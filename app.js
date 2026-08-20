@@ -2,6 +2,7 @@ import { principles, stages } from './data.js';
 import { createRenderers } from './renderers.js';
 import { resolveRoute } from './router.js';
 import { createAppState, setCurrentRoute } from './state.js';
+import { renderGeometryPlayground } from './geometry/playground.js';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -21,8 +22,11 @@ function navigate(hash) {
 }
 
 const renderers = createRenderers({ app, state, navigate });
+let activePlayground = null;
 
 function renderCurrentRoute() {
+  activePlayground?.canvas.destroy();
+  activePlayground = null;
   const route = resolveRoute(location.hash, stages, principles);
   setCurrentRoute(state, route);
 
@@ -30,7 +34,9 @@ function renderCurrentRoute() {
     history.replaceState(null, '', route.hash);
   }
 
-  if (route.name === 'stage') {
+  if (route.name === 'geometryPlayground') {
+    activePlayground = renderGeometryPlayground({ app, navigate });
+  } else if (route.name === 'stage') {
     renderers.stage(route.stage);
   } else if (route.name === 'complete') {
     renderers.complete(route.principle);

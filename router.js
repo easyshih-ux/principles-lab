@@ -23,6 +23,10 @@ export function resolveRoute(hash, stages, principles) {
     return { name: 'principles', hash: '#principles' };
   }
 
+  if (normalizedHash === '#dev/geometry') {
+    return { name: 'geometryPlayground', hash: '#dev/geometry' };
+  }
+
   const aliasedStageId = legacyStageAliases[normalizedHash];
   if (aliasedStageId) {
     const stage = stages.find((item) => item.id === aliasedStageId);

@@ -22,6 +22,8 @@
 - `validators.js`：validator registry 與現有漸層判定器。
 - `renderers.js`：首頁、樣本牆、通用 task frame 與三種 stage renderer。
 - `tests/phase1a.test.mjs`：路由、validator、state 與漸層資料流程的最小測試。
+- `geometry/`：Phase 1B 共用元素模型、座標、格點、邊界、操作引擎、Canvas 與 Playground。
+- `tests/geometry-engine.test.mjs`：Geometry Engine 純資料操作與權限測試。
 - `screenshots/`：三種尺寸的驗收截圖。
 
 ## 正式形式原理名稱
@@ -58,6 +60,12 @@
 
 目前資料、狀態、路由、判定與畫面已分離，新增原理時不需要重寫首頁、樣本牆或建立大量固定路由。
 
+## Geometry Playground（開發驗收）
+
+啟動網站後開啟 `#dev/geometry`。此頁只用於驗收六種形狀、選取、Pointer 拖曳、格點吸附、邊界、複製、刪除、Undo 與鍵盤操作，不屬於學生正式關卡。
+
+Geometry Engine 使用 `1000 × 600` 邏輯畫布與集中管理的 `20` 單位隱形格點。Canvas 只回傳乾淨 element state，不包含任何形式原理判定。
+
 ## 第一階段範圍
 
 已完成首頁、形式原理選擇頁、漸層三任務、完成畫面及 Phase 1A 通用骨架。尚未製作其他形式原理的正式題目與 Geometry Engine，也未加入登入、教師後台、排行榜、資料庫、學習紀錄或複雜計分。
@@ -66,4 +74,4 @@
 
 使用 Node.js 執行：
 
-`node --test tests/phase1a.test.mjs`
+`node --test tests/*.test.mjs`
