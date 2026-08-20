@@ -28,6 +28,10 @@
 - `geometry/palette.js`：Size logical mapping 與六色系 × 五階深淺 palette。
 - `geometry/controls.js`：控制器合法值、`allowedValues`、`lockedValues` 與預設值規則。
 - `tests/phase2-controls.test.mjs`：固定級距、權限、限制值、Undo 與 palette 測試。
+- `experiment-validators.js`：十項形式原理的規格驅動實驗條件判定器與 registry 相容層。
+- `validator-fixtures.js`：每項原理的明確通過／失敗開發案例。
+- `validator-lab.js`：Phase 3 Validator Lab 開發驗收介面。
+- `tests/phase3-validators.test.mjs`：十項判定器的通過、失敗與邊界測試。
 - `screenshots/`：三種尺寸的驗收截圖。
 
 ## 正式形式原理名稱
@@ -71,6 +75,10 @@
 Geometry Engine 使用 `1000 × 600` 邏輯畫布與集中管理的 `20` 單位隱形格點。Canvas 只回傳乾淨 element state，不包含任何形式原理判定。
 
 Phase 2 的 Geometry Element 使用教學級距，而不是 CSS 數值：`size` 與 `lightness` 為 `1～5`，`hue` 為六種固定色系 ID，`rotation` 為八個固定角度，`proportion` 為 `1／2／3`。Control Panel 只顯示 `allowedTools` 開放的控制器，Engine 仍會在底層拒絕未授權工具與未開放數值。
+
+## Validator Lab（開發驗收）
+
+開啟 `#dev/validators`，可切換十項形式原理以及明確通過／失敗案例。所有實驗型 Validator 接受 element state 與題目 `spec`，並統一回傳 `passed`、`fulfilledConditions`、`missingConditions`、`feedback`、`metrics`；`isValid` 與 `code` 保留供既有 renderer 相容使用。Metrics 是開發／教師資料，不是藝術美感評分。
 
 ## 第一階段範圍
 

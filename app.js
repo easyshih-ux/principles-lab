@@ -3,6 +3,7 @@ import { createRenderers } from './renderers.js';
 import { resolveRoute } from './router.js';
 import { createAppState, setCurrentRoute } from './state.js';
 import { renderGeometryPlayground } from './geometry/playground.js';
+import { renderValidatorLab } from './validator-lab.js';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -36,6 +37,8 @@ function renderCurrentRoute() {
 
   if (route.name === 'geometryPlayground') {
     activePlayground = renderGeometryPlayground({ app, navigate });
+  } else if (route.name === 'validatorLab') {
+    renderValidatorLab({ app, navigate });
   } else if (route.name === 'stage') {
     renderers.stage(route.stage);
   } else if (route.name === 'complete') {
