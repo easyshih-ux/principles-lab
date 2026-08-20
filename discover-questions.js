@@ -51,8 +51,11 @@ function getQuestion(questionId) {
 
 // Fixture calibration: preserve the intended single variable and make required overlap explicit.
 setPositions('discover-gradation-size', {
-  'gs-1': { x: 260, y: 330, size: 5 }, 'gs-2': { x: 434, y: 346, size: 4 }, 'gs-wrong': { x: 566, y: 372, size: 2 },
-  'gs-4': { x: 684, y: 360, size: 3 }, 'gs-5': { x: 792, y: 382, size: 1 }
+  'gs-1': { shape: 'rectangle', x: 220, y: 350, size: 5 },
+  'gs-2': { shape: 'rectangle', x: 360, y: 366, size: 4 },
+  'gs-wrong': { shape: 'rectangle', x: 500, y: 388, size: 2 },
+  'gs-4': { shape: 'rectangle', x: 640, y: 380, size: 3 },
+  'gs-5': { shape: 'rectangle', x: 780, y: 388, size: 1 }
 });
 getQuestion('discover-gradation-size').correctAnswer = 'gs-4';
 setPositions('discover-gradation-lightness', {

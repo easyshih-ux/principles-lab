@@ -29,10 +29,15 @@ test('gradation fixtures isolate size and gap changes', () => {
   const sizeQuestion = byId['discover-gradation-size'];
   const boxes = sizeQuestion.elements.map((element) => {
     const { width, height } = getShapeDimensions(element);
-    return { left: element.x - width / 2, right: element.x + width / 2, bottom: element.y + height / 2 };
+    const renderedHeight = Math.max(height, 64); // 48px minimum hit area at the current canvas scale.
+    return { left: element.x - width / 2, right: element.x + width / 2, bottom: element.y + renderedHeight / 2 };
   });
-  assert.deepEqual(boxes.slice(1).map((box, index) => box.left - boxes[index].right), [50, 50, 50, 50]);
+  assert.deepEqual(sizeQuestion.elements.slice(1).map((element, index) => element.x - sizeQuestion.elements[index].x), [140, 140, 140, 140]);
   assert.equal(new Set(boxes.map(({ bottom }) => bottom)).size, 1);
+  assert.equal(boxes[0].bottom, 420);
+  assert.deepEqual(sizeQuestion.elements.map(({ shape }) => shape), ['rectangle', 'rectangle', 'rectangle', 'rectangle', 'rectangle']);
+  assert.equal(new Set(sizeQuestion.elements.map(({ hue }) => hue)).size, 1);
+  assert.equal(new Set(sizeQuestion.elements.map(({ proportion }) => proportion)).size, 1);
   assert.deepEqual(sizeQuestion.elements.map(({ size }) => size), [5, 4, 2, 3, 1]);
   assert.equal(sizeQuestion.correctAnswer, 'gs-4');
   const gapQuestion = byId['discover-gradation-gap'];
