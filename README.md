@@ -1,6 +1,6 @@
 # 形式原理視覺實驗室
 
-供七年級視覺藝術課使用的視覺與互動實驗室。學生透過「觀察 → 辨認 → 發現變化 → 實際操作 → 驗證」理解形式原理；目前只有「漸層」保留第一版互動內容，其他形式原理只提供 metadata、樣本縮圖與「即將開放」。
+供七年級視覺藝術課使用的視覺與互動實驗室。學生透過「觀察 → 辨認 → 發現變化 → 實際操作 → 驗證」理解形式原理；目前已完成正式第一關八題，並保留漸層第一版互動原型供後續重構參考。
 
 ## 啟動方式
 
@@ -32,6 +32,10 @@
 - `validator-fixtures.js`：每項原理的明確通過／失敗開發案例。
 - `validator-lab.js`：Phase 3 Validator Lab 開發驗收介面。
 - `tests/phase3-validators.test.mjs`：十項判定器的通過、失敗與邊界測試。
+- `recognize-questions.js`：Phase 4 第一關八題正式題庫與靜態幾何構圖資料。
+- `recognize-course-state.js`：第一關選答、嘗試、完成與解鎖狀態。
+- `recognize-course.js`：第一關開始頁、題目頁、回饋與完成頁 renderer。
+- `tests/phase4-recognize.test.mjs`：題序、資料、答題狀態、路由與構圖 metrics 測試。
 - `screenshots/`：三種尺寸的驗收截圖。
 
 ## 正式形式原理名稱
@@ -80,9 +84,13 @@ Phase 2 的 Geometry Element 使用教學級距，而不是 CSS 數值：`size` 
 
 開啟 `#dev/validators`，可切換十項形式原理以及明確通過／失敗案例。所有實驗型 Validator 接受 element state 與題目 `spec`，並統一回傳 `passed`、`fulfilledConditions`、`missingConditions`、`feedback`、`metrics`；`isValid` 與 `code` 保留供既有 renderer 相容使用。Metrics 是開發／教師資料，不是藝術美感評分。
 
+## 第一關｜你看得出來嗎？
+
+正式入口為 `#level/recognize/start`，也可由形式原理選擇頁進入。固定八題順序為：反覆、漸層、對稱、均衡、律動、對比、調和、統一。每題沿用 `selected-option-equals`；答錯可重新選擇且不公布答案，答對後才顯示下一題。比例與單純刻意不在本關獨立出題，第二關目前維持施工中。
+
 ## 第一階段範圍
 
-已完成首頁、形式原理選擇頁、漸層三任務、完成畫面及 Phase 1A 通用骨架。尚未製作其他形式原理的正式題目與 Geometry Engine，也未加入登入、教師後台、排行榜、資料庫、學習紀錄或複雜計分。
+已完成首頁、形式原理選擇頁、第一關八題、既有漸層原型、Geometry Engine、固定控制器與 Validator Engine。第二關與正式第三關題目尚未製作，也未加入登入、教師後台、排行榜、資料庫、學習紀錄或複雜計分。
 
 ## 最小測試
 

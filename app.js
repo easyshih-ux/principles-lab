@@ -4,6 +4,8 @@ import { resolveRoute } from './router.js';
 import { createAppState, setCurrentRoute } from './state.js';
 import { renderGeometryPlayground } from './geometry/playground.js';
 import { renderValidatorLab } from './validator-lab.js';
+import { recognizeQuestions } from './recognize-questions.js';
+import { createRecognizeCourseRenderers } from './recognize-course.js';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -12,7 +14,7 @@ if (captureWidth) {
 }
 
 const app = document.querySelector('#app');
-const state = createAppState(stages);
+const state = createAppState(stages, recognizeQuestions);
 
 function navigate(hash) {
   if (location.hash === hash) {
@@ -23,12 +25,13 @@ function navigate(hash) {
 }
 
 const renderers = createRenderers({ app, state, navigate });
+const recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate });
 let activePlayground = null;
 
 function renderCurrentRoute() {
   activePlayground?.canvas.destroy();
   activePlayground = null;
-  const route = resolveRoute(location.hash, stages, principles);
+  const route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
   setCurrentRoute(state, route);
 
   if (route.isFallback || route.isLegacyAlias) {
@@ -39,6 +42,12 @@ function renderCurrentRoute() {
     activePlayground = renderGeometryPlayground({ app, navigate });
   } else if (route.name === 'validatorLab') {
     renderValidatorLab({ app, navigate });
+  } else if (route.name === 'recognizeStart') {
+    recognizeRenderers.start();
+  } else if (route.name === 'recognizeQuestion') {
+    recognizeRenderers.question(route.question);
+  } else if (route.name === 'recognizeComplete') {
+    recognizeRenderers.complete();
   } else if (route.name === 'stage') {
     renderers.stage(route.stage);
   } else if (route.name === 'complete') {

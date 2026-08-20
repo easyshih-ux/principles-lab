@@ -104,7 +104,10 @@ export function createRenderers({ app, state, navigate }) {
             <p class="section-label">實驗樣本牆</p>
             <h1>選擇形式原理</h1>
           </div>
-          <p>先從「漸層」開始，觀察變化如何形成秩序。</p>
+          <div class="wall-course-entry">
+            <p>從辨認開始，觀察畫面中最明顯的形式原理。</p>
+            <button type="button" class="primary-button compact" id="start-recognize-course">開始第一關</button>
+          </div>
         </header>
         <div class="sample-wall">
           ${principles.map((principle, index) => {
@@ -126,6 +129,7 @@ export function createRenderers({ app, state, navigate }) {
       </section>`;
 
     document.querySelector('#home-back').addEventListener('click', () => navigate('#home'));
+    document.querySelector('#start-recognize-course').addEventListener('click', () => navigate('#level/recognize/start'));
     document.querySelectorAll('[data-principle-id]').forEach((element) => {
       element.addEventListener('click', () => {
         const principleId = element.dataset.principleId;

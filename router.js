@@ -12,7 +12,11 @@ export function completeHash(principleId) {
   return `#complete/${principleId}`;
 }
 
-export function resolveRoute(hash, stages, principles) {
+export function recognizeQuestionHash(questionId) {
+  return `#level/recognize/${questionId}`;
+}
+
+export function resolveRoute(hash, stages, principles, recognizeQuestions = []) {
   const normalizedHash = hash || '#home';
 
   if (normalizedHash === '#home') {
@@ -29,6 +33,22 @@ export function resolveRoute(hash, stages, principles) {
 
   if (normalizedHash === '#dev/validators') {
     return { name: 'validatorLab', hash: '#dev/validators' };
+  }
+
+  if (normalizedHash === '#level/recognize/start') {
+    return { name: 'recognizeStart', hash: normalizedHash };
+  }
+
+  if (normalizedHash === '#level/recognize/complete') {
+    return { name: 'recognizeComplete', hash: normalizedHash };
+  }
+
+  const recognizeMatch = normalizedHash.match(/^#level\/recognize\/([^/]+)$/);
+  if (recognizeMatch) {
+    const question = recognizeQuestions.find((item) => item.id === recognizeMatch[1]);
+    return question
+      ? { name: 'recognizeQuestion', hash: normalizedHash, question }
+      : fallbackRoute(normalizedHash);
   }
 
   const aliasedStageId = legacyStageAliases[normalizedHash];

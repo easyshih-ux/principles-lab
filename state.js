@@ -24,7 +24,9 @@ function createStageState(stage) {
   return common;
 }
 
-export function createAppState(stages) {
+import { createRecognizeCourseState } from './recognize-course-state.js';
+
+export function createAppState(stages, recognizeQuestions = []) {
   return {
     navigation: {
       currentRoute: { name: 'home', hash: '#home' },
@@ -37,7 +39,8 @@ export function createAppState(stages) {
     completion: {
       stages: {},
       principles: {}
-    }
+    },
+    recognizeCourse: createRecognizeCourseState(recognizeQuestions)
   };
 }
 
