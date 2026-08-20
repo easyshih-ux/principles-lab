@@ -25,8 +25,9 @@ function createStageState(stage) {
 }
 
 import { createRecognizeCourseState } from './recognize-course-state.js';
+import { createDiscoverCourseState } from './discover-course-state.js';
 
-export function createAppState(stages, recognizeQuestions = []) {
+export function createAppState(stages, recognizeQuestions = [], discoverQuestions = []) {
   return {
     navigation: {
       currentRoute: { name: 'home', hash: '#home' },
@@ -40,7 +41,8 @@ export function createAppState(stages, recognizeQuestions = []) {
       stages: {},
       principles: {}
     },
-    recognizeCourse: createRecognizeCourseState(recognizeQuestions)
+    recognizeCourse: createRecognizeCourseState(recognizeQuestions),
+    discoverCourse: createDiscoverCourseState(discoverQuestions)
   };
 }
 

@@ -1,6 +1,6 @@
 # 形式原理視覺實驗室
 
-供七年級視覺藝術課使用的視覺與互動實驗室。學生透過「觀察 → 辨認 → 發現變化 → 實際操作 → 驗證」理解形式原理；目前已完成正式第一關八題，並保留漸層第一版互動原型供後續重構參考。
+供七年級視覺藝術課使用的視覺與互動實驗室。學生透過「觀察 → 辨認 → 發現變化 → 實際操作 → 驗證」理解形式原理；目前已完成正式第一關八題與第二關十六題，並保留漸層第一版互動原型供後續重構參考。
 
 ## 啟動方式
 
@@ -36,13 +36,19 @@
 - `recognize-course-state.js`：第一關選答、嘗試、完成與解鎖狀態。
 - `recognize-course.js`：第一關開始頁、題目頁、回饋與完成頁 renderer。
 - `tests/phase4-recognize.test.mjs`：題序、資料、答題狀態、路由與構圖 metrics 測試。
+- `discover-questions.js`：Phase 5 第二關十六題正式題庫與 logical geometry fixtures。
+- `discover-randomizer.js`：可 seeded、可測試的受限制題序產生器。
+- `discover-course-state.js`：第二關 session 題序、選取、嘗試與完成狀態。
+- `discover-validators.js`：第二關選取、複選與配對判定器。
+- `discover-course.js`：第二關五種通用互動、開始／完成與 dev renderer。
+- `tests/phase5-discover.test.mjs`：第二關資料、題序、fixtures、validators 與 state 測試。
 - `screenshots/`：三種尺寸的驗收截圖。
 
 ## 正式形式原理名稱
 
 本專案統一使用以下十項名稱：反覆、漸層、對稱、均衡、對比、律動、比例、統一、調和、單純。
 
-目前只有「漸層」的 `hasContent` 為 `true`；其餘原理尚未建立正式題目。
+樣本牆的單一原理實驗目前仍只有「漸層」的 `hasContent` 為 `true`；第二關則已透過獨立課程入口涵蓋十項原理。
 
 ## 通用教學架構
 
@@ -86,11 +92,15 @@ Phase 2 的 Geometry Element 使用教學級距，而不是 CSS 數值：`size` 
 
 ## 第一關｜你看得出來嗎？
 
-正式入口為 `#level/recognize/start`，也可由形式原理選擇頁進入。固定八題順序為：反覆、漸層、對稱、均衡、律動、對比、調和、統一。每題沿用 `selected-option-equals`；答錯可重新選擇且不公布答案，答對後才顯示下一題。比例與單純刻意不在本關獨立出題，第二關目前維持施工中。
+正式入口為 `#level/recognize/start`，也可由形式原理選擇頁進入。固定八題順序為：反覆、漸層、對稱、均衡、律動、對比、調和、統一。每題沿用 `selected-option-equals`；答錯可重新選擇且不公布答案，答對後才顯示下一題。比例與單純刻意不在本關獨立出題。
+
+## 第二關｜哪裡不對勁？
+
+正式入口為 `#level/discover/start`。每次完整進行十六題，題序遵守同原理不相鄰、調和／統一先於收束題、單純位於後半與容易題起步等限制。支援元素、gap、單選比較、複選、配對與 Before／After；題序只在重新開始時產生。開發驗收入口為 `#dev/phase5`。
 
 ## 第一階段範圍
 
-已完成首頁、形式原理選擇頁、第一關八題、既有漸層原型、Geometry Engine、固定控制器與 Validator Engine。第二關與正式第三關題目尚未製作，也未加入登入、教師後台、排行榜、資料庫、學習紀錄或複雜計分。
+已完成首頁、形式原理選擇頁、第一關八題、第二關十六題、既有漸層原型、Geometry Engine、固定控制器與 Validator Engine。正式第三關題目尚未製作，也未加入登入、教師後台、排行榜、資料庫、學習紀錄或複雜計分。
 
 ## 最小測試
 

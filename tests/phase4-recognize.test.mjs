@@ -145,11 +145,11 @@ test('the completion state is available only after all eight correct answers', (
   assert.equal(completeRecognizeCourse(course, recognizeQuestions), true);
 });
 
-test('recognize routes are data-driven and unfinished second-level route falls back safely', () => {
+test('recognize routes are data-driven and the formal second-level route is available', () => {
   assert.equal(resolveRoute('#level/recognize/start', stages, principles, recognizeQuestions).name, 'recognizeStart');
   assert.equal(resolveRoute(`#level/recognize/${recognizeQuestions[0].id}`, stages, principles, recognizeQuestions).question.id, recognizeQuestions[0].id);
   assert.equal(resolveRoute('#level/recognize/complete', stages, principles, recognizeQuestions).name, 'recognizeComplete');
-  assert.equal(resolveRoute('#level/discover/start', stages, principles, recognizeQuestions).name, 'home');
+  assert.equal(resolveRoute('#level/discover/start', stages, principles, recognizeQuestions).name, 'discoverStart');
 });
 
 test('balance, rhythm and unity compositions satisfy their development metrics', () => {

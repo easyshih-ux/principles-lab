@@ -35,6 +35,11 @@ export function resolveRoute(hash, stages, principles, recognizeQuestions = []) 
     return { name: 'validatorLab', hash: '#dev/validators' };
   }
 
+  if (normalizedHash === '#dev/phase5') return { name: 'discoverDev', hash: normalizedHash };
+  if (normalizedHash === '#level/discover/start') return { name: 'discoverStart', hash: normalizedHash };
+  if (normalizedHash === '#level/discover/question') return { name: 'discoverQuestion', hash: normalizedHash };
+  if (normalizedHash === '#level/discover/complete') return { name: 'discoverComplete', hash: normalizedHash };
+
   if (normalizedHash === '#level/recognize/start') {
     return { name: 'recognizeStart', hash: normalizedHash };
   }
