@@ -1,0 +1,84 @@
+function createStageState(stage) {
+  const common = {
+    attempts: 0,
+    feedback: '',
+    isComplete: false
+  };
+
+  if (stage.stageType === 'recognize') {
+    return { ...common, selectedOptionId: null };
+  }
+
+  if (stage.stageType === 'discover') {
+    return { ...common, selectedElementId: null };
+  }
+
+  if (stage.stageType === 'experiment') {
+    return {
+      ...common,
+      order: stage.initialState.order.slice(),
+      history: []
+    };
+  }
+
+  return common;
+}
+
+export function createAppState(stages) {
+  return {
+    navigation: {
+      currentRoute: { name: 'home', hash: '#home' },
+      previousHash: null
+    },
+    stageState: Object.fromEntries(
+      stages.map((stage) => [stage.id, createStageState(stage)])
+    ),
+    temporary: {},
+    completion: {
+      stages: {},
+      principles: {}
+    }
+  };
+}
+
+export function setCurrentRoute(state, route) {
+  state.navigation.previousHash = state.navigation.currentRoute?.hash ?? null;
+  state.navigation.currentRoute = route;
+}
+
+export function getStageState(state, stageId) {
+  const stageState = state.stageState[stageId];
+  if (!stageState) {
+    throw new Error(`Unknown stage state: ${stageId}`);
+  }
+  return stageState;
+}
+
+export function updateStageState(state, stageId, changes) {
+  Object.assign(getStageState(state, stageId), changes);
+}
+
+export function resetStageState(state, stage) {
+  state.stageState[stage.id] = createStageState(stage);
+}
+
+export function resetPrincipleStages(state, stages, principleId) {
+  stages
+    .filter((stage) => stage.principleId === principleId)
+    .forEach((stage) => resetStageState(state, stage));
+  delete state.completion.principles[principleId];
+}
+
+export function markStageComplete(state, stage) {
+  updateStageState(state, stage.id, { isComplete: true });
+  state.completion.stages[stage.id] = true;
+}
+
+export function clearStageCompletion(state, stageId) {
+  updateStageState(state, stageId, { isComplete: false });
+  delete state.completion.stages[stageId];
+}
+
+export function markPrincipleComplete(state, principleId) {
+  state.completion.principles[principleId] = true;
+}
