@@ -175,6 +175,18 @@ test('balance composition is one large circle against three identical squares in
   assert.deepEqual(squares.map(({ y }) => y), [180, 300, 420]);
 });
 
+test('gradation composition changes only size across equally spaced centers', () => {
+  const question = recognizeQuestions.find(({ principleId }) => principleId === 'gradation');
+  assert.deepEqual(question.elements.map(({ size }) => size), [5, 4, 3, 2, 1]);
+  assert.deepEqual(question.elements.map(({ x }) => x), [200, 350, 500, 650, 800]);
+  assert.equal(new Set(question.elements.map(({ y }) => y)).size, 1);
+  assert.equal(new Set(question.elements.map(({ shape }) => shape)).size, 1);
+  assert.equal(new Set(question.elements.map(({ hue }) => hue)).size, 1);
+  assert.equal(new Set(question.elements.map(({ lightness }) => lightness)).size, 1);
+  const gaps = question.elements.slice(1).map((element, index) => element.x - question.elements[index].x);
+  assert.deepEqual(gaps, [150, 150, 150, 150]);
+});
+
 test('harmony composition uses unordered adjacent colors without a size or lightness ramp', () => {
   const question = recognizeQuestions.find(({ principleId }) => principleId === 'harmony');
   assert.deepEqual(new Set(question.elements.map(({ shape }) => shape)), new Set(['circle', 'square', 'triangle', 'rectangle']));
