@@ -13,6 +13,7 @@ import { recognizeQuestions } from '../recognize-questions.js';
 import { principles, stages } from '../data.js';
 import { resolveRoute } from '../router.js';
 import { assertGeometryElement } from '../geometry/model.js';
+import { getShapeDimensions } from '../geometry/bounds.js';
 import {
   validateBalance,
   validateRhythm,
@@ -175,16 +176,23 @@ test('balance composition is one large circle against three identical squares in
   assert.deepEqual(squares.map(({ y }) => y), [180, 300, 420]);
 });
 
-test('gradation composition changes only size across equally spaced centers', () => {
+test('gradation composition changes only size across equal edge gaps and a shared baseline', () => {
   const question = recognizeQuestions.find(({ principleId }) => principleId === 'gradation');
   assert.deepEqual(question.elements.map(({ size }) => size), [5, 4, 3, 2, 1]);
-  assert.deepEqual(question.elements.map(({ x }) => x), [200, 350, 500, 650, 800]);
-  assert.equal(new Set(question.elements.map(({ y }) => y)).size, 1);
   assert.equal(new Set(question.elements.map(({ shape }) => shape)).size, 1);
   assert.equal(new Set(question.elements.map(({ hue }) => hue)).size, 1);
   assert.equal(new Set(question.elements.map(({ lightness }) => lightness)).size, 1);
-  const gaps = question.elements.slice(1).map((element, index) => element.x - question.elements[index].x);
-  assert.deepEqual(gaps, [150, 150, 150, 150]);
+  const boxes = question.elements.map((element) => {
+    const dimensions = getShapeDimensions(element);
+    return {
+      left: element.x - dimensions.width / 2,
+      right: element.x + dimensions.width / 2,
+      bottom: element.y + dimensions.height / 2
+    };
+  });
+  const edgeGaps = boxes.slice(1).map((box, index) => box.left - boxes[index].right);
+  assert.deepEqual(edgeGaps, [50, 50, 50, 50]);
+  assert.equal(new Set(boxes.map(({ bottom }) => bottom)).size, 1);
 });
 
 test('harmony composition uses unordered adjacent colors without a size or lightness ramp', () => {

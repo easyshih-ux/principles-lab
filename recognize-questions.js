@@ -21,11 +21,11 @@ export const recognizeQuestions = Object.freeze([
     id: 'recognize-gradation', principleId: 'gradation', title: '漸層',
     prompt: '這張構圖最明顯的形式原理是什麼？', shortHint: '看逐步變化。',
     elements: [
-      element('square-0', 'square', 200, 310, 5, 'blue'),
-      element('square-1', 'square', 350, 310, 4, 'blue'),
-      element('square-2', 'square', 500, 310, 3, 'blue'),
-      element('square-3', 'square', 650, 310, 2, 'blue'),
-      element('square-4', 'square', 800, 310, 1, 'blue')
+      element('square-0', 'square', 260, 330, 5, 'blue'),
+      element('square-1', 'square', 434, 346, 4, 'blue'),
+      element('square-2', 'square', 578, 360, 3, 'blue'),
+      element('square-3', 'square', 696, 372, 2, 'blue'),
+      element('square-4', 'square', 792, 382, 1, 'blue')
     ],
     options: [option('gradation', '漸層'), option('repetition', '反覆'), option('proportion', '比例')],
     correctAnswer: 'gradation',
