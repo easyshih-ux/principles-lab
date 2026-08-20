@@ -28,7 +28,7 @@ test('each created element has a unique stable id', () => {
 
 test('duplicate creates a new id while retaining geometry fields', () => {
   const engine = createEngine();
-  engine.add('triangle', { size: 120, hue: 45, lightness: 62, rotation: 0 });
+  engine.add('triangle', { size: 4, hue: 'yellow', lightness: 3, rotation: 0 });
   const original = engine.getSelectedElement();
   engine.duplicate();
   const duplicate = engine.getSelectedElement();
@@ -44,7 +44,7 @@ test('grid snap uses the centralized step', () => {
 });
 
 test('boundary clamp considers shape dimensions', () => {
-  const rectangle = createGeometryElement({ id: 'rect', shape: 'rectangle', x: 0, y: 0, size: 80 });
+  const rectangle = createGeometryElement({ id: 'rect', shape: 'rectangle', x: 0, y: 0, size: 3 });
   assert.deepEqual(
     clampElementPosition(rectangle, { x: -50, y: -50 }, GEOMETRY_CANVAS),
     { x: 60, y: 40 }
@@ -132,7 +132,7 @@ test('all six supported shapes create valid clean state', () => {
   GEOMETRY_SHAPES.forEach((shape) => engine.add(shape));
   assert.deepEqual(engine.getState().elements.map((element) => element.shape), GEOMETRY_SHAPES);
   engine.getState().elements.forEach((element) => {
-    assert.deepEqual(Object.keys(element), ['shape', 'x', 'y', 'size', 'hue', 'lightness', 'rotation', 'id']);
+    assert.deepEqual(Object.keys(element), ['shape', 'x', 'y', 'size', 'hue', 'lightness', 'rotation', 'proportion', 'id']);
   });
 });
 

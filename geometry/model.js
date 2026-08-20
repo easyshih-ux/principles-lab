@@ -1,4 +1,12 @@
-import { DEFAULT_ELEMENT_VALUES, GEOMETRY_SHAPES } from './config.js';
+import {
+  DEFAULT_ELEMENT_VALUES,
+  GEOMETRY_SHAPES,
+  HUE_IDS,
+  LIGHTNESS_LEVELS,
+  PROPORTION_LEVELS,
+  ROTATION_VALUES,
+  SIZE_LEVELS
+} from './config.js';
 
 let idSequence = 0;
 
@@ -33,15 +41,23 @@ export function assertGeometryElement(element) {
   if (!GEOMETRY_SHAPES.includes(element.shape)) {
     throw new TypeError(`Unsupported geometry shape: ${element.shape}`);
   }
-  ['x', 'y', 'size', 'hue', 'lightness', 'rotation'].forEach((field) => {
+  ['x', 'y'].forEach((field) => {
     if (!Number.isFinite(element[field])) {
       throw new TypeError(`Geometry element ${field} must be finite.`);
     }
   });
-  if (element.size <= 0) {
-    throw new RangeError('Geometry element size must be greater than zero.');
-  }
+  assertAllowedValue('size', element.size, SIZE_LEVELS);
+  assertAllowedValue('hue', element.hue, HUE_IDS);
+  assertAllowedValue('lightness', element.lightness, LIGHTNESS_LEVELS);
+  assertAllowedValue('rotation', element.rotation, ROTATION_VALUES);
+  assertAllowedValue('proportion', element.proportion, PROPORTION_LEVELS);
   return element;
+}
+
+function assertAllowedValue(field, value, allowedValues) {
+  if (!allowedValues.includes(value)) {
+    throw new RangeError(`Invalid geometry ${field}: ${value}`);
+  }
 }
 
 export function assertUniqueIds(elements) {

@@ -5,6 +5,7 @@ import {
   GEOMETRY_TOOLS
 } from './config.js';
 import {
+  assertGeometryElement,
   assertUniqueIds,
   cloneElements,
   createElementId,
@@ -14,6 +15,11 @@ import {
   clampElementPosition,
   snapAndClampElementPosition
 } from './bounds.js';
+import {
+  CONTROL_DEFINITIONS,
+  isControlValueAllowed,
+  normalizeToolConstraints
+} from './controls.js';
 
 function cloneSnapshot(snapshot) {
   return {
@@ -28,20 +34,41 @@ export class GeometryEngine {
     allowedTools = [],
     canvas = GEOMETRY_CANVAS,
     grid = GEOMETRY_GRID,
-    idFactory = createElementId
+    idFactory = createElementId,
+    toolConstraints = {}
   } = {}) {
+    elements.forEach(assertGeometryElement);
     assertUniqueIds(elements);
     this.canvas = { ...canvas };
     this.grid = { ...grid };
     this.allowedTools = new Set(allowedTools);
+    this.toolConstraints = normalizeToolConstraints(toolConstraints);
     this.idFactory = idFactory;
     this.elements = cloneElements(elements);
     this.selectedId = null;
     this.history = [];
+    this.activeAdjustment = null;
   }
 
   canUse(tool) {
     return this.allowedTools.has(tool);
+  }
+
+  setAllowedTools(allowedTools) {
+    this.allowedTools = new Set(allowedTools);
+    return this.getState();
+  }
+
+  setToolConstraints(toolConstraints) {
+    this.toolConstraints = normalizeToolConstraints(toolConstraints);
+    return this.getState();
+  }
+
+  getControlConstraint(property) {
+    const constraint = this.toolConstraints[property];
+    return constraint
+      ? { ...constraint, allowedValues: [...constraint.allowedValues], lockedValues: [...constraint.lockedValues] }
+      : null;
   }
 
   getState() {
@@ -109,6 +136,63 @@ export class GeometryEngine {
     return this.changed('move');
   }
 
+  setProperty(property, value, id = this.selectedId) {
+    const check = this.checkPropertyChange(property, value, id);
+    if (check.result) return check.result;
+    if (check.element[property] === value) return this.unchanged('same-value');
+    const before = this.snapshot();
+    this.applyProperty(check.element, property, value);
+    this.record(`${property}-change`, before);
+    return this.changed(`${property}-change`);
+  }
+
+  beginAdjustment(property, id = this.selectedId) {
+    const definition = CONTROL_DEFINITIONS[property];
+    if (!definition || !this.canUse(definition.tool)) return this.unauthorized();
+    const element = this.elements.find((item) => item.id === id);
+    if (!element) return this.unchanged('not-found');
+    if (!this.activeAdjustment) {
+      this.activeAdjustment = { property, id, before: this.snapshot() };
+    }
+    return this.unchanged('adjustment-started');
+  }
+
+  previewProperty(property, value, id = this.selectedId) {
+    const check = this.checkPropertyChange(property, value, id);
+    if (check.result) return check.result;
+    if (!this.activeAdjustment) this.beginAdjustment(property, id);
+    if (!this.activeAdjustment
+      || this.activeAdjustment.property !== property
+      || this.activeAdjustment.id !== id) {
+      return this.unchanged('adjustment-conflict');
+    }
+    this.applyProperty(check.element, property, value);
+    return this.changed(`${property}-preview`);
+  }
+
+  commitAdjustment() {
+    const adjustment = this.activeAdjustment;
+    this.activeAdjustment = null;
+    if (!adjustment) return this.unchanged('no-adjustment');
+    const beforeElement = adjustment.before.elements.find(
+      (element) => element.id === adjustment.id
+    );
+    const current = this.elements.find((element) => element.id === adjustment.id);
+    if (!beforeElement || !current || beforeElement[adjustment.property] === current[adjustment.property]) {
+      return this.unchanged('same-value');
+    }
+    this.record(`${adjustment.property}-change`, adjustment.before);
+    return this.changed(`${adjustment.property}-change`);
+  }
+
+  cancelAdjustment() {
+    if (!this.activeAdjustment) return this.unchanged('no-adjustment');
+    const before = this.activeAdjustment.before;
+    this.activeAdjustment = null;
+    this.restore(before);
+    return this.changed('adjustment-cancelled');
+  }
+
   duplicate(id = this.selectedId) {
     if (!this.canUse(GEOMETRY_TOOLS.duplicate)) return this.unauthorized();
     const source = this.elements.find((element) => element.id === id);
@@ -159,6 +243,27 @@ export class GeometryEngine {
   restore(snapshot) {
     this.elements = cloneElements(snapshot.elements);
     this.selectedId = snapshot.selectedId;
+  }
+
+  checkPropertyChange(property, value, id) {
+    const definition = CONTROL_DEFINITIONS[property];
+    if (!definition) return { result: this.unchanged('unknown-property') };
+    if (!this.canUse(definition.tool)) return { result: this.unauthorized() };
+    if (!isControlValueAllowed(property, value, this.toolConstraints)) {
+      return { result: this.unchanged('value-not-allowed') };
+    }
+    const element = this.elements.find((item) => item.id === id);
+    return element ? { element } : { result: this.unchanged('not-found') };
+  }
+
+  applyProperty(element, property, value) {
+    element[property] = value;
+    if (property === 'size' || property === 'rotation') {
+      Object.assign(
+        element,
+        snapAndClampElementPosition(element, element, this.canvas, this.grid.step)
+      );
+    }
   }
 
   record(type, before) {

@@ -24,6 +24,10 @@
 - `tests/phase1a.test.mjs`：路由、validator、state 與漸層資料流程的最小測試。
 - `geometry/`：Phase 1B 共用元素模型、座標、格點、邊界、操作引擎、Canvas 與 Playground。
 - `tests/geometry-engine.test.mjs`：Geometry Engine 純資料操作與權限測試。
+- `geometry/control-panel.js`：依 `allowedTools` 顯示的共用固定尺標與操作面板。
+- `geometry/palette.js`：Size logical mapping 與六色系 × 五階深淺 palette。
+- `geometry/controls.js`：控制器合法值、`allowedValues`、`lockedValues` 與預設值規則。
+- `tests/phase2-controls.test.mjs`：固定級距、權限、限制值、Undo 與 palette 測試。
 - `screenshots/`：三種尺寸的驗收截圖。
 
 ## 正式形式原理名稱
@@ -65,6 +69,8 @@
 啟動網站後開啟 `#dev/geometry`。此頁只用於驗收六種形狀、選取、Pointer 拖曳、格點吸附、邊界、複製、刪除、Undo 與鍵盤操作，不屬於學生正式關卡。
 
 Geometry Engine 使用 `1000 × 600` 邏輯畫布與集中管理的 `20` 單位隱形格點。Canvas 只回傳乾淨 element state，不包含任何形式原理判定。
+
+Phase 2 的 Geometry Element 使用教學級距，而不是 CSS 數值：`size` 與 `lightness` 為 `1～5`，`hue` 為六種固定色系 ID，`rotation` 為八個固定角度，`proportion` 為 `1／2／3`。Control Panel 只顯示 `allowedTools` 開放的控制器，Engine 仍會在底層拒絕未授權工具與未開放數值。
 
 ## 第一階段範圍
 

@@ -1,14 +1,16 @@
 import { snapPoint } from './grid.js';
+import { getLogicalSize } from './palette.js';
 
 export function getShapeDimensions(element) {
+  const size = getLogicalSize(element.size);
   switch (element.shape) {
     case 'rectangle':
-      return { width: element.size * 1.5, height: element.size };
+      return { width: size * 1.5, height: size };
     case 'semicircle':
     case 'line':
-      return { width: element.size * 1.5, height: element.size / 2 };
+      return { width: size * 1.5, height: size / 2 };
     default:
-      return { width: element.size, height: element.size };
+      return { width: size, height: size };
   }
 }
 

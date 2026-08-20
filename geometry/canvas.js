@@ -5,6 +5,7 @@ import {
   logicalToScreen,
   screenToLogical
 } from './coordinates.js';
+import { getDisplayColor } from './palette.js';
 
 export class GeometryCanvas {
   constructor({ container, engine, onStateChange = () => {} }) {
@@ -71,8 +72,7 @@ export class GeometryCanvas {
     node.style.width = `${width}px`;
     node.style.height = `${height}px`;
     node.style.transform = `translate(${screen.x - width / 2}px, ${screen.y - height / 2}px) rotate(${element.rotation}deg)`;
-    node.style.setProperty('--geometry-hue', element.hue);
-    node.style.setProperty('--geometry-lightness', `${element.lightness}%`);
+    node.style.setProperty('--geometry-color', getDisplayColor(element.hue, element.lightness));
     node.setAttribute('aria-label', `${element.shape}，位置 ${element.x}, ${element.y}`);
   }
 

@@ -1,4 +1,5 @@
 import { GeometryCanvas } from './canvas.js';
+import { GeometryControlPanel } from './control-panel.js';
 import { GEOMETRY_SHAPES, GEOMETRY_TOOLS } from './config.js';
 import { GeometryEngine } from './engine.js';
 
@@ -12,12 +13,30 @@ const shapeLabels = Object.freeze({
 });
 
 const colors = Object.freeze({
-  circle: { hue: 8, lightness: 60 },
-  square: { hue: 210, lightness: 47 },
-  triangle: { hue: 45, lightness: 62 },
-  rectangle: { hue: 0, lightness: 15 },
-  semicircle: { hue: 145, lightness: 46 },
-  line: { hue: 210, lightness: 47 }
+  circle: { hue: 'red', lightness: 3 },
+  square: { hue: 'blue', lightness: 3 },
+  triangle: { hue: 'yellow', lightness: 3 },
+  rectangle: { hue: 'orange', lightness: 2 },
+  semicircle: { hue: 'green', lightness: 3 },
+  line: { hue: 'purple', lightness: 3 }
+});
+
+const toolLabels = Object.freeze({
+  add: '新增', move: '移動', duplicate: '複製', delete: '刪除', undo: 'Undo',
+  size: '大小', color: '色彩', lightness: '深淺', rotation: '方向', proportion: '比例'
+});
+
+const constraintPresets = Object.freeze({
+  all: {},
+  blue: {
+    hue: { allowedValues: ['blue'], defaultValue: 'blue' },
+    lightness: { allowedValues: [1, 3, 5], defaultValue: 3 }
+  },
+  limited: {
+    size: { allowedValues: [2, 4], defaultValue: 2 },
+    rotation: { allowedValues: [0, 90, 180, 270], defaultValue: 0 },
+    proportion: { allowedValues: [1, 3], lockedValues: [3], defaultValue: 1 }
+  }
 });
 
 function debugMarkup(element) {
@@ -31,6 +50,7 @@ function debugMarkup(element) {
       <div><dt>hue</dt><dd>${element.hue}</dd></div>
       <div><dt>lightness</dt><dd>${element.lightness}</dd></div>
       <div><dt>rotation</dt><dd>${element.rotation}</dd></div>
+      <div><dt>proportion</dt><dd>${element.proportion}</dd></div>
     </dl>`;
 }
 
@@ -51,12 +71,21 @@ export function renderGeometryPlayground({ app, navigate }) {
               ${shapeLabels[shape]}
             </button>`).join('')}
         </div>
-        <div class="geometry-action-tools">
-          <button type="button" class="secondary-button geometry-tool" id="geometry-duplicate">複製</button>
-          <button type="button" class="secondary-button geometry-tool" id="geometry-delete">刪除</button>
-          <button type="button" class="secondary-button geometry-tool" id="geometry-undo">Undo</button>
-        </div>
       </div>
+      <details class="geometry-dev-settings" open>
+        <summary>Playground 權限與數值限制</summary>
+        <div class="geometry-tool-switches">
+          ${Object.values(GEOMETRY_TOOLS).map((tool) => `
+            <label><input type="checkbox" value="${tool}" data-tool-toggle checked> ${toolLabels[tool]}</label>`).join('')}
+        </div>
+        <label class="geometry-constraint-select">allowedValues 測試
+          <select id="geometry-constraint-preset">
+            <option value="all">全部合法值</option>
+            <option value="blue">僅藍色；深淺 1／3／5</option>
+            <option value="limited">大小 2／4；固定方向；比例 3 鎖定</option>
+          </select>
+        </label>
+      </details>
       <div class="geometry-workspace">
         <div id="geometry-canvas-host"></div>
         <aside class="geometry-debug" aria-live="polite" aria-atomic="true">
@@ -64,6 +93,7 @@ export function renderGeometryPlayground({ app, navigate }) {
           <div id="geometry-debug-values"></div>
         </aside>
       </div>
+      <div id="geometry-control-panel" class="geometry-control-panel" aria-label="幾何操作工具"></div>
       <p class="geometry-help">拖曳時自由跟隨，放開後吸附格點。選取後可使用方向鍵移動；Delete / Backspace 刪除。</p>
     </section>`;
 
@@ -74,10 +104,28 @@ export function renderGeometryPlayground({ app, navigate }) {
   const updateDebug = () => {
     debug.innerHTML = debugMarkup(engine.getSelectedElement());
   };
+  let controlPanel;
+  const syncAll = () => {
+    canvas.render();
+    controlPanel.render();
+    updateDebug();
+  };
   const canvas = new GeometryCanvas({
     container: document.querySelector('#geometry-canvas-host'),
     engine,
-    onStateChange: updateDebug
+    onStateChange: () => {
+      controlPanel?.render();
+      updateDebug();
+    }
+  });
+  controlPanel = new GeometryControlPanel({
+    container: document.querySelector('#geometry-control-panel'),
+    engine,
+    onVisualChange: () => {
+      canvas.render();
+      updateDebug();
+    },
+    onStateChange: syncAll
   });
 
   document.querySelector('#playground-back').addEventListener('click', () => navigate('#home'));
@@ -91,23 +139,24 @@ export function renderGeometryPlayground({ app, navigate }) {
         ...colors[shape]
       });
       canvas.render();
+      controlPanel.render();
       updateDebug();
     });
   });
-  document.querySelector('#geometry-duplicate').addEventListener('click', () => {
-    engine.duplicate();
-    canvas.render();
-    updateDebug();
+  document.querySelectorAll('[data-tool-toggle]').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+      const allowedTools = [...document.querySelectorAll('[data-tool-toggle]:checked')]
+        .map((input) => input.value);
+      engine.setAllowedTools(allowedTools);
+      document.querySelectorAll('[data-add-shape]').forEach((button) => {
+        button.disabled = !engine.canUse('add');
+      });
+      controlPanel.render();
+    });
   });
-  document.querySelector('#geometry-delete').addEventListener('click', () => {
-    engine.delete();
-    canvas.render();
-    updateDebug();
-  });
-  document.querySelector('#geometry-undo').addEventListener('click', () => {
-    engine.undo();
-    canvas.render();
-    updateDebug();
+  document.querySelector('#geometry-constraint-preset').addEventListener('change', (event) => {
+    engine.setToolConstraints(constraintPresets[event.target.value]);
+    controlPanel.render();
   });
   updateDebug();
 
