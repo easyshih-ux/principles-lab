@@ -75,11 +75,13 @@ export const recognizeQuestions = Object.freeze([
   {
     id: 'recognize-contrast', principleId: 'contrast', title: '對比',
     prompt: '這張構圖最明顯的形式原理是什麼？', shortHint: '看差異。',
-    elements: [
-      element('small-1', 'square', 170, 310, 1, 'red'), element('small-2', 'square', 290, 310, 1, 'red'),
-      element('small-3', 'square', 410, 310, 1, 'red'), element('small-4', 'square', 530, 310, 1, 'red'),
-      element('large', 'square', 760, 310, 5, 'red')
-    ],
+    elements: [170, 330, 490].flatMap((y, rowIndex) => (
+      [340, 500, 660].map((x, columnIndex) => (
+        rowIndex === 1 && columnIndex === 1
+          ? element('contrast-triangle', 'triangle', x, y, 2, 'red')
+          : element(`contrast-circle-${rowIndex}-${columnIndex}`, 'circle', x, y, 2, 'blue')
+      ))
+    )),
     options: [option('contrast', '對比'), option('harmony', '調和'), option('proportion', '比例')],
     correctAnswer: 'contrast',
     wrongFeedback: {
@@ -95,7 +97,7 @@ export const recognizeQuestions = Object.freeze([
       { ...element('h-circle', 'circle', 230, 210, 3, 'blue', 3), displayColor: '#3E78B2' },
       { ...element('h-triangle', 'triangle', 720, 180, 3, 'green', 3), displayColor: '#4F9D78' },
       { ...element('h-square', 'square', 470, 420, 3, 'green', 3), displayColor: '#3E8F91' },
-      { ...element('h-semicircle', 'semicircle', 810, 430, 3, 'blue', 3), displayColor: '#3E78B2' }
+      { ...element('h-rectangle', 'rectangle', 810, 430, 3, 'blue', 3), displayColor: '#3E78B2' }
     ],
     options: [option('harmony', '調和'), option('unity', '統一'), option('gradation', '漸層')],
     correctAnswer: 'harmony',

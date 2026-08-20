@@ -177,10 +177,22 @@ test('balance composition is one large circle against three identical squares in
 
 test('harmony composition uses unordered adjacent colors without a size or lightness ramp', () => {
   const question = recognizeQuestions.find(({ principleId }) => principleId === 'harmony');
-  assert.equal(new Set(question.elements.map(({ shape }) => shape)).size, 4);
+  assert.deepEqual(new Set(question.elements.map(({ shape }) => shape)), new Set(['circle', 'square', 'triangle', 'rectangle']));
   assert.equal(new Set(question.elements.map(({ size }) => size)).size, 1);
   assert.equal(new Set(question.elements.map(({ lightness }) => lightness)).size, 1);
   assert.deepEqual(new Set(question.elements.map(({ displayColor }) => displayColor)), new Set(['#3E78B2', '#3E8F91', '#4F9D78']));
   const leftToRight = [...question.elements].sort((a, b) => a.x - b.x).map(({ displayColor }) => displayColor);
   assert.deepEqual(leftToRight, ['#3E78B2', '#3E8F91', '#4F9D78', '#3E78B2']);
+});
+
+test('contrast composition is one distinct element in an otherwise consistent group', () => {
+  const question = recognizeQuestions.find(({ principleId }) => principleId === 'contrast');
+  const distinct = question.elements.filter(({ shape, hue }) => shape === 'triangle' && hue === 'red');
+  const group = question.elements.filter(({ shape, hue }) => shape === 'circle' && hue === 'blue');
+  assert.equal(question.elements.length, 9);
+  assert.equal(distinct.length, 1);
+  assert.equal(group.length, 8);
+  assert.equal(new Set(question.elements.map(({ size }) => size)).size, 1);
+  assert.equal(new Set(question.elements.map(({ x }) => x)).size, 3);
+  assert.equal(new Set(question.elements.map(({ y }) => y)).size, 3);
 });
