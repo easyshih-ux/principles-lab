@@ -37,6 +37,7 @@
 - `recognize-course.js`：第一關開始頁、題目頁、回饋與完成頁 renderer。
 - `tests/phase4-recognize.test.mjs`：題序、資料、答題狀態、路由與構圖 metrics 測試。
 - `discover-questions.js`：Phase 5 第二關十六題正式題庫與 logical geometry fixtures。
+- `discover-generators.js`：十六種題型的動態實例生成、選項洗牌與畫布／重疊安全檢查。
 - `discover-randomizer.js`：可 seeded、可測試的受限制題序產生器。
 - `discover-course-state.js`：第二關 session 題序、選取、嘗試與完成狀態。
 - `discover-validators.js`：第二關選取、複選與配對判定器。
@@ -96,7 +97,9 @@ Phase 2 的 Geometry Element 使用教學級距，而不是 CSS 數值：`size` 
 
 ## 第二關｜哪裡不對勁？
 
-正式入口為 `#level/discover/start`。每次完整進行十六題，題序遵守同原理不相鄰、調和／統一先於收束題、單純位於後半與容易題起步等限制。支援元素、gap、單選比較、複選、配對與 Before／After；題序只在重新開始時產生。開發驗收入口為 `#dev/phase5`。
+正式入口為 `#level/discover/start`。每次完整進行十六題，題序遵守同原理不相鄰、調和／統一先於收束題、單純位於後半與容易題起步等限制。支援元素、gap、單選比較、複選、配對與 Before／After。
+
+每次重新開始第二關時，系統依 `question template → random parameters → generated question → safety validation → correctAnswer` 產生十六個新題目實例。題目圖形、色彩、尺寸、方向、位置、間距、錯誤元素位置及 A／B／C 排列會依題型安全範圍變化；不符合唯一答案、畫布邊界或不重疊規則的結果會重新生成。同一輪生成結果會保存在 course state，提示、答錯與畫面重繪不會改變當次答案。開發驗收入口為 `#dev/phase5`。
 
 ## 第一階段範圍
 

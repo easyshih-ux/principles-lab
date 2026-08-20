@@ -6,6 +6,7 @@ import { validateDiscoverQuestion } from '../discover-validators.js';
 import { advanceDiscoverCourse, applyDiscoverResult, createDiscoverCourseState, currentDiscoverQuestion, setDiscoverSelection, startDiscoverCourse } from '../discover-course-state.js';
 import { assertGeometryElement } from '../geometry/model.js';
 import { getShapeDimensions } from '../geometry/bounds.js';
+import { discoverQuestionGenerators, generateDiscoverQuestions, validateGeneratedQuestion } from '../discover-generators.js';
 
 const ids = discoverQuestions.map(({ id }) => id);
 const byId = Object.fromEntries(discoverQuestions.map((question) => [question.id, question]));
@@ -149,6 +150,64 @@ test('generated size gradation is saved for rerenders and regenerated on restart
   assert.equal(currentDiscoverQuestion(state, discoverQuestions), first);
   startDiscoverCourse(state, discoverQuestions, 42);
   assert.notDeepEqual(state.generatedQuestions['discover-gradation-size'].actualSizes, first.actualSizes);
+});
+
+test('all sixteen templates have a dynamic generator', () => {
+  assert.deepEqual(new Set(Object.keys(discoverQuestionGenerators)), new Set(ids));
+});
+
+test('dynamic generation produces safe, answerable instances across many seeds', () => {
+  const signatures = Object.fromEntries(ids.map((id) => [id, new Set()]));
+  const answerPositions = Object.fromEntries(ids.map((id) => [id, new Set()]));
+  for (let seed = 1; seed <= 80; seed += 1) {
+    const generated = generateDiscoverQuestions(discoverQuestions, seed);
+    assert.deepEqual(new Set(Object.keys(generated)), new Set(ids));
+    Object.values(generated).forEach((question) => {
+      assert.equal(validateGeneratedQuestion(question), true, `${seed}: ${question.id}`);
+      assert.equal(validateDiscoverQuestion(question, question.correctAnswer).isValid, true, `${seed}: ${question.id}`);
+      signatures[question.id].add(JSON.stringify({
+        elements: question.elements,
+        panels: question.comparisonPanels,
+        answer: question.correctAnswer
+      }));
+      if (question.interactionType === 'element-select') {
+        answerPositions[question.id].add(question.elements.findIndex(({ id }) => id === question.correctAnswer));
+      } else if (question.interactionType !== 'pairing') {
+        const firstAnswer = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : question.correctAnswer;
+        answerPositions[question.id].add(question.options.findIndex(({ id }) => id === firstAnswer));
+      } else {
+        answerPositions[question.id].add(JSON.stringify(question.correctAnswer));
+      }
+    });
+  }
+  ids.forEach((id) => assert.equal(signatures[id].size > 1, true, `${id} content should vary`));
+  ['discover-repetition-single','discover-repetition-group','discover-gradation-size','discover-gradation-lightness','discover-symmetry-shape','discover-symmetry-position','discover-harmony','discover-unity']
+    .forEach((id) => assert.equal(answerPositions[id].size > 1, true, `${id} answer position should vary`));
+  ['discover-gradation-gap','discover-rhythm-compare','discover-rhythm-multiple','discover-proportion','discover-contrast','discover-balance','discover-simplicity','discover-harmony-unity']
+    .forEach((id) => assert.equal(answerPositions[id].size > 1, true, `${id} option order should vary`));
+});
+
+test('generated lightness gradation has exactly one removable interruption', () => {
+  for (let seed = 1; seed <= 100; seed += 1) {
+    const question = generateDiscoverQuestions(discoverQuestions, seed)['discover-gradation-lightness'];
+    const possible = question.actualLightness.map((_, removedIndex) => {
+      const remaining = question.actualLightness.filter((__, index) => index !== removedIndex);
+      const differences = remaining.slice(1).map((value, index) => value - remaining[index]);
+      return differences.every((difference) => difference > 0) || differences.every((difference) => difference < 0);
+    });
+    assert.deepEqual(possible.map((valid,index)=>valid?index:-1).filter((index)=>index>=0), [question.correctIndex]);
+  }
+});
+
+test('all generated question instances remain stable inside one course run', () => {
+  const state = createDiscoverCourseState(discoverQuestions);
+  startDiscoverCourse(state, discoverQuestions, 20260821);
+  const saved = state.generatedQuestions;
+  state.questionOrder.forEach((id, index) => {
+    state.currentIndex = index;
+    assert.equal(currentDiscoverQuestion(state, discoverQuestions), saved[id]);
+    assert.equal(currentDiscoverQuestion(state, discoverQuestions), saved[id]);
+  });
 });
 
 test('each formal question has an explicit pass and fail fixture', () => {

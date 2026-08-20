@@ -13,7 +13,10 @@ export function validateDiscoverQuestion(question, selection) {
     const selected = [...selection].sort();
     if (sameSet(selected, question.correctAnswer)) return { isValid: true, code: 'valid' };
     const key = selected.join('-');
-    return { isValid: false, code: ({ b:'only-b', c:'only-c', 'a-b':'a-b', 'a-b-c':'all' })[key] ?? 'incorrect' };
+    const legacyCode = question.correctAnswer.join('-') === 'b-c'
+      ? ({ b:'only-b', c:'only-c', 'a-b':'a-b', 'a-b-c':'all' })[key]
+      : null;
+    return { isValid: false, code: legacyCode ?? 'incorrect' };
   }
   if (question.validatorId === 'discover-pairing') {
     const isValid = Object.entries(question.correctAnswer).every(([panel, principle]) => selection?.[panel] === principle);

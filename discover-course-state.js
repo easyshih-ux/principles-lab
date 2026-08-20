@@ -1,5 +1,5 @@
-import { generateGradationSizeQuestion } from './discover-questions.js';
-import { createDiscoverOrder, createSeededRandom } from './discover-randomizer.js';
+import { generateDiscoverQuestions } from './discover-generators.js';
+import { createDiscoverOrder } from './discover-randomizer.js';
 
 const emptyQuestionState = () => ({ attempts: 0, selection: null, feedbackCode: '', feedback: '', completed: false });
 
@@ -16,9 +16,7 @@ export function startDiscoverCourse(state, questions, seed = Date.now()) {
     started: true,
     seed,
     questionOrder: createDiscoverOrder(questions, seed),
-    generatedQuestions: {
-      'discover-gradation-size': generateGradationSizeQuestion(createSeededRandom(Number(seed) ^ 0x47524144))
-    }
+    generatedQuestions: generateDiscoverQuestions(questions, seed)
   });
   return state.questionOrder;
 }
