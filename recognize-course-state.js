@@ -30,7 +30,9 @@ export function applyRecognizeValidation(courseState, question, validation) {
   }
   questionState.attempts += 1;
   questionState.isCorrect = false;
-  questionState.feedback = question.wrongFeedback[questionState.selectedAnswer]
+  const secondFeedback = question.wrongFeedbackSecond?.[questionState.selectedAnswer];
+  questionState.feedback = (questionState.attempts >= 2 ? secondFeedback : null)
+    ?? question.wrongFeedback[questionState.selectedAnswer]
     ?? '再找找畫面中最主要的視覺特徵。';
   return false;
 }

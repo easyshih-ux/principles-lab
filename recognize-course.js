@@ -21,7 +21,7 @@ function compositionMarkup(question) {
         return `
           <i
             class="composition-element shape-${element.shape}"
-            style="--x:${element.x / 10}%;--y:${element.y / 6}%;--w:${dimensions.width / 10}%;--h:${dimensions.height / 6}%;--rotation:${element.rotation}deg;--geometry-color:${getDisplayColor(element.hue, element.lightness)}"
+            style="--x:${element.x / 10}%;--y:${element.y / 6}%;--w:${dimensions.width / 10}%;--h:${dimensions.height / 6}%;--rotation:${element.rotation}deg;--geometry-color:${element.displayColor ?? getDisplayColor(element.hue, element.lightness)}"
             aria-hidden="true"
           ><span class="geometry-shape"></span></i>`;
       }).join('')}

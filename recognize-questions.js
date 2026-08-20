@@ -45,19 +45,18 @@ export const recognizeQuestions = Object.freeze([
   },
   {
     id: 'recognize-balance', principleId: 'balance', title: '均衡',
-    prompt: '這張構圖最明顯的形式原理是什麼？', shortHint: '看視覺重量。',
+    prompt: '這張構圖最明顯的形式原理是什麼？', shortHint: '均衡：不同 → 穩定',
     elements: [
-      element('large-left', 'circle', 270, 300, 5, 'blue', 1),
-      element('right-square', 'square', 650, 175, 2, 'blue', 3),
-      element('right-triangle', 'triangle', 790, 250, 3, 'blue', 3),
-      element('right-semicircle', 'semicircle', 690, 405, 3, 'blue', 4),
-      element('right-circle', 'circle', 830, 445, 1, 'blue', 2)
+      element('large-left', 'circle', 280, 300, 5, 'blue', 2),
+      element('right-square-top', 'square', 750, 180, 2, 'blue', 2),
+      element('right-square-middle', 'square', 750, 300, 2, 'blue', 2),
+      element('right-square-bottom', 'square', 750, 420, 2, 'blue', 2)
     ],
     options: [option('balance', '均衡'), option('symmetry', '對稱'), option('proportion', '比例')],
     correctAnswer: 'balance',
     wrongFeedback: {
       symmetry: '左右真的一模一樣嗎？還是雖然不同，畫面仍然很穩定？',
-      proportion: '先別只看大小，整體的視覺重量有沒有明顯倒向某一側？'
+      proportion: '這張圖雖然有大小差異，但重點是固定的比例關係，還是整個畫面的穩定感？'
     },
     successFeedback: '左右不必相同，也能形成穩定的視覺重量。'
   },
@@ -93,16 +92,20 @@ export const recognizeQuestions = Object.freeze([
     id: 'recognize-harmony', principleId: 'harmony', title: '調和',
     prompt: '這張構圖最明顯的形式原理是什麼？', shortHint: '調和：相近 → 協調。',
     elements: [
-      element('h-circle', 'circle', 240, 210, 3, 'blue', 1),
-      element('h-triangle', 'triangle', 520, 390, 3, 'blue', 3),
-      element('h-square', 'square', 760, 180, 3, 'blue', 5),
-      element('h-semicircle', 'semicircle', 790, 440, 2, 'blue', 4)
+      { ...element('h-circle', 'circle', 230, 210, 3, 'blue', 3), displayColor: '#3E78B2' },
+      { ...element('h-triangle', 'triangle', 720, 180, 3, 'green', 3), displayColor: '#4F9D78' },
+      { ...element('h-square', 'square', 470, 420, 3, 'green', 3), displayColor: '#3E8F91' },
+      { ...element('h-semicircle', 'semicircle', 810, 430, 3, 'blue', 3), displayColor: '#3E78B2' }
     ],
     options: [option('harmony', '調和'), option('unity', '統一'), option('gradation', '漸層')],
     correctAnswer: 'harmony',
     wrongFeedback: {
-      unity: '它們不是完全使用同一個共同特徵，而是因為彼此相近，看起來很協調。',
-      gradation: '這些深淺有固定順序地一步一步變化嗎？還是只是彼此相近？'
+      unity: '再看看這些顏色，它們是完全相同，還是彼此相近？',
+      gradation: '這些顏色有按照固定順序一步一步改變嗎？'
+    },
+    wrongFeedbackSecond: {
+      unity: '統一重視「共同要素」，這張圖更重要的是不同顏色之間的相近與協調。',
+      gradation: '漸層需要明顯的「逐步變化」，再看看這些相近色是不是刻意沒有排成順序。'
     },
     successFeedback: '不同元素因為色彩彼此相近，產生協調感。'
   },

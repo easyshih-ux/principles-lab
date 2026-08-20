@@ -15,7 +15,6 @@ import { resolveRoute } from '../router.js';
 import { assertGeometryElement } from '../geometry/model.js';
 import {
   validateBalance,
-  validateHarmony,
   validateRhythm,
   validateUnity
 } from '../experiment-validators.js';
@@ -107,6 +106,17 @@ test('students can replace a wrong answer and answer correctly', () => {
   assert.equal(course.questions[question.id].isCorrect, true);
 });
 
+test('a question may give more explicit feedback after a second wrong attempt', () => {
+  const course = createRecognizeCourseState(recognizeQuestions);
+  resetRecognizeCourse(course, recognizeQuestions);
+  const question = recognizeQuestions.find(({ principleId }) => principleId === 'harmony');
+  selectRecognizeAnswer(course, question.id, 'unity');
+  applyRecognizeValidation(course, question, { isValid: false });
+  assert.equal(course.questions[question.id].feedback, question.wrongFeedback.unity);
+  applyRecognizeValidation(course, question, { isValid: false });
+  assert.equal(course.questions[question.id].feedback, question.wrongFeedbackSecond.unity);
+});
+
 test('only a correct validation makes the next question available', () => {
   const course = createRecognizeCourseState(recognizeQuestions);
   resetRecognizeCourse(course, recognizeQuestions);
@@ -141,15 +151,36 @@ test('recognize routes are data-driven and unfinished second-level route falls b
   assert.equal(resolveRoute('#level/discover/start', stages, principles, recognizeQuestions).name, 'home');
 });
 
-test('the most ambiguous compositions satisfy their development metrics', () => {
+test('balance, rhythm and unity compositions satisfy their development metrics', () => {
   const byPrinciple = Object.fromEntries(recognizeQuestions.map((question) => [question.principleId, question]));
   const balance = validateBalance({ elements: byPrinciple.balance.elements, spec: { symmetryAxis: 500, balanceTolerance: 0.25 } });
   const rhythm = validateRhythm({ elements: byPrinciple.rhythm.elements, spec: { minimumElements: 5, minimumTurns: 2, minimumYRange: 100 } });
-  const harmony = validateHarmony({ elements: byPrinciple.harmony.elements, spec: { minimumShapes: 3, minimumLightnessLevels: 3 } });
   const unity = validateUnity({ elements: byPrinciple.unity.elements, spec: { unityMode: 'color', targetHue: 'yellow', minimumShapes: 3, requiredUnityRatio: 1 } });
   assert.equal(balance.passed, true);
   assert.equal(balance.metrics.isMirror, false);
   assert.equal(rhythm.passed, true);
-  assert.equal(harmony.passed, true);
   assert.equal(unity.passed, true);
+});
+
+test('balance composition is one large circle against three identical squares in one color', () => {
+  const question = recognizeQuestions.find(({ principleId }) => principleId === 'balance');
+  const [circle, ...squares] = question.elements;
+  assert.equal(circle.shape, 'circle');
+  assert.equal(circle.size, 5);
+  assert.equal(circle.x < 500, true);
+  assert.equal(squares.length, 3);
+  assert.equal(squares.every(({ shape, size, hue, lightness, x }) => (
+    shape === 'square' && size === 2 && hue === circle.hue && lightness === circle.lightness && x > 500
+  )), true);
+  assert.deepEqual(squares.map(({ y }) => y), [180, 300, 420]);
+});
+
+test('harmony composition uses unordered adjacent colors without a size or lightness ramp', () => {
+  const question = recognizeQuestions.find(({ principleId }) => principleId === 'harmony');
+  assert.equal(new Set(question.elements.map(({ shape }) => shape)).size, 4);
+  assert.equal(new Set(question.elements.map(({ size }) => size)).size, 1);
+  assert.equal(new Set(question.elements.map(({ lightness }) => lightness)).size, 1);
+  assert.deepEqual(new Set(question.elements.map(({ displayColor }) => displayColor)), new Set(['#3E78B2', '#3E8F91', '#4F9D78']));
+  const leftToRight = [...question.elements].sort((a, b) => a.x - b.x).map(({ displayColor }) => displayColor);
+  assert.deepEqual(leftToRight, ['#3E78B2', '#3E8F91', '#4F9D78', '#3E78B2']);
 });
