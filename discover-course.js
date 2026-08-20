@@ -6,8 +6,10 @@ import { validateDiscoverQuestion } from './discover-validators.js';
 
 function shapeMarkup(item, selectable = false, selected = false) {
   const dimensions = getShapeDimensions(item);
-  const width = item.displaySize ?? dimensions.width;
   const height = item.displaySize ?? dimensions.height;
+  const width = item.displaySize == null
+    ? dimensions.width
+    : item.displaySize * (item.shape === 'rectangle' ? 1.5 : 1);
   const tag = selectable ? 'button' : 'i';
   return `<${tag} ${selectable ? `type="button" data-selection-id="${item.id}"` : ''} class="discover-element composition-element shape-${item.shape} ${selected ? 'selected' : ''}" style="--x:${item.x/10}%;--y:${item.y/6}%;--w:${width/10}%;--h:${height/6}%;--rotation:${item.rotation}deg;--geometry-color:${item.displayColor ?? getDisplayColor(item.hue,item.lightness)};--layer:${item.layer}" ${selectable ? `aria-pressed="${selected}" aria-label="選擇幾何元素"` : 'aria-hidden="true"'}><span class="geometry-shape"></span></${tag}>`;
 }

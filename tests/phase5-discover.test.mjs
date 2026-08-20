@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { discoverQuestions, discoverInteractionTypes, overlapPolicies } from '../discover-questions.js';
-import { createDiscoverOrder, EASY_START_IDS, isValidDiscoverOrder } from '../discover-randomizer.js';
+import { discoverQuestions, discoverInteractionTypes, generateGradationSizeQuestion, overlapPolicies } from '../discover-questions.js';
+import { createDiscoverOrder, createSeededRandom, EASY_START_IDS, isValidDiscoverOrder } from '../discover-randomizer.js';
 import { validateDiscoverQuestion } from '../discover-validators.js';
 import { advanceDiscoverCourse, applyDiscoverResult, createDiscoverCourseState, currentDiscoverQuestion, setDiscoverSelection, startDiscoverCourse } from '../discover-course-state.js';
 import { assertGeometryElement } from '../geometry/model.js';
@@ -108,6 +108,47 @@ test('restarting creates a new legal order while rerender reads the saved order'
   startDiscoverCourse(state, discoverQuestions, 42);
   assert.notDeepEqual(state.questionOrder, first);
   assert.equal(isValidDiscoverOrder(state.questionOrder, discoverQuestions), true);
+});
+
+test('generated size gradation has one recorded answer across varied directions and positions', () => {
+  const directions = new Set();
+  const answerIndexes = new Set();
+  for (let seed = 1; seed <= 100; seed += 1) {
+    const question = generateGradationSizeQuestion(createSeededRandom(seed));
+    directions.add(question.gradationDirection);
+    answerIndexes.add(question.correctIndex);
+    assert.equal(question.correctIndex >= 1 && question.correctIndex <= 3, true);
+    assert.equal(question.correctAnswer, question.elements[question.correctIndex].id);
+    assert.equal(question.actualSizes[question.correctIndex] > Math.max(...question.expectedSizes), true);
+    assert.equal(new Set(question.elements.map(({ shape }) => shape)).size, 1);
+    assert.equal(new Set(question.elements.map(({ hue }) => hue)).size, 1);
+    assert.deepEqual(question.elements.slice(1).map((item, index) => item.x - question.elements[index].x), [190, 190, 190, 190]);
+    assert.equal(question.elements.slice(1).every((item, index) => {
+      const previous = question.elements[index];
+      return item.x - item.displaySize * 0.75 > previous.x + previous.displaySize * 0.75;
+    }), true);
+    assert.equal(new Set(question.elements.map((item) => item.y + Math.max(item.displaySize, 64) / 2)).size, 1);
+
+    const monotonicAfterRemoval = question.actualSizes.map((_, removedIndex) => {
+      const remaining = question.actualSizes.filter((__, index) => index !== removedIndex);
+      const differences = remaining.slice(1).map((value, index) => value - remaining[index]);
+      return differences.every((difference) => difference > 0) || differences.every((difference) => difference < 0);
+    });
+    assert.deepEqual(monotonicAfterRemoval.map((valid, index) => valid ? index : -1).filter((index) => index >= 0), [question.correctIndex]);
+  }
+  assert.deepEqual(directions, new Set(['ascending', 'descending']));
+  assert.deepEqual(answerIndexes, new Set([1, 2, 3]));
+});
+
+test('generated size gradation is saved for rerenders and regenerated on restart', () => {
+  const state = createDiscoverCourseState(discoverQuestions);
+  startDiscoverCourse(state, discoverQuestions, 7);
+  const first = state.generatedQuestions['discover-gradation-size'];
+  state.currentIndex = state.questionOrder.indexOf('discover-gradation-size');
+  assert.equal(currentDiscoverQuestion(state, discoverQuestions), first);
+  assert.equal(currentDiscoverQuestion(state, discoverQuestions), first);
+  startDiscoverCourse(state, discoverQuestions, 42);
+  assert.notDeepEqual(state.generatedQuestions['discover-gradation-size'].actualSizes, first.actualSizes);
 });
 
 test('each formal question has an explicit pass and fail fixture', () => {

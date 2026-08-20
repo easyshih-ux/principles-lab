@@ -154,3 +154,51 @@ export const discoverQuestions = Object.freeze(questionList);
 export const discoverInteractionTypes = Object.freeze(['element-select','gap-select','composition-choice','multi-select-composition','pairing']);
 export const overlapPolicies = Object.freeze(['avoid','allowed','required']);
 export function getDiscoverQuestion(id) { return discoverQuestions.find((question) => question.id === id); }
+
+function isStrictlyMonotonic(values) {
+  const differences = values.slice(1).map((value, index) => value - values[index]);
+  return differences.every((difference) => difference > 0)
+    || differences.every((difference) => difference < 0);
+}
+
+export function generateGradationSizeQuestion(random = Math.random) {
+  const template = getDiscoverQuestion('discover-gradation-size');
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const minimum = 64 + Math.floor(random() * 5);
+    const step = 10 + Math.floor(random() * 3);
+    const direction = random() < 0.5 ? 'ascending' : 'descending';
+    const correctIndex = 1 + Math.floor(random() * 3);
+    const ascending = Array.from({ length: 5 }, (_, index) => minimum + index * step);
+    const expectedSizes = direction === 'ascending' ? ascending : ascending.slice().reverse();
+    const actualSizes = expectedSizes.slice();
+
+    actualSizes[correctIndex] = Math.max(...expectedSizes) + step;
+
+    const possibleAnswers = actualSizes
+      .map((_, index) => actualSizes.filter((__, candidateIndex) => candidateIndex !== index))
+      .map(isStrictlyMonotonic);
+    if (possibleAnswers.filter(Boolean).length !== 1 || !possibleAnswers[correctIndex]) continue;
+
+    const baseline = 420;
+    const elements = actualSizes.map((displaySize, index) => element(
+      index === correctIndex ? 'gs-wrong' : `gs-${index + 1}`,
+      'rectangle',
+      120 + index * 190,
+      baseline - Math.max(displaySize, 64) / 2,
+      3,
+      'blue',
+      { displaySize }
+    ));
+    return {
+      ...template,
+      elements,
+      selectableElementIds: elements.map(({ id }) => id),
+      correctAnswer: elements[correctIndex].id,
+      correctIndex,
+      gradationDirection: direction,
+      expectedSizes,
+      actualSizes
+    };
+  }
+  throw new Error('Unable to generate an unambiguous size gradation question.');
+}
