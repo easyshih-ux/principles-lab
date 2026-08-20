@@ -45,10 +45,19 @@ function setPositions(questionId, positions) {
   ));
 }
 
+function getQuestion(questionId) {
+  return questionList.find(({ id }) => id === questionId);
+}
+
 // Fixture calibration: preserve the intended single variable and make required overlap explicit.
 setPositions('discover-gradation-size', {
-  'gs-1': { x: 260, y: 330 }, 'gs-2': { x: 434, y: 346 }, 'gs-wrong': { x: 592, y: 346 },
-  'gs-4': { x: 724, y: 372 }, 'gs-5': { x: 820, y: 382 }
+  'gs-1': { x: 260, y: 330, size: 5 }, 'gs-2': { x: 434, y: 346, size: 4 }, 'gs-wrong': { x: 566, y: 372, size: 2 },
+  'gs-4': { x: 684, y: 360, size: 3 }, 'gs-5': { x: 792, y: 382, size: 1 }
+});
+getQuestion('discover-gradation-size').correctAnswer = 'gs-4';
+setPositions('discover-gradation-lightness', {
+  'gl-1': { lightness: 1 }, 'gl-2': { lightness: 2 }, 'gl-wrong': { lightness: 5 },
+  'gl-4': { lightness: 4 }, 'gl-5': { lightness: 5 }
 });
 setPositions('discover-gradation-gap', {
   'gg-1': { x: 180 }, 'gg-2': { x: 256 }, 'gg-3': { x: 352 },
@@ -70,6 +79,46 @@ setPositions('discover-harmony-unity', {
   'hu-a1': { x: 330, y: 230 }, 'hu-a2': { x: 385, y: 270 }, 'hu-a3': { x: 520, y: 210 }, 'hu-a4': { x: 575, y: 260 },
   'hu-b1': { x: 330, y: 230 }, 'hu-b2': { x: 385, y: 270 }, 'hu-b3': { x: 520, y: 210 }, 'hu-b4': { x: 575, y: 260 }
 });
+
+setPositions('discover-repetition-group', {
+  'rg-c-0': { x: 160 }, 'rg-s-0': { x: 205 }, 'rg-c-1': { x: 360 }, 'rg-s-1': { x: 405 },
+  'rg-c-2': { x: 560 }, 'rg-wrong': { x: 605 }, 'rg-c-3': { x: 760 }, 'rg-s-3': { x: 805 }
+});
+
+setPositions('discover-proportion', {
+  'p-a0': { displaySize: 50, y: 395 }, 'p-a1': { displaySize: 100, y: 370 }, 'p-a2': { displaySize: 150, y: 345 },
+  'p-b0': { displaySize: 50, y: 395 }, 'p-b1': { displaySize: 75, y: 382.5 }, 'p-b2': { displaySize: 150, y: 345 },
+  'p-c0': { displaySize: 50, y: 395 }, 'p-c1': { displaySize: 125, y: 357.5 }, 'p-c2': { displaySize: 150, y: 345 }
+});
+
+setPositions('discover-balance', {
+  'ba-a1': { x: 280, y: 310 }, 'ba-a2': { x: 720, y: 310 },
+  'ba-b1': { x: 280, y: 310 }, 'ba-b2': { x: 735, y: 190 }, 'ba-b3': { x: 735, y: 310 }, 'ba-b4': { x: 735, y: 430 },
+  'ba-c1': { x: 280, y: 310 }, 'ba-c2': { x: 455, y: 190 }, 'ba-c3': { x: 455, y: 310 }, 'ba-c4': { x: 455, y: 430 }
+});
+
+const simplicity = getQuestion('discover-simplicity');
+simplicity.beforeState = [
+  element('si-core', 'circle', 500, 300, 5, 'red', { layer: 3 }),
+  element('si-d1', 'triangle', 310, 190, 2, 'blue'),
+  element('si-d2', 'circle', 690, 190, 1, 'yellow'),
+  element('si-d3', 'rectangle', 300, 390, 2, 'green'),
+  element('si-d4', 'square', 700, 390, 2, 'blue'),
+  element('si-d5', 'triangle', 590, 150, 1, 'yellow')
+];
+simplicity.comparisonPanels = [
+  option('a', 'A', [
+    element('si-a-core', 'circle', 500, 300, 5, 'red', { layer: 3 }),
+    element('si-a1', 'triangle', 320, 190, 2, 'blue'),
+    element('si-a2', 'rectangle', 300, 390, 2, 'green'),
+    element('si-a3', 'square', 700, 390, 2, 'blue')
+  ]),
+  option('b', 'B', [element('si-b-core', 'circle', 500, 300, 5, 'red', { layer: 3 })]),
+  option('c', 'C', [
+    element('si-c1', 'triangle', 420, 280, 2, 'blue'),
+    element('si-c2', 'square', 580, 330, 2, 'yellow')
+  ])
+];
 
 export const discoverQuestions = Object.freeze(questionList);
 

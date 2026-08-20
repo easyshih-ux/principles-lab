@@ -33,12 +33,40 @@ test('gradation fixtures isolate size and gap changes', () => {
   });
   assert.deepEqual(boxes.slice(1).map((box, index) => box.left - boxes[index].right), [50, 50, 50, 50]);
   assert.equal(new Set(boxes.map(({ bottom }) => bottom)).size, 1);
+  assert.deepEqual(sizeQuestion.elements.map(({ size }) => size), [5, 4, 2, 3, 1]);
+  assert.equal(sizeQuestion.correctAnswer, 'gs-4');
   const gapQuestion = byId['discover-gradation-gap'];
   const edgeGaps = gapQuestion.elements.slice(1).map((element, index) => {
     const previous = gapQuestion.elements[index];
     return (element.x - 18) - (previous.x + 18);
   });
   assert.deepEqual(edgeGaps, [40, 60, 40, 100, 120]);
+});
+
+test('calibrated comparison fixtures keep their intended visual variables', () => {
+  const lightness = byId['discover-gradation-lightness'];
+  assert.deepEqual(lightness.elements.map((element) => element.lightness), [1, 2, 5, 4, 5]);
+
+  const proportion = byId['discover-proportion'];
+  assert.deepEqual(proportion.comparisonPanels.map((panel) => panel.elements.map((element) => element.displaySize)), [
+    [50, 100, 150], [50, 75, 150], [50, 125, 150]
+  ]);
+
+  const balance = byId['discover-balance'];
+  const panelB = balance.comparisonPanels[1].elements;
+  const panelC = balance.comparisonPanels[2].elements;
+  assert.deepEqual(panelB.map(({ shape, size }) => [shape, size]), panelC.map(({ shape, size }) => [shape, size]));
+  assert.notDeepEqual(panelB.map(({ x }) => x), panelC.map(({ x }) => x));
+
+  const simplicity = byId['discover-simplicity'];
+  assert.equal(simplicity.beforeState.some(({ id }) => id === 'si-core'), true);
+  assert.equal(simplicity.comparisonPanels[1].elements.some(({ id }) => id === 'si-b-core'), true);
+  assert.equal(simplicity.comparisonPanels[2].elements.some(({ hue }) => hue === 'red'), false);
+  assert.equal([simplicity.beforeState, ...simplicity.comparisonPanels.map(({ elements }) => elements)].flat().some(({ shape }) => shape === 'line'), false);
+
+  const groups = byId['discover-repetition-group'].elements;
+  const groupCenters = [0, 1, 2, 3].map((index) => [groups[index * 2].x, groups[index * 2 + 1].x]);
+  assert.deepEqual(groupCenters, [[160, 205], [360, 405], [560, 605], [760, 805]]);
 });
 
 test('required-overlap fixtures contain a deliberate local overlap', () => {
