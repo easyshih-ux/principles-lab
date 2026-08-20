@@ -64,25 +64,25 @@ setPositions('discover-gradation-gap', {
   'gg-4': { x: 428 }, 'gg-5': { x: 564 }, 'gg-6': { x: 720 }
 });
 setPositions('discover-rhythm-multiple', {
-  'rm-c1': { x: 250, y: 390, rotation: 315 }, 'rm-c2': { x: 315, y: 315, rotation: 45 }, 'rm-c3': { x: 380, y: 235, rotation: 315 },
-  'rm-c4': { x: 455, y: 185, rotation: 90 }, 'rm-c5': { x: 525, y: 250, rotation: 45 }, 'rm-c6': { x: 595, y: 355, rotation: 135 }
+  'rm-c1': { x: 180, y: 390, rotation: 315 }, 'rm-c2': { x: 300, y: 300, rotation: 45 }, 'rm-c3': { x: 420, y: 210, rotation: 315 },
+  'rm-c4': { x: 550, y: 175, rotation: 90 }, 'rm-c5': { x: 690, y: 250, rotation: 45 }, 'rm-c6': { x: 790, y: 370, rotation: 135 }
 });
 setPositions('discover-harmony', {
-  'ha-1': { x: 300, y: 230 }, 'ha-2': { x: 355, y: 260 }, 'ha-3': { x: 500, y: 190 },
-  'ha-4': { x: 545, y: 230 }, 'ha-wrong': { x: 700, y: 180 }, 'ha-6': { x: 735, y: 330 }, 'ha-7': { x: 500, y: 370 }
+  'ha-1': { x: 230, y: 180 }, 'ha-2': { x: 390, y: 290 }, 'ha-3': { x: 540, y: 160 },
+  'ha-4': { x: 690, y: 290 }, 'ha-wrong': { x: 830, y: 160 }, 'ha-6': { x: 790, y: 430 }, 'ha-7': { x: 500, y: 430 }
 });
 setPositions('discover-unity', {
-  'un-1': { x: 300, y: 230 }, 'un-2': { x: 355, y: 260 }, 'un-3': { x: 500, y: 190 },
-  'un-4': { x: 545, y: 230 }, 'un-wrong': { x: 700, y: 180 }, 'un-6': { x: 735, y: 330 }, 'un-7': { x: 500, y: 370 }
+  'un-1': { x: 230, y: 180 }, 'un-2': { x: 390, y: 290 }, 'un-3': { x: 540, y: 160 },
+  'un-4': { x: 690, y: 290 }, 'un-wrong': { x: 830, y: 160 }, 'un-6': { x: 790, y: 430 }, 'un-7': { x: 500, y: 430 }
 });
 setPositions('discover-harmony-unity', {
-  'hu-a1': { x: 330, y: 230 }, 'hu-a2': { x: 385, y: 270 }, 'hu-a3': { x: 520, y: 210 }, 'hu-a4': { x: 575, y: 260 },
-  'hu-b1': { x: 330, y: 230 }, 'hu-b2': { x: 385, y: 270 }, 'hu-b3': { x: 520, y: 210 }, 'hu-b4': { x: 575, y: 260 }
+  'hu-a1': { x: 250, y: 180 }, 'hu-a2': { x: 420, y: 320 }, 'hu-a3': { x: 590, y: 170 }, 'hu-a4': { x: 760, y: 330 },
+  'hu-b1': { x: 250, y: 180 }, 'hu-b2': { x: 420, y: 320 }, 'hu-b3': { x: 590, y: 170 }, 'hu-b4': { x: 760, y: 330 }
 });
 
 setPositions('discover-repetition-group', {
-  'rg-c-0': { x: 160 }, 'rg-s-0': { x: 205 }, 'rg-c-1': { x: 360 }, 'rg-s-1': { x: 405 },
-  'rg-c-2': { x: 560 }, 'rg-wrong': { x: 605 }, 'rg-c-3': { x: 760 }, 'rg-s-3': { x: 805 }
+  'rg-c-0': { x: 130 }, 'rg-s-0': { x: 205 }, 'rg-c-1': { x: 360 }, 'rg-s-1': { x: 435 },
+  'rg-c-2': { x: 590 }, 'rg-wrong': { x: 665 }, 'rg-c-3': { x: 820 }, 'rg-s-3': { x: 895 }
 });
 
 setPositions('discover-proportion', {
@@ -98,27 +98,53 @@ setPositions('discover-balance', {
 });
 
 const simplicity = getQuestion('discover-simplicity');
+const flower = (prefix) => [
+  element(`${prefix}-center`, 'circle', 500, 230, 2, 'yellow', { layer: 3 }),
+  element(`${prefix}-left`, 'circle', 420, 230, 2, 'red'),
+  element(`${prefix}-right`, 'circle', 580, 230, 2, 'red'),
+  element(`${prefix}-top`, 'circle', 500, 140, 2, 'red'),
+  element(`${prefix}-bottom`, 'circle', 500, 320, 2, 'red'),
+  element(`${prefix}-stem`, 'rectangle', 500, 420, 2, 'green', { rotation: 90 })
+];
+simplicity.prompt = '哪一個版本變得更簡潔，同時仍保留原本主要的造形？';
 simplicity.beforeState = [
-  element('si-core', 'circle', 500, 300, 5, 'red', { layer: 3 }),
-  element('si-d1', 'triangle', 310, 190, 2, 'blue'),
-  element('si-d2', 'circle', 690, 190, 1, 'yellow'),
-  element('si-d3', 'rectangle', 300, 390, 2, 'green'),
-  element('si-d4', 'square', 700, 390, 2, 'blue'),
-  element('si-d5', 'triangle', 590, 150, 1, 'yellow')
+  ...flower('si-before'),
+  element('si-d1', 'circle', 260, 150, 1, 'blue'), element('si-d2', 'square', 720, 150, 1, 'yellow'),
+  element('si-d3', 'triangle', 280, 390, 1, 'blue'), element('si-d4', 'rectangle', 720, 390, 1, 'red'),
+  element('si-d5', 'line', 340, 110, 2, 'green', { rotation: 45 }), element('si-d6', 'line', 680, 110, 2, 'blue', { rotation: 315 })
 ];
 simplicity.comparisonPanels = [
-  option('a', 'A', [
-    element('si-a-core', 'circle', 500, 300, 5, 'red', { layer: 3 }),
-    element('si-a1', 'triangle', 320, 190, 2, 'blue'),
-    element('si-a2', 'rectangle', 300, 390, 2, 'green'),
-    element('si-a3', 'square', 700, 390, 2, 'blue')
-  ]),
-  option('b', 'B', [element('si-b-core', 'circle', 500, 300, 5, 'red', { layer: 3 })]),
-  option('c', 'C', [
-    element('si-c1', 'triangle', 420, 280, 2, 'blue'),
-    element('si-c2', 'square', 580, 330, 2, 'yellow')
-  ])
+  option('a', 'A', [...flower('si-a'), element('si-a1', 'circle', 280, 160, 1, 'blue'), element('si-a2', 'square', 720, 380, 1, 'yellow'), element('si-a3', 'triangle', 300, 400, 1, 'green')]),
+  option('b', 'B', flower('si-b')),
+  option('c', 'C', [element('si-c-center', 'circle', 500, 230, 2, 'yellow')])
 ];
+simplicity.feedbackByCode.a = '雖然少了一些元素，但畫面是不是還有不少不必要的裝飾？';
+simplicity.feedbackByCode.c = '東西最少不一定就是單純。原本主要的花朵還看得出來嗎？';
+simplicity.hints = ['比較哪些裝飾仍然不必要，以及主要花朵是否保留。', '留下必要的，去掉多餘的。'];
+simplicity.successFeedback = '沒錯！單純不是全部刪掉，而是讓畫面簡潔、明確，同時保留主要內容。';
+simplicity.successNote = '單純＝簡潔 → 明確';
+
+const spacing = getQuestion('discover-gradation-gap');
+const spacingRow = (prefix, xs) => xs.map((x, index) => element(`${prefix}-${index + 1}`, 'circle', x, 310, 1, 'blue'));
+spacing.interactionType = 'composition-choice';
+spacing.prompt = '哪一組圖形的「間距」有逐步變化？';
+spacing.elements = [];
+spacing.gaps = [];
+spacing.selectableGapIds = [];
+spacing.comparisonPanels = [
+  option('a', 'A', spacingRow('gap-a', [180, 276, 372, 468, 564, 660])),
+  option('b', 'B', spacingRow('gap-b', [180, 246, 332, 438, 564, 710])),
+  option('c', 'C', spacingRow('gap-c', [180, 246, 352, 438, 584, 690]))
+];
+spacing.options = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }, { id: 'c', label: 'C' }];
+spacing.correctAnswer = 'b';
+spacing.hints = ['圖形本身都一樣，這次比較它們中間的空白。', '哪一組的空白距離會一步一步增加或減少？'];
+spacing.successFeedback = '沒錯！圖形之間的間距，也可以形成逐步變化。';
+spacing.successNote = '漸層＝逐步變化';
+
+questionList.filter(({ overlapPolicy }) => overlapPolicy === 'required').forEach((question) => {
+  question.overlapPolicy = 'avoid';
+});
 
 export const discoverQuestions = Object.freeze(questionList);
 

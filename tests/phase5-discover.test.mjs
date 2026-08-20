@@ -36,11 +36,12 @@ test('gradation fixtures isolate size and gap changes', () => {
   assert.deepEqual(sizeQuestion.elements.map(({ size }) => size), [5, 4, 2, 3, 1]);
   assert.equal(sizeQuestion.correctAnswer, 'gs-4');
   const gapQuestion = byId['discover-gradation-gap'];
-  const edgeGaps = gapQuestion.elements.slice(1).map((element, index) => {
-    const previous = gapQuestion.elements[index];
-    return (element.x - 18) - (previous.x + 18);
-  });
-  assert.deepEqual(edgeGaps, [40, 60, 40, 100, 120]);
+  assert.equal(gapQuestion.interactionType, 'composition-choice');
+  const panelGaps = gapQuestion.comparisonPanels.map((panel) => panel.elements.slice(1).map((element, index) => (
+    (element.x - 18) - (panel.elements[index].x + 18)
+  )));
+  assert.deepEqual(panelGaps, [[60, 60, 60, 60, 60], [30, 50, 70, 90, 110], [30, 70, 50, 110, 70]]);
+  assert.equal(gapQuestion.correctAnswer, 'b');
 });
 
 test('calibrated comparison fixtures keep their intended visual variables', () => {
@@ -59,30 +60,24 @@ test('calibrated comparison fixtures keep their intended visual variables', () =
   assert.notDeepEqual(panelB.map(({ x }) => x), panelC.map(({ x }) => x));
 
   const simplicity = byId['discover-simplicity'];
-  assert.equal(simplicity.beforeState.some(({ id }) => id === 'si-core'), true);
-  assert.equal(simplicity.comparisonPanels[1].elements.some(({ id }) => id === 'si-b-core'), true);
-  assert.equal(simplicity.comparisonPanels[2].elements.some(({ hue }) => hue === 'red'), false);
-  assert.equal([simplicity.beforeState, ...simplicity.comparisonPanels.map(({ elements }) => elements)].flat().some(({ shape }) => shape === 'line'), false);
+  assert.equal(simplicity.beforeState.some(({ id }) => id === 'si-before-center'), true);
+  assert.equal(simplicity.comparisonPanels[1].elements.length, 6);
+  assert.equal(simplicity.comparisonPanels[1].elements.some(({ id }) => id === 'si-b-stem'), true);
+  assert.equal(simplicity.comparisonPanels[2].elements.length, 1);
+  assert.equal(simplicity.comparisonPanels[2].elements.some(({ id }) => id === 'si-c-center'), true);
 
   const groups = byId['discover-repetition-group'].elements;
   const groupCenters = [0, 1, 2, 3].map((index) => [groups[index * 2].x, groups[index * 2 + 1].x]);
-  assert.deepEqual(groupCenters, [[160, 205], [360, 405], [560, 605], [760, 805]]);
+  assert.deepEqual(groupCenters, [[130, 205], [360, 435], [590, 665], [820, 895]]);
 });
 
-test('required-overlap fixtures contain a deliberate local overlap', () => {
-  const overlaps = (elements) => elements.some((left, index) => elements.slice(index + 1).some((right) => {
-    const a = getShapeDimensions(left); const b = getShapeDimensions(right);
-    return Math.abs(left.x - right.x) < (a.width + b.width) / 2 && Math.abs(left.y - right.y) < (a.height + b.height) / 2;
-  }));
-  discoverQuestions.filter(({ overlapPolicy }) => overlapPolicy === 'required').forEach((question) => {
-    const panels = question.comparisonPanels?.map((panel) => panel.elements) ?? [question.elements];
-    assert.equal(panels.some(overlaps), true, question.id);
-  });
+test('Phase 5 no longer forces overlap', () => {
+  assert.equal(discoverQuestions.some(({ overlapPolicy }) => overlapPolicy === 'required'), false);
 });
 
 test('formal principles and interaction types follow the confirmed specification', () => {
   assert.deepEqual(discoverQuestions.map(({ principleId }) => principleId), ['repetition','repetition','gradation','gradation','gradation','symmetry','symmetry','rhythm','rhythm','proportion','contrast','balance','harmony','unity','synthesis','simplicity']);
-  assert.deepEqual(discoverQuestions.map(({ interactionType }) => interactionType), ['element-select','element-select','element-select','element-select','gap-select','element-select','element-select','composition-choice','multi-select-composition','composition-choice','composition-choice','composition-choice','element-select','element-select','pairing','composition-choice']);
+  assert.deepEqual(discoverQuestions.map(({ interactionType }) => interactionType), ['element-select','element-select','element-select','element-select','composition-choice','element-select','element-select','composition-choice','multi-select-composition','composition-choice','composition-choice','composition-choice','element-select','element-select','pairing','composition-choice']);
 });
 
 for (const seed of [7, 42, 2026, 5501, 99173]) {
