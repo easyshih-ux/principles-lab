@@ -106,7 +106,7 @@ export function createRenderers({ app, state, navigate }) {
           </div>
           <div class="wall-course-entry">
             <p>從辨認到分析，找出形式原理的視覺線索。</p>
-            <div class="wall-course-actions"><button type="button" class="primary-button compact" id="start-recognize-course">開始第一關</button><button type="button" class="secondary-button compact" id="start-discover-course">開始第二關</button></div>
+            <div class="wall-course-actions"><button type="button" class="primary-button compact" id="start-recognize-course">開始第一關</button><button type="button" class="secondary-button compact" id="start-discover-course">開始第二關</button><button type="button" class="secondary-button compact" id="start-experiment-course">開始第三關</button></div>
           </div>
         </header>
         <div class="sample-wall">
@@ -131,6 +131,7 @@ export function createRenderers({ app, state, navigate }) {
     document.querySelector('#home-back').addEventListener('click', () => navigate('#home'));
     document.querySelector('#start-recognize-course').addEventListener('click', () => navigate('#level/recognize/start'));
     document.querySelector('#start-discover-course').addEventListener('click', () => navigate('#level/discover/start'));
+    document.querySelector('#start-experiment-course').addEventListener('click', () => navigate('#level/experiment/start'));
     document.querySelectorAll('[data-principle-id]').forEach((element) => {
       element.addEventListener('click', () => {
         const principleId = element.dataset.principleId;

@@ -12,6 +12,10 @@ export function completeHash(principleId) {
   return `#complete/${principleId}`;
 }
 
+export function experimentHash(principleId) {
+  return `#level/experiment/${principleId}`;
+}
+
 export function recognizeQuestionHash(questionId) {
   return `#level/recognize/${questionId}`;
 }
@@ -33,6 +37,18 @@ export function resolveRoute(hash, stages, principles, recognizeQuestions = []) 
 
   if (normalizedHash === '#dev/validators') {
     return { name: 'validatorLab', hash: '#dev/validators' };
+  }
+
+  if (normalizedHash === '#dev/experiments') return { name: 'experimentDev', hash: normalizedHash };
+  if (normalizedHash === '#level/experiment/start') return { name: 'experimentStart', hash: normalizedHash };
+  if (normalizedHash === '#level/experiment/complete') return { name: 'experimentComplete', hash: normalizedHash };
+
+  const experimentMatch = normalizedHash.match(/^#level\/experiment\/([^/]+)$/);
+  if (experimentMatch) {
+    const allowed = ['repetition', 'gradation', 'balance', 'rhythm'];
+    return allowed.includes(experimentMatch[1])
+      ? { name: 'experiment', hash: normalizedHash, principleId: experimentMatch[1] }
+      : fallbackRoute(normalizedHash);
   }
 
   if (normalizedHash === '#dev/phase5') return { name: 'discoverDev', hash: normalizedHash };

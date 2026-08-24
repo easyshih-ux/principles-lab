@@ -1,0 +1,78 @@
+const element = (id, values = {}) => ({
+  id, shape: 'circle', x: 100, y: 300, size: 3, hue: 'blue',
+  lightness: 3, rotation: 0, proportion: 1, ...values
+});
+
+const row = (prefix, values, field, positions = null) => values.map((value, index) => element(`${prefix}-${index}`, {
+  x: positions?.[index] ?? 150 + index * 170,
+  [field]: value
+}));
+
+export const phase6cFixtures = Object.freeze({
+  repetition: {
+    pass: {
+      single: [element('rs-1', { x: 150 }), element('rs-2', { x: 430, y: 220 }), element('rs-3', { x: 790, y: 370 })],
+      group: [0, 1, 2].flatMap((index) => [
+        element(`rg-c-${index}`, { x: 170 + index * 300, y: 300 }),
+        element(`rg-t-${index}`, { shape: 'triangle', x: 225 + index * 300, y: 300, hue: 'red', size: 2 })
+      ])
+    },
+    fail: {
+      two: [element('r2-1', { x: 240 }), element('r2-2', { x: 650 })],
+      inconsistent: ['circle', 'square', 'triangle', 'rectangle', 'semicircle'].map((shape, index) => element(`ri-${index}`, { shape, x: 130 + index * 180, hue: index % 2 ? 'red' : 'blue', size: (index % 5) + 1 }))
+    }
+  },
+  gradation: {
+    pass: {
+      size: row('gs', [1, 2, 3, 4, 5], 'size'),
+      descending: row('gd', [5, 4, 3, 2, 1], 'size'),
+      nonEqual: row('gn', [1, 2, 4, 5], 'size'),
+      lightness: row('gl', [1, 2, 3, 4, 5], 'lightness'),
+      spacing: row('gp', [3, 3, 3, 3, 3], 'size', [100, 210, 350, 520, 720]),
+      multiple: row('gm', [1, 2, 3, 4, 5], 'size', [100, 210, 350, 520, 720])
+    },
+    fail: {
+      directionBreak: row('gb', [1, 3, 2, 5], 'size'),
+      tooFew: row('gf', [1, 3, 5], 'size')
+    }
+  },
+  balance: {
+    pass: {
+      symmetrical: [element('bs-l', { x: 300 }), element('bs-r', { x: 700 })],
+      asymmetrical: [
+        element('ba-l', { x: 300, size: 4, hue: 'red' }),
+        element('ba-r1', { shape: 'square', x: 620, y: 180, size: 2 }),
+        element('ba-r2', { shape: 'square', x: 700, y: 300, size: 2 }),
+        element('ba-r3', { shape: 'square', x: 780, y: 420, size: 2 })
+      ]
+    },
+    fail: {
+      oneSide: [element('bo-1', { x: 200 }), element('bo-2', { x: 320 })],
+      leftHeavy: [element('bl-l', { x: 180, size: 5 }), element('bl-r', { x: 650, size: 1 })],
+      rightHeavy: [element('br-l', { x: 350, size: 1 }), element('br-r', { x: 820, size: 5 })],
+      centered: [element('bc-1', { x: 485 }), element('bc-2', { x: 515 })]
+    }
+  },
+  rhythm: {
+    pass: {
+      regular: row('yr', [300, 200, 140, 200, 300], 'y'),
+      irregular: row('yi', [430, 370, 295, 205, 110], 'y'),
+      rotation: row('yt', [0, 45, 90, 135, 90], 'rotation'),
+      size: row('yz', [1, 2, 3, 4, 5], 'size'),
+      spacing: row('yp', [3, 3, 3, 3, 3], 'size', [100, 210, 350, 520, 720]),
+      mixed: [0, 1, 2, 3, 4].map((index) => element(`ym-${index}`, { x: 120 + index * 175, y: 420 - index * 70, size: index + 1 })),
+      noRepetition: ['circle', 'square', 'triangle', 'rectangle', 'semicircle'].map((shape, index) => element(`yn-${index}`, { shape, x: 120 + index * 180, y: 430 - index * 75, hue: index % 2 ? 'red' : 'blue' }))
+    },
+    fail: {
+      static: row('ys', [300, 300, 300, 300, 300], 'y'),
+      random: [
+        element('yx-1', { x: 100, y: 100, size: 5, rotation: 0 }),
+        element('yx-2', { x: 260, y: 500, size: 1, rotation: 135 }),
+        element('yx-3', { x: 390, y: 220, size: 4, rotation: 45 }),
+        element('yx-4', { x: 650, y: 470, size: 2, rotation: 90 }),
+        element('yx-5', { x: 900, y: 130, size: 3, rotation: 0 })
+      ],
+      weak: row('yw', [300, 295, 305, 298, 302], 'y')
+    }
+  }
+});

@@ -8,6 +8,9 @@ import { recognizeQuestions } from './recognize-questions.js';
 import { createRecognizeCourseRenderers } from './recognize-course.js';
 import { discoverQuestions } from './discover-questions.js';
 import { createDiscoverCourseRenderers } from './discover-course.js';
+import { createExperimentCourseRenderers } from './experiment-course.js';
+import { createPhase6cCourseState } from './phase6c-course-state.js';
+import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -17,6 +20,7 @@ if (captureWidth) {
 
 const app = document.querySelector('#app');
 const state = createAppState(stages, recognizeQuestions, discoverQuestions);
+state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
 
 function navigate(hash) {
   if (location.hash === hash) {
@@ -29,11 +33,13 @@ function navigate(hash) {
 const renderers = createRenderers({ app, state, navigate });
 const recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate });
 const discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate });
+const experimentRenderers = createExperimentCourseRenderers({ app, state, navigate });
 let activePlayground = null;
 
 function renderCurrentRoute() {
   activePlayground?.canvas.destroy();
   activePlayground = null;
+  experimentRenderers.destroy();
   const route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
   setCurrentRoute(state, route);
 
@@ -59,6 +65,14 @@ function renderCurrentRoute() {
     discoverRenderers.complete();
   } else if (route.name === 'discoverDev') {
     discoverRenderers.dev();
+  } else if (route.name === 'experimentStart') {
+    experimentRenderers.start();
+  } else if (route.name === 'experiment') {
+    experimentRenderers.experiment(phase6cDefinitionsById[`experiment-${route.principleId}`]);
+  } else if (route.name === 'experimentComplete') {
+    experimentRenderers.complete();
+  } else if (route.name === 'experimentDev') {
+    experimentRenderers.dev();
   } else if (route.name === 'stage') {
     renderers.stage(route.stage);
   } else if (route.name === 'complete') {

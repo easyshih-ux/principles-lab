@@ -30,6 +30,13 @@ export class GeometryCanvas {
     this.surface.addEventListener('pointercancel', (event) => this.finishDrag(event, false));
     this.surface.addEventListener('lostpointercapture', (event) => this.finishDrag(event, false));
     this.surface.addEventListener('keydown', (event) => this.onKeyDown(event));
+    this.surface.addEventListener('focusin', (event) => {
+      const node = event.target.closest?.('[data-geometry-id]');
+      if (!node) return;
+      this.engine.select(node.dataset.geometryId);
+      this.render();
+      this.onStateChange(this.engine.getState());
+    });
   }
 
   render() {
