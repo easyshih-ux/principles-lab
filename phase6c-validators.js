@@ -125,21 +125,31 @@ export function validateFormalBalance({ elements = [], spec = {} }) {
   return response(true, 'valid', metrics, [method]);
 }
 
-function continuous(values, minimumRange, maximumStepVariation = 1.1) {
-  if (values.length < 3 || range(values) < minimumRange) return false;
-  if (direction(values)) return true;
-  const steps = values.slice(1).map((value, index) => Math.abs(value - values[index])).filter(Boolean);
-  if (steps.length < values.length - 1) return false;
-  const average = steps.reduce((sum, value) => sum + value, 0) / steps.length;
-  const deviation = Math.sqrt(steps.reduce((sum, value) => sum + (value - average) ** 2, 0) / steps.length);
-  const signedSteps = values.slice(1).map((value, index) => value - values[index]);
-  const acceleration = signedSteps.slice(1).map((value, index) => Math.abs(value - signedSteps[index]));
-  const curvatureRatio = acceleration.length
-    ? acceleration.reduce((sum, value) => sum + value, 0) / acceleration.length / average
-    : 0;
-  return average > 0
-    && deviation / average <= maximumStepVariation
-    && curvatureRatio <= 1.35;
+
+function median(values) {
+  if (!values.length) return 0;
+  const ordered = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(ordered.length / 2);
+  return ordered.length % 2 ? ordered[middle] : (ordered[middle - 1] + ordered[middle]) / 2;
+}
+
+function rhythmPathMetrics(ordered, spec) {
+  const xGaps = ordered.slice(1).map((item, index) => item.x - ordered[index].x);
+  const ySteps = ordered.slice(1).map((item, index) => Math.abs(item.y - ordered[index].y));
+  const slopes = ySteps.map((step, index) => xGaps[index] > 0 ? step / xGaps[index] : Infinity);
+  const medianGap = median(xGaps);
+  const maximumGap = Math.max(0, ...xGaps);
+  const xSpan = ordered.length > 1 ? ordered.at(-1).x - ordered[0].x : 0;
+  const maximumSlope = Math.max(0, ...slopes);
+  const averageSlope = slopes.length ? slopes.reduce((sum, value) => sum + value, 0) / slopes.length : 0;
+  const gapRatio = medianGap > 0 ? maximumGap / medianGap : Infinity;
+  const traceable = ordered.length >= 3
+    && xGaps.every((gap) => gap > 0)
+    && xSpan >= (spec.minimumReadingSpan ?? 280)
+    && gapRatio <= (spec.maximumGapRatio ?? 2.5)
+    && maximumSlope <= (spec.maximumPathSlope ?? 2.25)
+    && averageSlope <= (spec.maximumAveragePathSlope ?? 1.35);
+  return { traceable, xSpan, medianGap, gapRatio, maximumSlope, averageSlope };
 }
 
 export function validateFormalRhythm({ elements = [], spec = {} }) {
@@ -148,22 +158,22 @@ export function validateFormalRhythm({ elements = [], spec = {} }) {
   const rotation = ordered.map((item) => item.rotation);
   const size = ordered.map((item) => item.size);
   const spacing = ordered.slice(1).map((item, index) => item.x - ordered[index].x);
+  const path = rhythmPathMetrics(ordered, spec);
   const channels = {
-    position: continuous(y, spec.minimumYRange ?? 80, 0.8),
-    rotation: continuous(rotation, spec.minimumRotationRange ?? 90, 0.55),
-    size: continuous(size, spec.minimumSizeRange ?? 2, 0.55),
-    spacing: continuous(spacing, spec.minimumSpacingRange ?? 35, 0.55)
+    position: path.traceable && range(y) >= (spec.minimumYRange ?? 80),
+    rotation: path.traceable && range(rotation) >= (spec.minimumRotationRange ?? 90),
+    size: path.traceable && range(size) >= (spec.minimumSizeRange ?? 2),
+    spacing: path.traceable && range(spacing) >= (spec.minimumSpacingRange ?? 35)
   };
   const detected = Object.entries(channels).filter(([, passed]) => passed).map(([mode]) => mode);
   const staticRepetition = ordered.length >= 3 && range(y) === 0 && range(rotation) === 0 && range(size) === 0 && range(spacing) < 10;
   const totalVariation = range(y) + range(rotation) + range(size) * 30 + range(spacing);
-  const metrics = { channels, yRange: range(y), rotationRange: range(rotation), sizeRange: range(size), spacingRange: range(spacing), totalVariation };
+  const metrics = { channels, path, yRange: range(y), rotationRange: range(rotation), sizeRange: range(size), spacingRange: range(spacing), totalVariation };
   if (ordered.length < (spec.minimumElements ?? 5)) return response(false, 'CHANGE_TOO_SUBTLE', metrics);
   if (staticRepetition) return response(false, 'STATIC_REPETITION', metrics);
   if (detected.length) return response(true, 'valid', metrics, detected.length > 1 ? ['mixed', ...detected] : detected);
   if (totalVariation < 70) return response(false, 'CHANGE_TOO_SUBTLE', metrics);
-  const hasManyUnrelatedChanges = [range(y) > 40, range(rotation) > 45, range(size) > 1, range(spacing) > 20].filter(Boolean).length >= 2;
-  return response(false, hasManyUnrelatedChanges ? 'TOO_RANDOM' : 'NO_CLEAR_MOTION', metrics);
+  return response(false, path.traceable ? 'NO_CLEAR_MOTION' : 'TOO_RANDOM', metrics);
 }
 
 export const phase6cValidators = Object.freeze({

@@ -89,16 +89,26 @@ test('balance rejects one-side, heavy-side and centered exploits', () => {
   assert.equal(validate('balance', phase6cFixtures.balance.fail.centered).primaryDiagnosticCode, 'TOO_CENTERED');
 });
 
-for (const fixture of ['regular', 'irregular', 'rotation', 'size', 'spacing', 'mixed', 'noRepetition']) {
+for (const fixture of ['regular', 'irregular', 'rotation', 'size', 'spacing', 'mixed', 'noRepetition', 'rhythm-irregular-wave-size-flow']) {
   test(`${fixture} rhythm path passes`, () => {
     assert.equal(validate('rhythm', phase6cFixtures.rhythm.pass[fixture]).passed, true);
   });
 }
 
-test('static repetition, random scatter and weak motion fail specifically', () => {
+test('irregular wave with non-periodic size changes is a traceable mixed rhythm', () => {
+  const result = validate('rhythm', phase6cFixtures.rhythm.pass['rhythm-irregular-wave-size-flow']);
+  assert.equal(result.passed, true);
+  assert.equal(result.metrics.path.traceable, true);
+  assert.ok(result.detectedMethods.includes('position'));
+  assert.ok(result.detectedMethods.includes('size'));
+  assert.ok(result.detectedMethods.includes('mixed'));
+});
+
+test('static repetition, random scatter, subtle change and unclear motion fail specifically', () => {
   assert.equal(validate('rhythm', phase6cFixtures.rhythm.fail.static).primaryDiagnosticCode, 'STATIC_REPETITION');
   assert.equal(validate('rhythm', phase6cFixtures.rhythm.fail.random).primaryDiagnosticCode, 'TOO_RANDOM');
   assert.equal(validate('rhythm', phase6cFixtures.rhythm.fail.weak).primaryDiagnosticCode, 'CHANGE_TOO_SUBTLE');
+  assert.equal(validate('rhythm', phase6cFixtures.rhythm.fail.unclear).primaryDiagnosticCode, 'NO_CLEAR_MOTION');
 });
 
 test('diagnostic codes resolve observe, think and action hints', () => {

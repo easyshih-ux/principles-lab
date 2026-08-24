@@ -61,7 +61,11 @@ export const phase6cFixtures = Object.freeze({
       size: row('yz', [1, 2, 3, 4, 5], 'size'),
       spacing: row('yp', [3, 3, 3, 3, 3], 'size', [100, 210, 350, 520, 720]),
       mixed: [0, 1, 2, 3, 4].map((index) => element(`ym-${index}`, { x: 120 + index * 175, y: 420 - index * 70, size: index + 1 })),
-      noRepetition: ['circle', 'square', 'triangle', 'rectangle', 'semicircle'].map((shape, index) => element(`yn-${index}`, { shape, x: 120 + index * 180, y: 430 - index * 75, hue: index % 2 ? 'red' : 'blue' }))
+      noRepetition: ['circle', 'square', 'triangle', 'rectangle', 'semicircle'].map((shape, index) => element(`yn-${index}`, { shape, x: 120 + index * 180, y: 430 - index * 75, hue: index % 2 ? 'red' : 'blue' })),
+      'rhythm-irregular-wave-size-flow': [
+        [90, 350, 1], [170, 310, 2], [255, 200, 4], [345, 340, 2], [440, 430, 1], [530, 410, 2],
+        [625, 300, 4], [715, 270, 2], [810, 170, 3], [900, 350, 2], [970, 390, 1]
+      ].map(([x, y, size], index) => element(`rhythm-irregular-wave-size-flow-${index}`, { x, y, size }))
     },
     fail: {
       static: row('ys', [300, 300, 300, 300, 300], 'y'),
@@ -72,7 +76,10 @@ export const phase6cFixtures = Object.freeze({
         element('yx-4', { x: 650, y: 470, size: 2, rotation: 90 }),
         element('yx-5', { x: 900, y: 130, size: 3, rotation: 0 })
       ],
-      weak: row('yw', [300, 295, 305, 298, 302], 'y')
+      weak: row('yw', [300, 295, 305, 298, 302], 'y'),
+      unclear: [
+        [100, 300, 2, 0], [260, 300, 3, 45], [430, 300, 2, 0], [580, 300, 3, 45], [750, 300, 2, 0]
+      ].map(([x, y, size, rotation], index) => element(`yu-${index}`, { x, y, size, rotation }))
     }
   }
 });
