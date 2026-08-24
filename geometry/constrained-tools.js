@@ -105,12 +105,12 @@ export function snapLogicalPoint(point, grid = createGridConfig()) {
 
 export const ALLOWED_TOOL_DEFAULTS = Object.freeze({
   shape: false, size: false, ratioSize: false, color: false,
-  position: false, rotation: false, delete: false, grid: false
+  position: false, rotation: false, duplicate: false, delete: false, grid: false
 });
 
 const ENGINE_TOOL_MAP = Object.freeze({
   shape: ['add'], size: ['size'], ratioSize: ['proportion'], color: ['color', 'lightness'],
-  position: ['move'], rotation: ['rotation'], delete: ['delete'], grid: []
+  position: ['move'], rotation: ['rotation'], duplicate: ['duplicate'], delete: ['delete'], grid: []
 });
 
 export function normalizeAllowedTools(allowedTools = {}) {
