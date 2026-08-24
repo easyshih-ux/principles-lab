@@ -156,6 +156,7 @@ export class GeometryControlPanel {
 
   proportionMarkup(element) {
     const allowed = this.usableValues('proportion');
+    const ratioLevel = element.ratioLevel ?? element.proportion;
     return `
       <section class="geometry-control geometry-proportion-control">
         <h3>比例</h3>
@@ -163,11 +164,11 @@ export class GeometryControlPanel {
           ${PROPORTION_LEVELS.map((value) => `
             <button
               type="button"
-              class="geometry-proportion ${element.proportion === value ? 'selected' : ''}"
-              data-property="proportion"
+              class="geometry-proportion ${ratioLevel === value ? 'selected' : ''}"
+              data-property="ratioLevel"
               data-value="${value}"
               ${allowed.includes(value) ? '' : 'disabled'}
-              aria-pressed="${element.proportion === value}"
+              aria-pressed="${ratioLevel === value}"
             >${value}×</button>`).join('')}
         </div>
       </section>`;

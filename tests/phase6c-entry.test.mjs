@@ -54,7 +54,7 @@ test('experiment start and the complete seven-experiment route chain resolve saf
 });
 
 test('entry release uses a fresh application cache marker', () => {
-  assert.match(indexSource, /app\.js\?v=phase6c-review-flow/);
+  assert.match(indexSource, /app\.js\?v=phase6d-ratio-wiring/);
   assert.match(indexSource, /phase6c\.css\?v=phase6c-review-flow/);
 });
 test('explicit completion advances through repetition through proportion and then completion', () => {

@@ -5,7 +5,10 @@ export class ConstrainedGeometryEngine extends GeometryEngine {
   constructor({ allowedTools = {}, ...options } = {}) {
     const constrainedAllowedTools = normalizeAllowedTools(allowedTools);
     const elements = constrainedAllowedTools.ratioSize
-      ? (options.elements ?? []).map((element) => ({ ...element, logicalSize: logicalSizeForRatio(element.proportion ?? 1) }))
+      ? (options.elements ?? []).map((element) => {
+          const ratioLevel = element.ratioLevel ?? element.proportion ?? 1;
+          return { ...element, ratioLevel, proportion: ratioLevel, logicalSize: logicalSizeForRatio(ratioLevel) };
+        })
       : options.elements;
     super({ ...options, elements, allowedTools: engineToolsFor(constrainedAllowedTools) });
     this.constrainedAllowedTools = constrainedAllowedTools;
@@ -17,17 +20,26 @@ export class ConstrainedGeometryEngine extends GeometryEngine {
   }
 
   add(shape, values = {}) {
-    const result = super.add(shape, values);
-    if (result.changed && this.constrainedAllowedTools.ratioSize) {
-      const element = this.getSelectedElement();
-      element.logicalSize = logicalSizeForRatio(element.proportion);
-    }
+    const ratioLevel = values.ratioLevel ?? values.proportion ?? 1;
+    const result = super.add(shape, this.constrainedAllowedTools.ratioSize
+      ? { ...values, ratioLevel, proportion: ratioLevel, logicalSize: logicalSizeForRatio(ratioLevel) }
+      : values);
     return result;
+  }
+
+  setProperty(property, value, id = this.selectedId) {
+    if (property === 'ratioLevel') {
+      if (!this.constrainedAllowedTools.ratioSize) return this.unauthorized();
+      return super.setProperty('proportion', value, id);
+    }
+    return super.setProperty(property, value, id);
   }
 
   applyProperty(element, property, value) {
     super.applyProperty(element, property, value);
     if (property === 'proportion' && this.constrainedAllowedTools.ratioSize) {
+      element.ratioLevel = value;
+      element.proportion = value;
       element.logicalSize = logicalSizeForRatio(value);
     }
   }

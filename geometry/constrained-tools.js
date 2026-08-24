@@ -133,7 +133,7 @@ export function createElementState(values = {}) {
   const shape = values.shape ?? 'circle';
   const shapeData = getShapeMetadata(shape);
   const sizeLevel = values.sizeLevel ?? values.size ?? 3;
-  const ratioLevel = values.ratioLevel ?? null;
+  const ratioLevel = values.ratioLevel ?? (values.logicalSize != null ? values.proportion ?? null : null);
   const logicalSize = ratioLevel == null ? logicalSizeForLevel(sizeLevel) : logicalSizeForRatio(ratioLevel);
   const colorId = values.colorId ?? `${values.hueFamily ?? values.hue ?? 'blue'}-${values.lightnessLevel ?? values.lightness ?? 3}`;
   const color = getColorMetadata(colorId);
