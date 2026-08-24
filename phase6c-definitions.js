@@ -51,7 +51,7 @@ export const phase6cDefinitions = Object.freeze([
     title: '挑戰｜做出「均衡」',
     task: '運用造形的大小、數量和位置，讓整個畫面看起來穩定。左右可以不一樣，怎麼安排由你決定。',
     initialState: { elements: [element('bal-left', { x: 230, size: 4, hue: 'red' }), element('bal-right', { x: 720, size: 2 }), element('bal-right-2', { x: 820, y: 390, size: 1 })], gridConfig: { enabled: false, visible: true, step: 20, axis: 'vertical' } },
-    validationSpec: { balanceTolerance: 0.2, allowSymmetrical: true, allowAsymmetrical: true, centerDeadZone: 45, requireAsymmetry: false },
+    validationSpec: { balanceTolerance: 0.45, allowSymmetrical: true, allowAsymmetrical: true, centerDeadZone: 45, requireAsymmetry: false },
     diagnosticHints: {
       ONE_SIDE_EMPTY: { observe: '看看整張畫面，造形是不是都集中到同一邊了？', think: '如果希望整個畫面更穩定，另一邊需要出現什麼力量呢？', action: '試著把部分造形安排到另一側，再觀察整體的感覺。' },
       LEFT_HEAVY: { observe: '先別急著改。看著整張畫面，你覺得它比較像往哪一邊倒？', think: '想想看：圖形的大小、數量和離中心的距離，哪一項可能讓某一邊看起來比較重？', action: '試著調整較重一側的大小或位置，或調整另一側，再看看畫面有沒有站得更穩。' },

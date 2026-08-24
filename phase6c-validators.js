@@ -109,6 +109,7 @@ function isMirror(elements, axis, tolerance = 1) {
 export function validateFormalBalance({ elements = [], spec = {} }) {
   const axis = spec.symmetryAxis ?? 500;
   const deadZone = spec.centerDeadZone ?? 45;
+  const tolerance = spec.balanceTolerance ?? 0.45;
   const outside = elements.filter((item) => Math.abs(item.x - axis) > deadZone);
   const left = outside.filter((item) => item.x < axis);
   const right = outside.filter((item) => item.x > axis);
@@ -117,10 +118,10 @@ export function validateFormalBalance({ elements = [], spec = {} }) {
   const total = leftWeight + rightWeight;
   const differenceRatio = total ? Math.abs(leftWeight - rightWeight) / total : 1;
   const mirrored = outside.length > 1 && isMirror(outside, axis, spec.positionTolerance ?? 1);
-  const metrics = { leftWeight, rightWeight, differenceRatio, isMirror: mirrored, outsideDeadZone: outside.length };
+  const metrics = { leftWeight, rightWeight, differenceRatio, tolerance, isMirror: mirrored, outsideDeadZone: outside.length };
   if (!outside.length) return response(false, 'TOO_CENTERED', metrics);
   if (!left.length || !right.length) return response(false, 'ONE_SIDE_EMPTY', metrics);
-  if (differenceRatio > (spec.balanceTolerance ?? 0.2)) return response(false, leftWeight > rightWeight ? 'LEFT_HEAVY' : 'RIGHT_HEAVY', metrics);
+  if (differenceRatio > tolerance) return response(false, leftWeight > rightWeight ? 'LEFT_HEAVY' : 'RIGHT_HEAVY', metrics);
   const method = mirrored ? 'symmetrical' : 'asymmetrical';
   return response(true, 'valid', metrics, [method]);
 }

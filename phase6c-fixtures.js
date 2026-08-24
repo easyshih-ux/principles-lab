@@ -44,12 +44,26 @@ export const phase6cFixtures = Object.freeze({
         element('ba-r1', { shape: 'square', x: 620, y: 180, size: 2 }),
         element('ba-r2', { shape: 'square', x: 700, y: 300, size: 2 }),
         element('ba-r3', { shape: 'square', x: 780, y: 420, size: 2 })
+      ],
+      borderlineLargeAgainstTwoSmall: [
+        element('bb-a-left', { x: 250, y: 300, size: 4, hue: 'red' }),
+        element('bb-a-right-1', { shape: 'square', x: 600, y: 220, size: 2 }),
+        element('bb-a-right-2', { shape: 'square', x: 680, y: 390, size: 2 })
+      ],
+      borderlineUnevenPositions: [
+        element('bb-b-left-1', { x: 260, y: 220, size: 3 }),
+        element('bb-b-left-2', { x: 380, y: 410, size: 3 }),
+        element('bb-b-right-1', { shape: 'triangle', x: 600, y: 180, size: 2 }),
+        element('bb-b-right-2', { shape: 'triangle', x: 680, y: 310, size: 2 }),
+        element('bb-b-right-3', { shape: 'triangle', x: 800, y: 430, size: 2 })
       ]
     },
     fail: {
       oneSide: [element('bo-1', { x: 200 }), element('bo-2', { x: 320 })],
       leftHeavy: [element('bl-l', { x: 180, size: 5 }), element('bl-r', { x: 650, size: 1 })],
       rightHeavy: [element('br-l', { x: 350, size: 1 }), element('br-r', { x: 820, size: 5 })],
+      extremeLeftHeavy: [element('be-l-large', { x: 140, size: 5 }), element('be-l-small', { x: 590, size: 1 })],
+      extremeRightHeavy: [element('be-r-small', { x: 410, size: 1 }), element('be-r-large', { x: 860, size: 5 })],
       centered: [element('bc-1', { x: 485 }), element('bc-2', { x: 515 })]
     }
   },

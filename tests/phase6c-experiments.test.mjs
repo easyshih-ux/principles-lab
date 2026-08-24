@@ -82,6 +82,26 @@ test('symmetrical and asymmetrical balance both pass and classify correctly', ()
   assert.deepEqual(validate('balance', phase6cFixtures.balance.pass.asymmetrical).detectedMethods, ['asymmetrical']);
 });
 
+test('moderately uneven asymmetrical balance passes within the classroom tolerance', () => {
+  for (const fixtureName of ['borderlineLargeAgainstTwoSmall', 'borderlineUnevenPositions']) {
+    const result = validate('balance', phase6cFixtures.balance.pass[fixtureName]);
+    assert.equal(result.passed, true, fixtureName);
+    assert.deepEqual(result.detectedMethods, ['asymmetrical'], fixtureName);
+    assert.ok(result.metrics.differenceRatio > 0.2, `${fixtureName} must exercise the relaxed tolerance`);
+    assert.ok(result.metrics.differenceRatio <= 0.45, `${fixtureName} must remain visibly plausible`);
+    assert.equal(result.metrics.tolerance, 0.45);
+  }
+});
+
+test('extreme visual moments still fail on the visibly heavier side', () => {
+  const left = validate('balance', phase6cFixtures.balance.fail.extremeLeftHeavy);
+  const right = validate('balance', phase6cFixtures.balance.fail.extremeRightHeavy);
+  assert.equal(left.primaryDiagnosticCode, 'LEFT_HEAVY');
+  assert.equal(right.primaryDiagnosticCode, 'RIGHT_HEAVY');
+  assert.ok(left.metrics.differenceRatio > 0.45);
+  assert.ok(right.metrics.differenceRatio > 0.45);
+});
+
 test('balance rejects one-side, heavy-side and centered exploits', () => {
   assert.equal(validate('balance', phase6cFixtures.balance.fail.oneSide).primaryDiagnosticCode, 'ONE_SIDE_EMPTY');
   assert.equal(validate('balance', phase6cFixtures.balance.fail.leftHeavy).primaryDiagnosticCode, 'LEFT_HEAVY');
