@@ -92,3 +92,12 @@ test('mixed shapes and ratio levels coexist independently in either combination'
   }
  }
 });
+
+test('proportion delete updates working elements and undo restores the element',()=>{
+ const engine=new ConstrainedGeometryEngine({elements:[element('keep',{ratioLevel:1,proportion:1}),element('remove',{ratioLevel:3,proportion:3})],allowedTools:{ratioSize:true,duplicate:true,delete:true}});
+ assert.equal(engine.canUse('delete'),true); assert.equal(engine.canUse('undo'),true);
+ engine.select('remove'); engine.delete();
+ let workingElements=engine.getState().elements; assert.deepEqual(workingElements.map(item=>item.id),['keep']);
+ engine.undo(); workingElements=engine.getState().elements;
+ assert.deepEqual(workingElements.map(item=>item.id),['keep','remove']); assert.equal(workingElements[1].ratioLevel,3);
+});

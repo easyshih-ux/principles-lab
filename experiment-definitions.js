@@ -105,7 +105,7 @@ export const experimentDefinitions = Object.freeze([
     id: 'experiment-proportion', principleId: 'proportion', title: '比例實驗',
     task: '運用固定的大小級距，建立可辨識的大小關係。',
     studentConcept: '讓大小之間形成可辨識的關係。',
-    allowedTools: { shape: true, ratioSize: true, position: true, duplicate: true },
+    allowedTools: { shape: true, ratioSize: true, position: true, duplicate: true, delete: true },
     experimentOptions: { ratioLevels: [1, 2, 3] },
     validatorId: experimentValidatorIds.proportion,
     validationSpec: { requiredRatioLevels: [1, 2, 3], minimumElements: 6 },

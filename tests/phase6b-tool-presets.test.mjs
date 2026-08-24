@@ -9,7 +9,7 @@ const expected = {
   balance: ['shape', 'size', 'position', 'duplicate', 'delete'],
   contrast: ['shape', 'size', 'color', 'position'],
   rhythm: ['shape', 'size', 'position', 'rotation', 'duplicate'],
-  proportion: ['shape', 'ratioSize', 'position', 'duplicate'],
+  proportion: ['shape', 'ratioSize', 'position', 'duplicate', 'delete'],
   unity: ['shape', 'color', 'position', 'rotation', 'duplicate'],
   harmony: ['shape', 'color', 'size', 'position', 'duplicate'],
   simplicity: ['position', 'size', 'color', 'delete']

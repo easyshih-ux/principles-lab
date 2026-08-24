@@ -10,7 +10,9 @@ export class ConstrainedGeometryEngine extends GeometryEngine {
           return { ...element, ratioLevel, proportion: ratioLevel, logicalSize: logicalSizeForRatio(ratioLevel) };
         })
       : options.elements;
-    super({ ...options, elements, allowedTools: engineToolsFor(constrainedAllowedTools) });
+    const engineTools = engineToolsFor(constrainedAllowedTools);
+    if (constrainedAllowedTools.ratioSize && constrainedAllowedTools.delete) engineTools.push('undo');
+    super({ ...options, elements, allowedTools: engineTools });
     this.constrainedAllowedTools = constrainedAllowedTools;
   }
 

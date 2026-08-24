@@ -76,7 +76,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
     const index = phase6cDefinitions.findIndex((item) => item.id === definition.id);
     const enabledShapes = definition.allowedTools.shape ? GEOMETRY_SHAPES.filter((shape) => shape !== 'line') : [];
     app.innerHTML = `
-      <section class="experiment-page page-shell">
+      <section class="experiment-page principle-${definition.principleId} page-shell">
         <header class="experiment-header">
           <button class="back-link" id="experiment-back">← 返回實驗室</button>
           <div><p class="section-label">第三關｜有限工具實驗</p><h1>${definition.title}</h1></div>
@@ -86,11 +86,13 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
         ${definition.principleId === 'symmetry' ? `<div class="experiment-mode-bar" role="group" aria-label="選擇對稱方式">${[['vertical','左右對稱'],['horizontal','上下對稱'],['cross','十字對稱']].map(([value,label]) => `<button type="button" data-symmetry-mode="${value}" aria-pressed="${experimentState.selectedExperimentOption === value}" class="${experimentState.selectedExperimentOption === value ? 'selected' : ''}">${label}</button>`).join('')}</div>` : ''}
         ${enabledShapes.length ? `<div class="experiment-shape-bar"><span>新增造形</span>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
         <div class="experiment-canvas-wrap ${definition.principleId === 'balance' ? 'show-balance-axis' : ''}"><div id="experiment-canvas"></div></div>
-        <footer class="experiment-footer">
+        <div class="experiment-lower-workspace">
+          <div class="geometry-control-panel" id="experiment-controls"></div>
+          <footer class="experiment-footer">
           <div class="experiment-feedback" id="experiment-feedback" aria-live="polite">${feedbackMarkup(definition, feedback)}</div>
           <div class="experiment-actions">${experimentActionsMarkup(state.experimentCourse, definition, feedback)}</div>
-        </footer>
-        <div class="geometry-control-panel" id="experiment-controls"></div>
+          </footer>
+        </div>
       </section>`;
 
     const engine = new ConstrainedGeometryEngine({
