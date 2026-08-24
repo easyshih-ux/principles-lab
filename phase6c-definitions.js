@@ -105,7 +105,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('proportion', {
     title: '挑戰｜做出「比例」',
     task: '運用不同大小的造形，讓它們之間形成清楚的大小關係。怎麼排列，由你決定。',
-    initialState: { elements: [1, 2, 3, 1, 2, 3].map((proportion, index) => element('pro-' + index, { shape: ['circle', 'square', 'triangle'][index % 3], x: 150 + index * 140, y: index % 2 ? 380 : 220, proportion })) },
+    initialState: { elements: ['circle', 'square', 'triangle', 'rectangle', 'semicircle', 'circle'].map((shape, index) => element('pro-' + index, { shape, x: 150 + index * 140, y: index % 2 ? 380 : 220, proportion: 1 })) },
     validationSpec: { requiredRatioLevels: [1, 2, 3], ratioLogicalSizes: { 1: 40, 2: 80, 3: 120 }, minimumElements: 6 },
     diagnosticHints: {
       RATIO_LEVELS_INCOMPLETE: { observe: '看看畫面裡的大小，目前能看出幾種不同的尺度？', think: '如果想讓大小之間的關係更完整，還缺少哪一種尺度？', action: '試著使用目前還沒出現的比例大小，再檢查看看。' },

@@ -117,9 +117,9 @@ export const phase6cFixtures = Object.freeze({
   },
   proportion: {
     pass: {
-      ordered: [1,2,3,1,2,3].map((proportion,i)=>element('po' + i,{x:120+i*150,proportion})),
-      unordered: [3,1,2,3,1,2].map((proportion,i)=>element('pu' + i,{x:120+i*150,proportion})),
-      mixedShapes: [1,2,3,1,2,3].map((proportion,i)=>element('pm' + i,{x:120+i*150,proportion,shape:['circle','square','triangle'][i%3]}))
+      ordered: [1,2,3,1,2,3].map((proportion,i)=>element('po' + i,{x:120+i*150,proportion,shape:'circle'})),
+      unordered: [3,1,2,3,1,2].map((proportion,i)=>element('pu' + i,{x:120+i*150,proportion,shape:'square'})),
+      mixedShapes: ['circle','square','triangle'].flatMap((shape,shapeIndex)=>[1,2,3].map((proportion,ratioIndex)=>element('pm-'+shape+'-'+proportion,{x:150+ratioIndex*260,y:150+shapeIndex*150,proportion,shape})))
     },
     fail: {
       incomplete: [1,2,1,2,1,2].map((proportion,i)=>element('pi' + i,{x:120+i*150,proportion})),

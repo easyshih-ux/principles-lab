@@ -70,3 +70,25 @@ test('rectangle preserves shape proportions while using linear ratio size',()=>{
  const engine=engineFor([element('rect',{shape:'rectangle',ratioLevel:2,proportion:2})]); engine.select('rect');
  assert.deepEqual(getShapeDimensions(engine.getSelectedElement()),{width:120,height:80});
 });
+
+test('circle square and triangle each retain shape across all ratio levels',()=>{
+ for(const shape of ['circle','square','triangle']){
+  const engine=engineFor([element(shape,{shape})]); engine.select(shape);
+  for(const ratioLevel of [1,2,3]){
+   engine.setProperty('ratioLevel',ratioLevel);
+   assert.equal(engine.getSelectedElement().shape,shape);
+   assert.equal(engine.getSelectedElement().logicalSize,ratioLevel*40);
+  }
+ }
+});
+
+test('mixed shapes and ratio levels coexist independently in either combination',()=>{
+ const cases=[[['circle',1],['square',2],['triangle',3]],[['circle',3],['square',1],['triangle',2]]];
+ for(const combinations of cases){
+  const engine=engineFor(combinations.map(([shape,ratioLevel])=>element(shape,{shape,ratioLevel,proportion:ratioLevel})));
+  for(const [shape,ratioLevel] of combinations){
+   const item=engine.getState().elements.find(candidate=>candidate.id===shape);
+   assert.equal(item.shape,shape); assert.equal(item.ratioLevel,ratioLevel); assert.equal(item.logicalSize,ratioLevel*40);
+  }
+ }
+});
