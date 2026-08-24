@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { phase6cDefinitionsById } from '../phase6c-definitions.js';
-import { experimentActionsMarkup } from '../experiment-course.js';
+import { experimentActionsMarkup, feedbackMarkup } from '../experiment-course.js';
 import { createPhase6cCourseState } from '../phase6c-course-state.js';
 import { getExperimentState } from '../experiment-session.js';
 
@@ -72,4 +72,25 @@ test('portrait tablet stacks canvas and tool panels with natural page scrolling'
  assert.match(css,/experiment-center-workspace\{order:1/);
  assert.match(css,/experiment-tool-panel-left\{order:2/);
  assert.match(css,/experiment-tool-panel-right\{order:3/);
+});
+
+
+test('shared landscape feedback row bounds long text without moving actions',()=>{
+ assert.match(css,/experiment-feedback\{[^}]*min-width:0[^}]*overflow-x:hidden;overflow-y:auto[^}]*overflow-wrap:anywhere/);
+ assert.match(css,/experiment-actions\{[^}]*flex:0 0 auto[^}]*min-width:max-content[^}]*flex-wrap:nowrap/);
+ assert.match(css,/@media\(orientation:landscape\)\{\.experiment-footer\{height:clamp\(76px,11svh,92px\);min-height:0;max-height:92px;grid-template-columns:minmax\(0,1fr\) max-content/);
+ assert.match(css,/experiment-actions \.primary-button[^}]*flex:0 0 auto;white-space:nowrap/);
+});
+
+test('gradation and contrast feedback use the same bounded component despite different content structures',()=>{
+ const gradation=phase6cDefinitionsById['experiment-gradation'];
+ const contrast=phase6cDefinitionsById['experiment-contrast'];
+ const gradationSuccess=feedbackMarkup(gradation,{result:{passed:true,detectedMethods:['multiple','size']}});
+ const contrastSuccess=feedbackMarkup(contrast,{result:{passed:true,detectedMethods:['size']}});
+ const gradationFail=feedbackMarkup(gradation,{result:{passed:false},hint:{text:'選定一種變化方式，再依順序調整。'}});
+ assert.match(gradationSuccess,/小發現/);
+ assert.match(contrastSuccess,/成功！/);
+ assert.match(gradationFail,/再觀察一下/);
+ assert.equal((source.match(/class="experiment-feedback"/g)||[]).length,1);
+ assert.equal((source.match(/class="experiment-actions"/g)||[]).length,1);
 });

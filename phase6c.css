@@ -124,3 +124,13 @@
 .experiment-page .geometry-color-option,.experiment-page .geometry-angle,.experiment-page .geometry-proportion,.experiment-page .control-action{min-width:48px;min-height:48px}
 @media(orientation:landscape) and (max-height:900px){.experiment-workspace{grid-template-columns:minmax(165px,20%) minmax(0,1fr) minmax(155px,19%)}.experiment-workspace.no-right-tools{grid-template-columns:minmax(165px,20%) minmax(0,1fr) 0}.experiment-header{min-height:46px}.experiment-task p{line-height:1.25}.experiment-footer{min-height:76px}.experiment-tool-panel .geometry-control,.experiment-tool-panel .geometry-move-notice{padding-block:8px}}
 @media(orientation:portrait){.experiment-page{height:auto;min-height:100svh;overflow:visible;grid-template-rows:auto auto auto}.experiment-workspace,.experiment-workspace.no-right-tools{display:flex;flex-direction:column;gap:10px}.experiment-center-workspace{order:1;width:100%}.experiment-tool-panel-left{order:2;width:100%}.experiment-tool-panel-right{order:3;width:100%}.experiment-tool-panel{max-height:none;overflow:visible}.experiment-tool-panel .geometry-controls-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.experiment-side-group{justify-content:flex-start}.experiment-footer{grid-template-columns:1fr}.experiment-actions{justify-content:flex-end}}
+
+
+/* Keep validation feedback bounded while actions remain persistently visible. */
+.experiment-footer{min-width:0;max-width:100%;overflow:hidden}
+.experiment-feedback{min-width:0;max-width:100%;overflow-x:hidden;overflow-y:auto;overflow-wrap:anywhere;word-break:normal;white-space:normal}
+.experiment-feedback p,.experiment-feedback-label,.experiment-discovery{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.experiment-actions{flex:0 0 auto;min-width:max-content;flex-wrap:nowrap;align-items:center}
+.experiment-actions .primary-button,.experiment-actions .secondary-button{flex:0 0 auto;white-space:nowrap}
+@media(orientation:landscape){.experiment-footer{height:clamp(76px,11svh,92px);min-height:0;max-height:92px;grid-template-columns:minmax(0,1fr) max-content;align-items:stretch}.experiment-feedback{height:100%;max-height:100%;padding-block:3px}.experiment-actions{height:100%;align-content:center}}
+@media(orientation:portrait){.experiment-footer{height:auto;max-height:none;overflow:visible}.experiment-feedback{height:auto;max-height:none}.experiment-actions{min-width:0;flex-wrap:wrap}}
