@@ -15,7 +15,7 @@ test('proportion formally exposes delete with shape ratio position and duplicate
 test('tablet-first layout uses a viewport workspace with a persistent control dock',()=>{
  assert.match(css,/experiment-page\{height:100svh;min-height:0;overflow:hidden/);
  assert.match(css,/experiment-control-dock\{[^}]*height:100%[^}]*overflow:hidden/);
- assert.match(css,/experiment-dock-tools\{[^}]*overflow-x:auto;overflow-y:hidden/);
+ assert.match(css,/experiment-dock-tools\{[^}]*flex-wrap:wrap[^}]*overflow-x:hidden;overflow-y:hidden/);
  assert.match(css,/@media\(orientation:landscape\) and \(max-height:900px\)/);
  assert.match(css,/@media\(orientation:portrait\)/);
  const canvas=source.indexOf('experiment-canvas-wrap'); const dock=source.indexOf('experiment-control-dock'); const tools=source.indexOf('experiment-dock-tools'); const controls=source.indexOf('experiment-controls'); const footer=source.indexOf('experiment-footer'); assert.ok(canvas>=0 && dock>canvas && tools>dock && controls>tools && footer>controls);
@@ -43,10 +43,15 @@ test('all seven formal experiments share one dock renderer instead of per-princi
  assert.equal((source.match(/class="experiment-dock-tools"/g)||[]).length,1);
 });
 
-test('dock tools keep complete groups horizontally scrollable without vertical clipping',()=>{
- assert.match(css,/experiment-dock-group[^}]*flex:0 0 auto/);
- assert.match(css,/experiment-dock-group\{[^}]*min-width:max-content/);
- assert.match(css,/geometry-control-panel\{[^}]*min-width:max-content/);
- assert.match(css,/touch-action:pan-x/);
- assert.doesNotMatch(css,/experiment-dock-tools\{[^}]*overflow-y:(?:clip|auto|scroll)/);
+test('tablet dock wraps actual allowed tools into two complete rows without a primary scrollbar',()=>{
+ assert.match(css,/experiment-page \.geometry-control-panel,.experiment-page \.geometry-controls-body\{display:contents/);
+ assert.match(css,/experiment-dock-tools\{[^}]*flex-wrap:wrap[^}]*overflow-x:hidden;overflow-y:hidden/);
+ assert.match(css,/experiment-dock-group[^}]*height:50%/);
+ assert.match(css,/@media\(max-width:620px\)\{\.experiment-dock-tools\{[^}]*flex-wrap:nowrap;overflow-x:auto/);
+});
+
+ test('canvas has an explicit visible work surface adjacent to the dock',()=>{
+ assert.match(css,/experiment-canvas-wrap[^}]*border:1px solid var\(--line\)[^}]*background:var\(--surface\)/);
+ assert.match(css,/experiment-canvas-wrap>#experiment-canvas\{width:100%;height:100%/);
+ assert.match(css,/experiment-page\{grid-template-rows:auto auto minmax\(250px,1fr\) clamp\(184px,27svh,224px\);gap:5px/);
 });
