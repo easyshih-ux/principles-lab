@@ -227,6 +227,7 @@ function valueCounts(elements, key) {
 }
 function clearTwoGroup(counts, total, coverage) {
   const ordered = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  if (total === 2 && ordered.length === 2) return ordered;
   return ordered.length >= 2 && ordered[0][1] >= 2 && (ordered[0][1] + ordered[1][1]) / total >= coverage ? ordered.slice(0, 2) : null;
 }
 const hueOrder = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];

@@ -99,12 +99,18 @@ export const phase6cFixtures = Object.freeze({
   },
   contrast: {
     pass: {
+      'contrast-two-elements-strong-size': [
+        element('ct-small', { x: 300, size: 1 }),
+        element('ct-large', { x: 700, size: 5 })
+      ],
       size: [1,1,1,5].map((size,i)=>element('cz' + i,{x:180+i*180,size})),
       color: ['blue','blue','blue','orange'].map((hue,i)=>element('cc' + i,{x:180+i*180,hue})),
       shape: ['circle','circle','circle','triangle'].map((shape,i)=>element('cs' + i,{x:180+i*180,shape})),
       multiple: [0,1,2,3].map((i)=>element('cm' + i,{x:180+i*180,size:i===3?5:1,hue:i===3?'orange':'blue'}))
     },
     fail: {
+      twoWeak: [element('ct-weak-a', { x: 300, size: 3 }), element('ct-weak-b', { x: 700, size: 4 })],
+      identical: [element('ct-same-a', { x: 300, size: 3 }), element('ct-same-b', { x: 700, size: 3 })],
       weak: [3,3,3,4].map((size,i)=>element('cw' + i,{x:180+i*180,size})),
       unrelated: ['circle','square','triangle','rectangle','semicircle'].map((shape,i)=>element('cu' + i,{x:100+i*190,shape,size:i+1,hue:['red','orange','yellow','green','blue'][i]}))
     }

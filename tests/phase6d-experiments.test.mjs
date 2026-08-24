@@ -29,7 +29,14 @@ test('contrast size color shape and multiple paths pass',()=>{
  for(const mode of ['size','color','shape','multiple']) assert.equal(validate('contrast',phase6cFixtures.contrast.pass[mode]).passed,true);
  assert.deepEqual(validate('contrast',phase6cFixtures.contrast.pass.multiple).detectedMethods.slice(0,1),['multiple']);
 });
+test('two elements with a strong size difference form a contrast relationship',()=>{
+ const result=validate('contrast',phase6cFixtures.contrast.pass['contrast-two-elements-strong-size']);
+ assert.equal(result.passed,true);
+ assert.deepEqual(result.detectedMethods,['size']);
+});
 test('contrast weak and unrelated diversity fail',()=>{
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.twoWeak).primaryDiagnosticCode,'DIFFERENCE_TOO_SMALL');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.identical).primaryDiagnosticCode,'NO_CLEAR_CONTRAST');
  assert.equal(validate('contrast',phase6cFixtures.contrast.fail.weak).primaryDiagnosticCode,'DIFFERENCE_TOO_SMALL');
  assert.equal(validate('contrast',phase6cFixtures.contrast.fail.unrelated).primaryDiagnosticCode,'TOO_MANY_UNRELATED_DIFFERENCES');
 });
