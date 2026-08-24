@@ -9,6 +9,7 @@ import { advancePhase6c, createPhase6cCourseState } from '../phase6c-course-stat
 import { getExperimentState } from '../experiment-session.js';
 
 const rendererSource = readFileSync(new URL('../renderers.js', import.meta.url), 'utf8');
+const discoverCourseSource = readFileSync(new URL('../discover-course.js', import.meta.url), 'utf8');
 const indexSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('principle wall exposes all three student course entries', () => {
@@ -22,6 +23,14 @@ test('course entry click handlers preserve first, second and third routes', () =
   assert.match(rendererSource, /#start-recognize-course'[\s\S]*?navigate\('#level\/recognize\/start'\)/);
   assert.match(rendererSource, /#start-discover-course'[\s\S]*?navigate\('#level\/discover\/start'\)/);
   assert.match(rendererSource, /#start-experiment-course'[\s\S]*?navigate\('#level\/experiment\/start'\)/);
+});
+
+test('discover completion preserves the wall exit and enables the experiment course', () => {
+  assert.match(discoverCourseSource, /id="discover-wall">返回實驗室<\/button>/);
+  assert.match(discoverCourseSource, /#discover-wall'[\s\S]*?navigate\('#principles'\)/);
+  assert.match(discoverCourseSource, /id="discover-experiment">第三關｜製作實驗<\/button>/);
+  assert.doesNotMatch(discoverCourseSource, /id="discover-experiment"[^>]*disabled/);
+  assert.match(discoverCourseSource, /#discover-experiment'[\s\S]*?navigate\('#level\/experiment\/start'\)/);
 });
 
 test('experiment start and the complete four-experiment route chain resolve safely', () => {
