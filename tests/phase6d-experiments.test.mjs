@@ -58,5 +58,5 @@ test('new experiments retain explicit review and progression',()=>{
  assert.equal(nextHash(definition('rhythm')),'#level/experiment/symmetry');
  assert.equal(nextHash(definition('symmetry')),'#level/experiment/contrast');
  assert.equal(nextHash(definition('contrast')),'#level/experiment/proportion');
- assert.equal(nextHash(definition('proportion')),'#level/experiment/complete');
+ assert.equal(nextHash(definition('proportion')),'#level/experiment/unity');
 });

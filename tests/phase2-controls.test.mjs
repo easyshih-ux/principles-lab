@@ -33,7 +33,7 @@ test('size only accepts integer levels 1 through 5', () => {
   [0, 3.5, 6, 80].forEach((size) => assert.throws(() => createGeometryElement({ size })));
 });
 
-test('hue only accepts the six palette family ids', () => {
+test('hue accepts the twelve constrained palette family ids', () => {
   HUE_IDS.forEach((hue) => assert.equal(createGeometryElement({ hue }).hue, hue));
   ['cyan', 210, '#000'].forEach((hue) => assert.throws(() => createGeometryElement({ hue })));
 });
@@ -77,12 +77,12 @@ test('allowedValues and lockedValues block unavailable values', () => {
 test('control operations update clean element state', () => {
   const engine = engineWith(['size', 'color', 'lightness', 'rotation', 'proportion']);
   engine.setProperty('size', 5);
-  engine.setProperty('hue', 'purple');
+  engine.setProperty('hue', 'violet');
   engine.setProperty('lightness', 2);
   engine.setProperty('rotation', 135);
   engine.setProperty('proportion', 3);
   assert.deepEqual(getControlPanelState(engine).values, {
-    size: 5, hue: 'purple', lightness: 2, rotation: 135, proportion: 3
+    size: 5, hue: 'violet', lightness: 2, rotation: 135, proportion: 3
   });
 });
 
@@ -126,11 +126,11 @@ test('control panel state follows selection between elements', () => {
   assert.equal(getControlPanelState(engine).values.hue, 'blue');
 });
 
-test('all six hues and five lightness levels resolve to valid distinct display colors', () => {
+test('all twelve hues and five lightness levels resolve to valid distinct display colors', () => {
   const colors = HUE_IDS.flatMap((hue) => (
     LIGHTNESS_LEVELS.map((lightness) => getDisplayColor(hue, lightness))
   ));
-  assert.equal(colors.length, 30);
-  assert.equal(new Set(colors).size, 30);
+  assert.equal(colors.length, 60);
+  assert.equal(new Set(colors).size, 60);
   colors.forEach((color) => assert.match(color, /^#[0-9A-F]{6}$/i));
 });

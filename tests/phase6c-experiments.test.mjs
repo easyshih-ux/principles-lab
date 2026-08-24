@@ -27,18 +27,18 @@ const validate = (principle, elements) => ({
   rhythm: validateFormalRhythm
 }[principle]({ elements, spec: definition(principle).validationSpec }));
 
-test('formal experiment course exposes the seven completed experiments in confirmed order', () => {
-  assert.deepEqual(phase6cDefinitions.map((item) => item.principleId), ['repetition', 'gradation', 'balance', 'rhythm', 'symmetry', 'contrast', 'proportion']);
+test('formal experiment course exposes all ten experiments in confirmed order', () => {
+  assert.deepEqual(phase6cDefinitions.map((item) => item.principleId), ['repetition', 'gradation', 'balance', 'rhythm', 'symmetry', 'contrast', 'proportion', 'unity', 'harmony', 'simplicity']);
   assert.ok(phase6cDefinitions.every((item) => item.status === 'phase6c-formal'));
 });
 
-test('formal routes resolve seven experiments, completion and dev lab', () => {
-  for (const principleId of ['repetition', 'gradation', 'balance', 'rhythm', 'symmetry', 'contrast', 'proportion']) {
+test('formal routes resolve ten experiments, completion and dev lab', () => {
+  for (const principleId of ['repetition', 'gradation', 'balance', 'rhythm', 'symmetry', 'contrast', 'proportion', 'unity', 'harmony', 'simplicity']) {
     assert.equal(resolveRoute(`#level/experiment/${principleId}`, stages, principles, recognizeQuestions).name, 'experiment');
   }
   assert.equal(resolveRoute('#level/experiment/complete', stages, principles, recognizeQuestions).name, 'experimentComplete');
   assert.equal(resolveRoute('#dev/experiments', stages, principles, recognizeQuestions).name, 'experimentDev');
-  assert.equal(resolveRoute('#level/experiment/unity', stages, principles, recognizeQuestions).isFallback, true);
+  assert.equal(resolveRoute('#level/experiment/emphasis', stages, principles, recognizeQuestions).isFallback, true);
 });
 
 test('single repetition passes without equal spacing', () => {

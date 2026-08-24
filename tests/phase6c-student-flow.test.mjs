@@ -85,7 +85,7 @@ test('success keeps the composition, renders feedback and only then exposes next
   }
 });
 
-test('explicit next challenge follows the seven-route formal progression', () => {
+test('explicit next challenge follows the ten-route formal progression', () => {
   const expectedRoutes = [
     '#level/experiment/gradation',
     '#level/experiment/balance',
@@ -93,6 +93,9 @@ test('explicit next challenge follows the seven-route formal progression', () =>
     '#level/experiment/symmetry',
     '#level/experiment/contrast',
     '#level/experiment/proportion',
+    '#level/experiment/unity',
+    '#level/experiment/harmony',
+    '#level/experiment/simplicity',
     '#level/experiment/complete'
   ];
   const course = createPhase6cCourseState(phase6cDefinitions);

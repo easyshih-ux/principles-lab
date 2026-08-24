@@ -110,6 +110,46 @@ export const phase6cDefinitions = Object.freeze([
     },
     successFeedback: { general: '成功！你利用不同尺度的造形，建立了清楚的「比例」關係。', byMethod: { ratio: '成功！你利用不同尺度的造形，建立了清楚的「比例」關係。' } },
     discoveryFeedback: { ratio: '比例看的是大小彼此之間的關係，不一定要按照小到大排列。' }
+  }),
+  formal('unity', {
+    title: '挑戰｜做出「統一」',
+    task: '讓畫面中的造形彼此有共同的特徵，看起來像是同一個整體。',
+    initialState: { elements: [] },
+    validationSpec: { minimumElements: 4, requiredUnityRatio: 0.75, minimumDirectionalElements: 3, allowedUnityModes: ['color', 'rotation', 'shapeFeature', 'lineStyle'] },
+    diagnosticHints: {
+      NO_CLEAR_UNITY: { observe: '看看整張畫面，這些造形有沒有什麼共同的地方？', think: '如果把它們看成一個團隊，它們有沒有一項特徵能把大家連在一起？', action: '選一種特徵，例如色彩、方向或造形特色，讓更多元素彼此呼應。' },
+      UNITY_TOO_WEAK: { observe: '有一些造形已經很像一家人了，但其他造形也有加入嗎？', think: '共同特徵如果只出現在少數元素上，整體感可能還不夠明顯。', action: '把你選擇的共同特徵延伸到更多元素，再檢查看看。' }
+    },
+    successFeedback: { general: '成功！畫面已形成統一。', byMethod: { color: '成功！共同的色彩讓不同造形看起來屬於同一個整體。', rotation: '成功！相似的方向讓畫面產生了一致感。', shapeFeature: '成功！你讓不同造形保有共同特徵，形成了「統一」。', lineStyle: '成功！共同的線條特色讓畫面產生了一致感。', multiple: '成功！你用了不只一種共同特徵，讓整個畫面更有一致感。' } },
+    discoveryFeedback: { general: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', color: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', rotation: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', shapeFeature: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', lineStyle: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', multiple: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。' }
+  }),
+  formal('harmony', {
+    title: '挑戰｜做出「調和」',
+    task: '利用彼此接近、能互相呼應的色彩，讓畫面看起來協調。',
+    initialState: { elements: [] },
+    validationSpec: { minimumElements: 4, harmonyCoverage: 0.75, minimumLightnessLevels: 2, allowedHarmonyModes: ['sameHueLightness', 'neighborHue', 'mixed'] },
+    diagnosticHints: {
+      NO_CLEAR_HARMONY: { observe: '看看這些顏色，它們彼此有沒有「靠近」的感覺？', think: '可以從同色系的深淺，或色相環上相近的顏色開始找關係。', action: '選一個主要色系，再加入它的深淺變化或相近顏色。' },
+      COLORS_TOO_FAR_APART: { observe: '有些顏色彼此差得很遠，哪一些最不像同一組？', think: '如果想讓色彩更協調，可以把距離很遠的顏色換成相近色嗎？', action: '保留一個主要色系，將其中差異最大的顏色換成它附近的顏色。' },
+      HARMONY_TOO_WEAK: { observe: '已經有一些顏色開始互相呼應了，但整張畫面都有這種感覺嗎？', think: '調和不是只找到兩個相近色，而是讓主要色彩彼此能連在一起。', action: '把相近色或同色系的關係延伸到更多造形。' }
+    },
+    successFeedback: { general: '成功！畫面已形成調和。', byMethod: { sameHueLightness: '成功！你利用同色系的深淺變化，讓色彩彼此協調。', neighborHue: '成功！你利用相近的顏色，形成了柔和、協調的色彩關係。', mixed: '成功！你同時運用了相近色與深淺變化，讓色彩產生更豐富的調和。' } },
+    discoveryFeedback: { general: '調和不只是一種顏色。相近的顏色，或同色系的深淺變化，也能彼此呼應。', sameHueLightness: '調和不只是一種顏色。相近的顏色，或同色系的深淺變化，也能彼此呼應。', neighborHue: '調和不只是一種顏色。相近的顏色，或同色系的深淺變化，也能彼此呼應。', mixed: '調和不只是一種顏色。相近的顏色，或同色系的深淺變化，也能彼此呼應。' }
+  }),
+  formal('simplicity', {
+    title: '挑戰｜做出「單純」',
+    task: '讓這個構圖變得更單純，但不能刪掉最重要的核心元素。',
+    initialState: experimentDefinitionsById['experiment-simplicity'].initialState,
+    validationSpec: { minimumElementReduction: 2, minimumVarietyReduction: 2, minimumOrganizationGain: 0.16, minimumNonCoreRemaining: 1, coreElementIds: experimentDefinitionsById['experiment-simplicity'].initialState.coreElementIds, coreProtection: true },
+    diagnosticHints: {
+      NOT_SIMPLIFIED: { observe: '比較一下現在和一開始，畫面真的變得比較簡單了嗎？', think: '你可以從「減少、整理、減少變化」三個方向想一想。', action: '試著刪掉一些不重要的元素、整理位置，或減少過多的顏色與大小變化。' },
+      CORE_ELEMENT_MISSING: { observe: '最重要的元素需要留下來，再想想其他地方可以怎麼簡化。', think: '主要內容還完整嗎？哪些才是不必要的部分？', action: '保留最重要的元素，再從其他裝飾開始整理。' },
+      TOO_MUCH_VARIETY: { observe: '元素可能變少了，但畫面裡還有很多不同的變化。', think: '除了刪除，也可以看看顏色、大小或排列是不是太複雜。', action: '試著減少一些不必要的色彩或大小變化。' },
+      STILL_DISORGANIZED: { observe: '東西變少了，但畫面是不是還有一點散？', think: '單純不只是減少，也可以把剩下的元素整理得更清楚。', action: '試著重新安排位置，讓剩下的元素形成比較清楚的關係。' },
+      OVER_REDUCED: { observe: '你已經減少很多了。單純不是全部刪掉，也要保留畫面的主要關係。', think: '除了核心，還需要留下哪些元素才能看出完整構圖？', action: '復原一些有助於構圖關係的元素，再整理其他部分。' }
+    },
+    successFeedback: { general: '成功！構圖已變得更單純。', byMethod: { reduce: '成功！你減少了不必要的元素，讓畫面變得更單純。', organize: '成功！你重新整理了元素的位置，讓畫面變得更清楚、單純。', simplifyVariety: '成功！你減少了過多的變化，讓畫面更有重點。', multiple: '成功！你用了不只一種方法，把複雜的構圖整理得更單純。' } },
+    discoveryFeedback: { general: '單純不是全部刪掉，而是留下重要的、減少不必要的複雜。', reduce: '單純不是全部刪掉，而是留下重要的、減少不必要的複雜。', organize: '單純不是全部刪掉，而是留下重要的、減少不必要的複雜。', simplifyVariety: '單純不是全部刪掉，而是留下重要的、減少不必要的複雜。', multiple: '單純不是全部刪掉，而是留下重要的、減少不必要的複雜。' }
   })
 ]);
 

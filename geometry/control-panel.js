@@ -59,12 +59,13 @@ function scaleMarkup({ property, label, start, end, values, current, allowedValu
 }
 
 export class GeometryControlPanel {
-  constructor({ container, engine, region = 'all', onVisualChange = () => {}, onStateChange = () => {} }) {
+  constructor({ container, engine, region = 'all', onVisualChange = () => {}, onStateChange = () => {}, onActionResult = () => {} }) {
     this.container = container;
     this.engine = engine;
     this.region = region;
     this.onVisualChange = onVisualChange;
     this.onStateChange = onStateChange;
+    this.onActionResult = onActionResult;
     this.render();
   }
 
@@ -262,9 +263,11 @@ export class GeometryControlPanel {
     this.container.querySelectorAll('[data-action]').forEach((button) => {
       button.addEventListener('click', () => {
         const action = button.dataset.action;
-        if (action === 'duplicate') this.engine.duplicate();
-        if (action === 'delete') this.engine.delete();
-        if (action === 'undo') this.engine.undo();
+        let result;
+        if (action === 'duplicate') result = this.engine.duplicate();
+        if (action === 'delete') result = this.engine.delete();
+        if (action === 'undo') result = this.engine.undo();
+        this.onActionResult(result, action);
         this.onStateChange();
       });
     });

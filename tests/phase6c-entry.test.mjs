@@ -33,7 +33,7 @@ test('discover completion preserves the wall exit and enables the experiment cou
   assert.match(discoverCourseSource, /#discover-experiment'[\s\S]*?navigate\('#level\/experiment\/start'\)/);
 });
 
-test('experiment start and the complete seven-experiment route chain resolve safely', () => {
+test('experiment start and the complete ten-experiment route chain resolve safely', () => {
   const expected = [
     ['#level/experiment/start', 'experimentStart'],
     ['#level/experiment/repetition', 'experiment'],
@@ -43,6 +43,9 @@ test('experiment start and the complete seven-experiment route chain resolve saf
     ['#level/experiment/symmetry', 'experiment'],
     ['#level/experiment/contrast', 'experiment'],
     ['#level/experiment/proportion', 'experiment'],
+    ['#level/experiment/unity', 'experiment'],
+    ['#level/experiment/harmony', 'experiment'],
+    ['#level/experiment/simplicity', 'experiment'],
     ['#level/experiment/complete', 'experimentComplete']
   ];
 
@@ -57,9 +60,9 @@ test('entry release uses a fresh application cache marker', () => {
   assert.match(indexSource, /app\.js\?v=phase6d-three-column/);
   assert.match(indexSource, /phase6c\.css\?v=phase6d-center-height/);
 });
-test('explicit completion advances through repetition through proportion and then completion', () => {
+test('explicit completion advances through all ten experiments and then completion', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
-  const expectedNextIds = ['experiment-gradation', 'experiment-balance', 'experiment-rhythm', 'experiment-symmetry', 'experiment-contrast', 'experiment-proportion', null];
+  const expectedNextIds = ['experiment-gradation', 'experiment-balance', 'experiment-rhythm', 'experiment-symmetry', 'experiment-contrast', 'experiment-proportion', 'experiment-unity', 'experiment-harmony', 'experiment-simplicity', null];
 
   phase6cDefinitions.forEach((definition, index) => {
     getExperimentState(course, definition.id).completed = true;

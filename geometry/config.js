@@ -26,12 +26,8 @@ export const SIZE_TO_LOGICAL = Object.freeze({
 });
 
 export const HUE_IDS = Object.freeze([
-  'red',
-  'orange',
-  'yellow',
-  'green',
-  'blue',
-  'purple'
+  'red', 'red-orange', 'orange', 'yellow-orange', 'yellow', 'yellow-green',
+  'green', 'blue-green', 'blue', 'blue-violet', 'violet', 'red-violet'
 ]);
 
 export const LIGHTNESS_LEVELS = Object.freeze([1, 2, 3, 4, 5]);

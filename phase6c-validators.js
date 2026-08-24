@@ -1,4 +1,5 @@
 import { getLogicalSize } from './geometry/palette.js';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js';
 
 function response(passed, code, metrics, detectedMethods = []) {
   const fulfilledConditions = passed ? ['指定形式原理已成立'] : [];
@@ -267,6 +268,127 @@ export function validateFormalProportion({ elements = [], spec = {} }) {
   return response(true, 'valid', metrics, ['ratio']);
 }
 
+
+function dominantGroup(elements, key) {
+  const counts = valueCounts(elements, key);
+  const ordered = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const [value, count] = ordered[0] ?? [null, 0];
+  return { value, count, ratio: elements.length ? count / elements.length : 0, counts: Object.fromEntries(ordered) };
+}
+
+export function validateFormalUnity({ elements = [], spec = {} }) {
+  const minimumElements = spec.minimumElements ?? 4;
+  const requiredRatio = spec.requiredUnityRatio ?? 0.75;
+  const color = dominantGroup(elements, (item) => item.hueFamily ?? item.hue);
+  const directional = elements.filter((item) => getShapeMetadata(item.shape).directional);
+  const rotation = dominantGroup(directional, (item) => item.rotation ?? 0);
+  const featureCounts = new Map();
+  const meaningfulFeatures = new Set(['rounded', 'angular', 'pointed', 'elongated', 'equal-sides', 'radial', 'flat-edge', 'open', 'linear']);
+  elements.forEach((item) => getShapeMetadata(item.shape).shapeFeature.filter((feature) => meaningfulFeatures.has(feature)).forEach((feature) => featureCounts.set(feature, (featureCounts.get(feature) ?? 0) + 1)));
+  const [feature, featureCount] = [...featureCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+  const shapeFeature = { value: feature, count: featureCount, ratio: elements.length ? featureCount / elements.length : 0 };
+  const lineStyle = dominantGroup(elements, (item) => item.lineStyle ?? 'solid');
+  const methods = [];
+  if (elements.length >= minimumElements && color.ratio >= requiredRatio) methods.push('color');
+  if (directional.length >= (spec.minimumDirectionalElements ?? 3) && rotation.ratio >= requiredRatio) methods.push('rotation');
+  if (elements.length >= minimumElements && new Set(elements.map((item) => item.shape)).size >= 2 && shapeFeature.ratio >= requiredRatio) methods.push('shapeFeature');
+  if (spec.lineStyleEnabled === true && elements.length >= minimumElements && lineStyle.ratio >= requiredRatio) methods.push('lineStyle');
+  const metrics = { elementCount: elements.length, requiredRatio, color, directionalCount: directional.length, rotation, shapeFeature, lineStyle };
+  if (methods.length) return response(true, 'valid', metrics, methods.length > 1 ? ['multiple', ...methods] : methods);
+  const strongest = Math.max(color.ratio, directional.length ? rotation.ratio : 0, shapeFeature.ratio);
+  return response(false, strongest >= 0.4 ? 'UNITY_TOO_WEAK' : 'NO_CLEAR_UNITY', metrics);
+}
+
+function hueDistance(first, second) {
+  const a = HUE_FAMILIES.indexOf(first);
+  const b = HUE_FAMILIES.indexOf(second);
+  if (a < 0 || b < 0) return Infinity;
+  const raw = Math.abs(a - b);
+  return Math.min(raw, HUE_FAMILIES.length - raw);
+}
+
+export function validateFormalHarmony({ elements = [], spec = {} }) {
+  const minimumElements = spec.minimumElements ?? 4;
+  const coverage = spec.harmonyCoverage ?? 0.75;
+  const hues = elements.map((item) => item.hueFamily ?? item.hue);
+  const hueGroups = dominantGroup(elements, (item) => item.hueFamily ?? item.hue);
+  const sameHueElements = elements.filter((item) => (item.hueFamily ?? item.hue) === hueGroups.value);
+  const sameHueLightness = elements.length >= minimumElements
+    && hueGroups.ratio >= coverage
+    && new Set(sameHueElements.map((item) => item.lightnessLevel ?? item.lightness)).size >= (spec.minimumLightnessLevels ?? 2);
+  let bestNeighborCoverage = 0;
+  let bestCenter = null;
+  for (const center of HUE_FAMILIES) {
+    const covered = hues.filter((hue) => hue === center || areNeighborHues(center, hue)).length;
+    if (covered / Math.max(1, elements.length) > bestNeighborCoverage) {
+      bestNeighborCoverage = covered / Math.max(1, elements.length);
+      bestCenter = center;
+    }
+  }
+  const uniqueHues = [...new Set(hues)];
+  const neighborHue = elements.length >= minimumElements
+    && uniqueHues.length >= 2
+    && bestNeighborCoverage >= coverage
+    && uniqueHues.some((first) => uniqueHues.some((second) => areNeighborHues(first, second)));
+  const methods = [];
+  if (sameHueLightness && neighborHue) methods.push('mixed');
+  else if (sameHueLightness) methods.push('sameHueLightness');
+  else if (neighborHue) methods.push('neighborHue');
+  const maximumHueDistance = uniqueHues.reduce((maximum, first) => Math.max(maximum, ...uniqueHues.map((second) => hueDistance(first, second))), 0);
+  const metrics = { elementCount: elements.length, uniqueHues, hueGroups, sameHueLightness, neighborHue, bestNeighborCoverage, bestCenter, maximumHueDistance };
+  if (methods.length) return response(true, 'valid', metrics, methods);
+  if (uniqueHues.length === 1 && new Set(elements.map((item) => item.lightnessLevel ?? item.lightness)).size === 1) return response(false, 'NO_CLEAR_HARMONY', metrics);
+  if (maximumHueDistance >= 3 && bestNeighborCoverage <= 0.5) return response(false, 'COLORS_TOO_FAR_APART', metrics);
+  if (bestNeighborCoverage >= 0.4) return response(false, 'HARMONY_TOO_WEAK', metrics);
+  return response(false, 'NO_CLEAR_HARMONY', metrics);
+}
+
+function alignmentScore(elements, tolerance = 24) {
+  if (elements.length < 2) return 0;
+  let aligned = 0;
+  let pairs = 0;
+  for (let first = 0; first < elements.length; first += 1) {
+    for (let second = first + 1; second < elements.length; second += 1) {
+      pairs += 1;
+      if (Math.abs(elements[first].x - elements[second].x) <= tolerance || Math.abs(elements[first].y - elements[second].y) <= tolerance) aligned += 1;
+    }
+  }
+  return pairs ? aligned / pairs : 0;
+}
+
+function simplicityMetrics(elements) {
+  return {
+    elementCount: elements.length,
+    uniqueHues: new Set(elements.map((item) => item.hueFamily ?? item.hue)).size,
+    uniqueSizes: new Set(elements.map((item) => item.sizeLevel ?? item.size)).size,
+    uniqueShapes: new Set(elements.map((item) => item.shape)).size,
+    organization: alignmentScore(elements)
+  };
+}
+
+export function validateFormalSimplicity({ elements = [], beforeState = [], spec = {} }) {
+  const before = simplicityMetrics(beforeState);
+  const after = simplicityMetrics(elements);
+  const coreIds = spec.coreElementIds ?? [];
+  const afterIds = new Set(elements.map((item) => item.id));
+  const missingCoreIds = coreIds.filter((id) => !afterIds.has(id));
+  const nonCoreRemaining = elements.filter((item) => !coreIds.includes(item.id)).length;
+  const elementReduction = before.elementCount - after.elementCount;
+  const varietyReduction = (before.uniqueHues - after.uniqueHues) + (before.uniqueSizes - after.uniqueSizes) + (before.uniqueShapes - after.uniqueShapes);
+  const organizationGain = after.organization - before.organization;
+  const methods = [];
+  if (elementReduction >= (spec.minimumElementReduction ?? 2)) methods.push('reduce');
+  if (organizationGain >= (spec.minimumOrganizationGain ?? 0.16)) methods.push('organize');
+  if (varietyReduction >= (spec.minimumVarietyReduction ?? 2)) methods.push('simplifyVariety');
+  const metrics = { before, after, elementReduction, varietyReduction, organizationGain, nonCoreRemaining, missingCoreIds };
+  if (missingCoreIds.length) return response(false, 'CORE_ELEMENT_MISSING', metrics);
+  if (nonCoreRemaining < (spec.minimumNonCoreRemaining ?? 1)) return response(false, 'OVER_REDUCED', metrics);
+  if (!methods.length) return response(false, 'NOT_SIMPLIFIED', metrics);
+  if (methods.includes('reduce') && !methods.includes('organize') && !methods.includes('simplifyVariety') && after.organization < 0.12) return response(false, 'STILL_DISORGANIZED', metrics);
+  if (methods.includes('reduce') && !methods.includes('simplifyVariety') && after.uniqueHues >= before.uniqueHues && after.uniqueSizes >= before.uniqueSizes && after.uniqueShapes >= before.uniqueShapes) return response(false, 'TOO_MUCH_VARIETY', metrics);
+  return response(true, 'valid', metrics, methods.length > 1 ? ['multiple', ...methods] : methods);
+}
+
 export const phase6cValidators = Object.freeze({
   repetition: validateFormalRepetition,
   gradation: validateFormalGradation,
@@ -274,11 +396,19 @@ export const phase6cValidators = Object.freeze({
   rhythm: validateFormalRhythm,
   symmetry: validateFormalSymmetry,
   contrast: validateFormalContrast,
-  proportion: validateFormalProportion
+  proportion: validateFormalProportion,
+  unity: validateFormalUnity,
+  harmony: validateFormalHarmony,
+  simplicity: validateFormalSimplicity
 });
 
 export function validatePhase6cExperiment(definition, state) {
   const validator = phase6cValidators[definition.principleId];
   if (!validator) throw new Error(`No Phase 6C validator for ${definition.principleId}`);
-  return validator({ elements: state.workingElements ?? [], spec: definition.validationSpec, selectedSymmetryMode: state.selectedExperimentOption ?? definition.initialState.selectedSymmetryMode });
+  return validator({
+    elements: state.workingElements ?? [],
+    beforeState: state.beforeState ?? definition.initialState.beforeState ?? [],
+    spec: definition.validationSpec,
+    selectedSymmetryMode: state.selectedExperimentOption ?? definition.initialState.selectedSymmetryMode
+  });
 }

@@ -6,9 +6,9 @@ import { phase6cDefinitions } from '../phase6c-definitions.js';
 import { createPhase6cCourseState, resetPhase6cExperiment, submitPhase6cExperiment } from '../phase6c-course-state.js';
 import { phase6cFixtures } from '../phase6c-fixtures.js';
 
-test('the seven released formal student experiments start with blank artwork', () => {
+test('the first nine formal student experiments start with blank artwork', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
-  for (const definition of phase6cDefinitions) {
+  for (const definition of phase6cDefinitions.filter((item) => item.principleId !== 'simplicity')) {
     assert.deepEqual(definition.initialState.elements, [], definition.principleId);
     assert.deepEqual(getExperimentState(course, definition.id).workingElements, [], definition.principleId);
   }
@@ -49,7 +49,7 @@ test('student reset returns released experiments to blank and simplicity to a fr
 });
 
 test('blank formal artwork fails normally and keeps the existing diagnostic progression', () => {
-  for (const definition of phase6cDefinitions) {
+  for (const definition of phase6cDefinitions.filter((item) => item.principleId !== 'simplicity')) {
     const course = createPhase6cCourseState([definition]);
     const feedback = submitPhase6cExperiment(course, definition);
     assert.equal(feedback.result.passed, false, definition.principleId);

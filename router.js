@@ -45,7 +45,7 @@ export function resolveRoute(hash, stages, principles, recognizeQuestions = []) 
 
   const experimentMatch = normalizedHash.match(/^#level\/experiment\/([^/]+)$/);
   if (experimentMatch) {
-    const allowed = ['repetition', 'gradation', 'balance', 'rhythm', 'symmetry', 'contrast', 'proportion'];
+    const allowed = ['repetition', 'gradation', 'balance', 'rhythm', 'symmetry', 'contrast', 'proportion', 'unity', 'harmony', 'simplicity'];
     return allowed.includes(experimentMatch[1])
       ? { name: 'experiment', hash: normalizedHash, principleId: experimentMatch[1] }
       : fallbackRoute(normalizedHash);

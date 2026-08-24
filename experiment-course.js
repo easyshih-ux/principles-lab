@@ -83,7 +83,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
           <div><p class="section-label">第三關｜有限工具實驗</p><h1>${definition.title}</h1></div>
           <strong>${index + 1}／${phase6cDefinitions.length}</strong>
         </header>
-        <section class="experiment-task"><p>${definition.task}</p></section>
+        <section class="experiment-task"><p>${definition.task}</p>${definition.principleId === 'simplicity' ? '<div class="simplicity-method-hint"><strong>想一想，可以從三個方向開始：</strong><span>減少不必要的元素</span><span>整理元素的位置</span><span>減少太多不同的變化</span></div>' : ''}</section>
         <section class="experiment-workspace ${hasRightTools ? '' : 'no-right-tools'}">
           <aside class="experiment-tool-panel experiment-tool-panel-left" aria-label="建立與主要屬性工具">
             ${enabledShapes.length ? `<div class="experiment-shape-bar experiment-side-group"><strong>新增造形</strong>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
@@ -107,6 +107,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
       elements: experimentState.workingElements,
       allowedTools: definition.allowedTools,
       grid: definition.initialState.gridConfig ?? undefined,
+      nonDeletableElementIds: definition.initialState.nonDeletableElementIds ?? [],
       toolConstraints: { rotation: { allowedValues: definition.principleId === 'symmetry' ? [0,45,90,135,180,225,270,315] : [0,45,90,135], defaultValue: 0 } }
     });
     let panels = [];
@@ -116,7 +117,16 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
       panels.forEach((panel) => panel.render());
     };
     const canvas = new ConstrainedGeometryCanvas({ container: document.querySelector('#experiment-canvas'), engine, grid: definition.principleId === 'symmetry' ? { ...definition.initialState.gridConfig, axis: experimentState.selectedExperimentOption } : { enabled: false }, onStateChange: sync });
-    const panelOptions = { engine, onVisualChange: () => canvas.render(), onStateChange: () => { sync(); canvas.render(); } };
+    const panelOptions = {
+      engine,
+      onVisualChange: () => canvas.render(),
+      onStateChange: () => { sync(); canvas.render(); },
+      onActionResult: (result, action) => {
+        if (action === 'delete' && result?.reason === 'protected-element') {
+          document.querySelector('#experiment-feedback').innerHTML = '<p class="experiment-feedback-label">保留重要元素</p><p>這是構圖的重要元素，要想辦法保留下來。</p>';
+        }
+      }
+    };
     panels = [
       new GeometryControlPanel({ ...panelOptions, container: document.querySelector('#experiment-controls-primary'), region: 'primary' }),
       new GeometryControlPanel({ ...panelOptions, container: document.querySelector('#experiment-controls-secondary'), region: 'secondary' })
@@ -146,7 +156,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
 
   function complete() {
     destroy();
-    app.innerHTML = `<section class="experiment-complete page-shell"><div><p class="section-label">第三關｜第二組</p><h1>第二組實驗完成</h1><p>你已完成反覆、漸層、均衡、律動、對稱、對比與比例。後續形式原理仍在施工中。</p><button class="primary-button" id="experiment-return">返回實驗室</button></div><div class="experiment-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
+    app.innerHTML = `<section class="experiment-complete page-shell"><div><p class="section-label">第三關｜有限工具實驗</p><h1>第三關完成！</h1><p>你不只看得出形式原理，也已經能自己把它做出來了。</p><p>同一種形式原理，沒有只有一個正確答案。</p><button class="primary-button" id="experiment-return">返回形式原理實驗室</button></div><div class="experiment-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
     document.querySelector('#experiment-return').addEventListener('click', () => navigate('#principles'));
   }
 

@@ -1,3 +1,5 @@
+import { createSimplicityInitialArtwork, SIMPLICITY_CORE_ELEMENT_IDS } from './simplicity-initial-state.js';
+
 const element = (id, values = {}) => ({
   id, shape: 'circle', x: 100, y: 300, size: 3, hue: 'blue',
   lightness: 3, rotation: 0, proportion: 1, ...values
@@ -7,6 +9,12 @@ const row = (prefix, values, field, positions = null) => values.map((value, inde
   x: positions?.[index] ?? 150 + index * 170,
   [field]: value
 }));
+
+
+const simplicityInitial = createSimplicityInitialArtwork();
+const simplicityCore = () => createSimplicityInitialArtwork().filter((item) => SIMPLICITY_CORE_ELEMENT_IDS.includes(item.id));
+const withoutSimplicity = (...ids) => createSimplicityInitialArtwork().filter((item) => !ids.includes(item.id));
+const organized = (items) => items.map((item, index) => ({ ...item, x: 280 + (index % 4) * 150, y: 210 + Math.floor(index / 4) * 150 }));
 
 export const phase6cFixtures = Object.freeze({
   repetition: {
@@ -138,6 +146,46 @@ export const phase6cFixtures = Object.freeze({
     fail: {
       incomplete: [1,2,1,2,1,2].map((proportion,i)=>element('pi' + i,{x:120+i*150,proportion})),
       tooFew: [1,2,3].map((proportion,i)=>element('pf' + i,{x:250+i*220,proportion}))
+    }
+  },
+  unity: {
+    pass: {
+      color: ['circle','square','triangle','rectangle','semicircle'].map((shape,i)=>element('uc'+i,{shape,x:140+i*175,y:220+(i%2)*150,hue:'blue',size:(i%3)+1})),
+      rotation: ['triangle','rectangle','semicircle','triangle'].map((shape,i)=>element('ur'+i,{shape,x:180+i*210,y:220+(i%2)*150,hue:['red','yellow','blue','green'][i],rotation:45})),
+      shapeFeature: ['square','triangle','rectangle','square'].map((shape,i)=>element('uf'+i,{shape,x:180+i*210,y:220+(i%2)*150,hue:['red','yellow','blue','green'][i],rotation:i*45})),
+      multiple: ['triangle','rectangle','semicircle','triangle'].map((shape,i)=>element('um'+i,{shape,x:180+i*210,y:220+(i%2)*150,hue:'red-orange',rotation:90}))
+    },
+    fail: {
+      weak: ['red','red','blue','green','yellow'].map((hue,i)=>element('uw'+i,{shape:['circle','square','triangle','rectangle','semicircle'][i],x:120+i*190,hue,rotation:i*45})),
+      unrelated: ['circle','square','triangle','rectangle','semicircle'].map((shape,i)=>element('ux'+i,{shape,x:120+i*190,hue:['red','yellow','green','blue','violet'][i],rotation:i*45}))
+    }
+  },
+  harmony: {
+    pass: {
+      sameHueLightness: [1,2,3,4].map((lightness,i)=>element('hs'+i,{shape:['circle','square','triangle','rectangle'][i],x:170+i*210,hue:'blue-green',lightness})),
+      neighborHue: ['red','red-orange','red','red-orange'].map((hue,i)=>element('hn'+i,{shape:['circle','square','triangle','rectangle'][i],x:170+i*210,hue,lightness:3})),
+      wrapNeighbor: ['red','red-violet','red','red-violet'].map((hue,i)=>element('hw'+i,{shape:['circle','square','triangle','rectangle'][i],x:170+i*210,hue,lightness:3})),
+      mixed: [element('hm1',{x:180,hue:'blue',lightness:1}),element('hm2',{x:380,hue:'blue',lightness:3}),element('hm3',{x:580,hue:'blue',lightness:5}),element('hm4',{x:780,hue:'blue-violet',lightness:3})]
+    },
+    fail: {
+      far: ['red','yellow','green','blue-violet'].map((hue,i)=>element('hf'+i,{x:170+i*210,hue})),
+      isolatedPair: ['red','red-orange','green','blue','violet'].map((hue,i)=>element('hi'+i,{x:120+i*190,hue})),
+      identical: [0,1,2,3].map((i)=>element('hh'+i,{x:170+i*210,hue:'green',lightness:3}))
+    }
+  },
+  simplicity: {
+    initial: simplicityInitial,
+    pass: {
+      reduce: organized(withoutSimplicity('simplicity-decoration-dot-1','simplicity-decoration-dot-2')),
+      organize: organized(createSimplicityInitialArtwork()),
+      simplifyVariety: createSimplicityInitialArtwork().map((item)=>({ ...item, hue:item.isCore?item.hue:'red', size:item.isCore?item.size:2 })),
+      mixed: organized(withoutSimplicity('simplicity-decoration-dot-1','simplicity-decoration-dot-2')).map((item)=>({ ...item, hue:item.isCore?item.hue:'red' }))
+    },
+    fail: {
+      notSimplified: createSimplicityInitialArtwork(),
+      coreMissing: createSimplicityInitialArtwork().filter((item)=>item.id!=='simplicity-core-center'),
+      stillDisorganized: withoutSimplicity('simplicity-decoration-dot-1','simplicity-decoration-dot-2').map((item,index)=>({ ...item, x:[90,260,470,780,930,170,620,850][index], y:[90,510,150,470,80,360,540,270][index], ...(index===0?{hue:'blue',size:1}:{}) })),
+      overReduced: simplicityCore()
     }
   }
 });

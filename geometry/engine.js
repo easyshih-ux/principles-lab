@@ -35,7 +35,8 @@ export class GeometryEngine {
     canvas = GEOMETRY_CANVAS,
     grid = GEOMETRY_GRID,
     idFactory = createElementId,
-    toolConstraints = {}
+    toolConstraints = {},
+    nonDeletableElementIds = []
   } = {}) {
     elements.forEach(assertGeometryElement);
     assertUniqueIds(elements);
@@ -44,6 +45,7 @@ export class GeometryEngine {
     this.allowedTools = new Set(allowedTools);
     this.toolConstraints = normalizeToolConstraints(toolConstraints);
     this.idFactory = idFactory;
+    this.nonDeletableElementIds = new Set(nonDeletableElementIds);
     this.elements = cloneElements(elements);
     this.selectedId = null;
     this.history = [];
@@ -219,6 +221,7 @@ export class GeometryEngine {
 
   delete(id = this.selectedId) {
     if (!this.canUse(GEOMETRY_TOOLS.delete)) return this.unauthorized();
+    if (this.nonDeletableElementIds.has(id)) return this.unchanged('protected-element');
     const index = this.elements.findIndex((element) => element.id === id);
     if (index < 0) return this.unchanged('not-found');
     const before = this.snapshot();
