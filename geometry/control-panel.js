@@ -59,9 +59,10 @@ function scaleMarkup({ property, label, start, end, values, current, allowedValu
 }
 
 export class GeometryControlPanel {
-  constructor({ container, engine, onVisualChange = () => {}, onStateChange = () => {} }) {
+  constructor({ container, engine, region = 'all', onVisualChange = () => {}, onStateChange = () => {} }) {
     this.container = container;
     this.engine = engine;
+    this.region = region;
     this.onVisualChange = onVisualChange;
     this.onStateChange = onStateChange;
     this.render();
@@ -70,37 +71,39 @@ export class GeometryControlPanel {
   render() {
     const element = this.engine.getSelectedElement();
     if (!element) {
-      this.container.innerHTML = '<div class="geometry-controls-empty">選取畫布中的元素後，即可使用本題開放的工具。</div>';
+      this.container.innerHTML = this.region === 'secondary' ? '' : '<div class="geometry-controls-empty">選取畫布中的元素後，即可使用本題開放的工具。</div>';
       return;
     }
 
+    const showPrimary = this.region !== 'secondary';
+    const showSecondary = this.region !== 'primary';
     const controls = [];
-    if (this.engine.canUse('move')) {
+    if (showPrimary && this.engine.canUse('move')) {
       controls.push('<div class="geometry-move-notice"><strong>移動</strong><span>直接在畫布中拖曳</span></div>');
     }
-    if (this.engine.canUse('size')) {
+    if (showPrimary && this.engine.canUse('size')) {
       controls.push(scaleMarkup({
         property: 'size', label: '大小', start: '小', end: '大',
         values: SIZE_LEVELS, current: element.size,
         allowedValues: this.usableValues('size')
       }));
     }
-    if (this.engine.canUse('color')) controls.push(this.colorMarkup(element));
-    if (this.engine.canUse('lightness')) {
+    if (showPrimary && this.engine.canUse('color')) controls.push(this.colorMarkup(element));
+    if (showPrimary && this.engine.canUse('lightness')) {
       controls.push(scaleMarkup({
         property: 'lightness', label: '深淺', start: '深', end: '淺',
         values: LIGHTNESS_LEVELS, current: element.lightness,
         allowedValues: this.usableValues('lightness')
       }));
     }
-    if (this.engine.canUse('rotation')) controls.push(this.rotationMarkup(element));
-    if (this.engine.canUse('proportion')) controls.push(this.proportionMarkup(element));
+    if (showSecondary && this.engine.canUse('rotation')) controls.push(this.rotationMarkup(element));
+    if (showPrimary && this.engine.canUse('proportion')) controls.push(this.proportionMarkup(element));
 
-    const actions = [
+    const actions = showSecondary ? [
       this.engine.canUse('duplicate') ? '<button type="button" class="secondary-button control-action" data-action="duplicate">複製</button>' : '',
       this.engine.canUse('delete') ? '<button type="button" class="secondary-button control-action" data-action="delete">刪除</button>' : '',
       this.engine.canUse('undo') ? '<button type="button" class="secondary-button control-action" data-action="undo">Undo</button>' : ''
-    ].join('');
+    ].join('') : '';
 
     this.container.innerHTML = `
       <div class="geometry-controls-body">${controls.join('')}</div>

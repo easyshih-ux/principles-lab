@@ -8,50 +8,68 @@ import { getExperimentState } from '../experiment-session.js';
 
 const css=fs.readFileSync(new URL('../phase6c.css',import.meta.url),'utf8');
 const source=fs.readFileSync(new URL('../experiment-course.js',import.meta.url),'utf8');
+const panelSource=fs.readFileSync(new URL('../geometry/control-panel.js',import.meta.url),'utf8');
+
 test('proportion formally exposes delete with shape ratio position and duplicate',()=>{
  const tools=phase6cDefinitionsById['experiment-proportion'].allowedTools;
  assert.deepEqual(Object.entries(tools).filter(([,on])=>on).map(([key])=>key).sort(),['delete','duplicate','position','ratioSize','shape']);
 });
-test('tablet-first layout uses a viewport workspace with a persistent control dock',()=>{
+
+test('tablet-first layout uses one shared three-column workspace',()=>{
  assert.match(css,/experiment-page\{height:100svh;min-height:0;overflow:hidden/);
- assert.match(css,/experiment-control-dock\{[^}]*height:100%[^}]*overflow:hidden/);
- assert.match(css,/experiment-dock-tools\{[^}]*flex-wrap:wrap[^}]*overflow-x:hidden;overflow-y:hidden/);
+ assert.match(css,/experiment-workspace\{[^}]*display:grid[^}]*grid-template-columns:minmax\(170px,220px\) minmax\(0,1fr\) minmax\(160px,210px\)/);
+ assert.match(css,/experiment-center-workspace\{[^}]*grid-template-rows:auto auto/);
  assert.match(css,/@media\(orientation:landscape\) and \(max-height:900px\)/);
  assert.match(css,/@media\(orientation:portrait\)/);
- const canvas=source.indexOf('experiment-canvas-wrap'); const dock=source.indexOf('experiment-control-dock'); const tools=source.indexOf('experiment-dock-tools'); const controls=source.indexOf('experiment-controls'); const footer=source.indexOf('experiment-footer'); assert.ok(canvas>=0 && dock>canvas && tools>dock && controls>tools && footer>controls);
+ assert.equal((source.match(/class="experiment-workspace/g)||[]).length,1);
+ assert.equal((source.match(/experiment-tool-panel-left/g)||[]).length,1);
+ assert.equal((source.match(/experiment-tool-panel-right/g)||[]).length,1);
 });
-test('formal review and success actions remain present in compact layout',()=>{
+
+test('allowed tools are split by one reusable primary secondary panel renderer',()=>{
+ assert.match(panelSource,/region = 'all'/);
+ assert.match(panelSource,/showPrimary = this.region !== 'secondary'/);
+ assert.match(panelSource,/showSecondary = this.region !== 'primary'/);
+ assert.match(source,/region: 'primary'/);
+ assert.match(source,/region: 'secondary'/);
+ assert.match(source,/hasRightTools = definition.allowedTools.rotation || definition.allowedTools.duplicate/);
+ assert.match(css,/experiment-workspace.no-right-tools/);
+});
+
+test('formal review and success actions remain directly below the canvas',()=>{
  const definition=phase6cDefinitionsById['experiment-proportion']; const course=createPhase6cCourseState([definition]);
  assert.match(experimentActionsMarkup(course,definition,null),/id="experiment-check"/);
  getExperimentState(course,definition.id).completed=true;
  assert.match(experimentActionsMarkup(course,definition,{result:{passed:true}}),/id="experiment-next"/);
+ const canvas=source.indexOf('experiment-canvas-wrap'); const footer=source.indexOf('experiment-footer'); const right=source.indexOf('experiment-tool-panel-right');
+ assert.ok(canvas>=0 && footer>canvas && right>footer);
 });
+
+test('canvas remains the largest column and keeps its original visible surface',()=>{
+ assert.ok(css.includes('aspect-ratio:5/3'));
+ assert.match(css,/experiment-canvas-wrap \.geometry-canvas\{[^}]*border:1px solid var\(--line\)[^}]*background:var\(--surface\)/);
+ assert.match(css,/experiment-canvas-wrap>#experiment-canvas\{width:100%;height:auto/);
+ assert.match(css,/experiment-footer\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/);
+});
+
 test('tablet controls remain touch-sized and canvas uses unified pointer behavior',()=>{
- assert.match(css,/experiment-shape-bar button{min-height:48px/);
- assert.match(css,/experiment-mode-bar button{min-height:48px/);
- assert.match(css,/control-action{[^}]*min-height:48px/);
- assert.match(css,/geometry-element.selected{outline-width:4px/);
+ assert.match(css,/experiment-side-group button\{min-width:48px;min-height:48px/);
+ assert.match(css,/geometry-color-option[^}]*min-width:48px;min-height:48px/);
+ assert.match(css,/geometry-element.selected\{outline-width:4px/);
  const shared=fs.readFileSync(new URL('../styles.css',import.meta.url),'utf8');
- assert.match(shared,/.geometry-canvas{[^}]*touch-action:none/);
+ assert.match(shared,/.geometry-canvas\{[^}]*touch-action:none/);
 });
 
-
-test('all seven formal experiments share one dock renderer instead of per-principle layouts',()=>{
+test('all seven formal experiments share the same three-column renderer',()=>{
  const formal=['repetition','gradation','balance','rhythm','symmetry','contrast','proportion'];
  assert.deepEqual(formal.map(id=>phase6cDefinitionsById[`experiment-${id}`].principleId),formal);
- assert.equal((source.match(/class="experiment-control-dock"/g)||[]).length,1);
- assert.equal((source.match(/class="experiment-dock-tools"/g)||[]).length,1);
+ assert.equal((source.match(/experiment-controls-primary/g)||[]).length,2);
+ assert.equal((source.match(/experiment-controls-secondary/g)||[]).length,2);
 });
 
-test('tablet dock wraps actual allowed tools into two complete rows without a primary scrollbar',()=>{
- assert.match(css,/experiment-page \.geometry-control-panel,.experiment-page \.geometry-controls-body\{display:contents/);
- assert.match(css,/experiment-dock-tools\{[^}]*flex-wrap:wrap[^}]*overflow-x:hidden;overflow-y:hidden/);
- assert.match(css,/experiment-dock-group[^}]*height:50%/);
- assert.match(css,/@media\(max-width:620px\)\{\.experiment-dock-tools\{[^}]*flex-wrap:nowrap;overflow-x:auto/);
-});
-
- test('canvas has an explicit visible work surface adjacent to the dock',()=>{
- assert.match(css,/experiment-canvas-wrap[^}]*border:1px solid var\(--line\)[^}]*background:var\(--surface\)/);
- assert.match(css,/experiment-canvas-wrap>#experiment-canvas\{width:100%;height:100%/);
- assert.match(css,/experiment-page\{grid-template-rows:auto auto minmax\(250px,1fr\) clamp\(184px,27svh,224px\);gap:5px/);
+test('portrait tablet stacks canvas and tool panels with natural page scrolling',()=>{
+ assert.match(css,/@media\(orientation:portrait\)\{\.experiment-page\{height:auto;min-height:100svh;overflow:visible/);
+ assert.match(css,/experiment-center-workspace\{order:1/);
+ assert.match(css,/experiment-tool-panel-left\{order:2/);
+ assert.match(css,/experiment-tool-panel-right\{order:3/);
 });

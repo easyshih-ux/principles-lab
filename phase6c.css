@@ -91,3 +91,36 @@
 @media(orientation:landscape) and (max-height:900px){.experiment-page{grid-template-rows:auto auto minmax(250px,1fr) clamp(190px,27svh,220px)}.experiment-control-dock{grid-template-columns:minmax(0,1fr) minmax(220px,250px)}}
 @media(orientation:portrait){.experiment-page{grid-template-rows:auto auto minmax(360px,45svh) auto}.experiment-control-dock{grid-template-columns:1fr}.experiment-dock-tools{min-height:184px;overflow:visible}.experiment-dock-group,.experiment-page .geometry-control,.experiment-page .geometry-move-notice,.experiment-page .geometry-control-actions,.experiment-page .geometry-controls-empty{height:auto;min-height:88px}}
 @media(max-width:620px){.experiment-dock-tools{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;scroll-snap-type:x proximity}.experiment-page .geometry-control-panel{display:flex}.experiment-page .geometry-controls-body{display:flex}.experiment-dock-group,.experiment-page .geometry-control,.experiment-page .geometry-move-notice,.experiment-page .geometry-control-actions,.experiment-page .geometry-controls-empty{height:auto;flex:0 0 auto;scroll-snap-align:start}}
+
+
+/* Fix the Canvas percentage-height chain inside its grid track. */
+.experiment-canvas-wrap,.experiment-page.principle-symmetry .experiment-canvas-wrap{height:100%;min-height:0;margin:0 auto;align-self:stretch;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:hidden}
+.experiment-canvas-wrap>#experiment-canvas{width:100%;height:100%;min-height:0}
+.experiment-canvas-wrap .geometry-canvas{width:100%;height:100%;max-height:none;aspect-ratio:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-paper)}
+
+
+/* Phase 6D tablet-first three-column experiment workspace. */
+.experiment-page{height:100svh;min-height:0;overflow:hidden;padding:8px 0 10px;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:6px}
+.experiment-workspace{min-width:0;min-height:0;display:grid;grid-template-columns:minmax(170px,220px) minmax(0,1fr) minmax(160px,210px);gap:10px;align-items:start}
+.experiment-workspace.no-right-tools{grid-template-columns:minmax(170px,220px) minmax(0,1fr) 0}
+.experiment-center-workspace{min-width:0;min-height:0;display:grid;grid-template-rows:auto auto;gap:8px;align-content:start}
+.experiment-canvas-wrap,.experiment-page.principle-symmetry .experiment-canvas-wrap{width:100%;height:auto;min-height:0;margin:0;align-self:start;border:0;background:transparent;box-shadow:none;overflow:visible}
+.experiment-canvas-wrap>#experiment-canvas{width:100%;height:auto;min-height:0}
+.experiment-canvas-wrap .geometry-canvas{width:100%;height:auto;aspect-ratio:5/3;max-height:none;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-paper)}
+.experiment-tool-panel{min-width:0;max-height:100%;overflow-y:auto;overflow-x:hidden;border-top:2px solid var(--black);border-bottom:1px solid var(--line);background:rgba(255,253,248,.42)}
+.experiment-tool-panel.is-empty{display:none}
+.experiment-side-group{margin:0;padding:10px;display:flex;justify-content:flex-start;align-items:center;align-content:flex-start;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.experiment-side-group>strong{flex:0 0 100%;color:var(--text-secondary);font-size:14px}
+.experiment-side-group button{min-width:48px;min-height:48px;margin:0;padding:6px 10px}
+.experiment-tool-panel .geometry-control-panel{display:block;width:100%;min-width:0;height:auto;margin:0;border:0;background:transparent}
+.experiment-tool-panel .geometry-controls-body{display:block}
+.experiment-tool-panel .geometry-control,.experiment-tool-panel .geometry-move-notice{width:100%;min-width:0;height:auto;min-height:0;max-height:none;padding:10px;border:0;border-bottom:1px solid var(--line)}
+.experiment-tool-panel .geometry-control-actions{width:100%;min-width:0;height:auto;min-height:0;max-height:none;padding:10px;display:flex;flex-wrap:wrap;justify-content:flex-start;gap:8px;border:0;background:rgba(244,240,232,.5)}
+.experiment-tool-panel .geometry-controls-empty{width:auto;min-width:0;height:auto;min-height:0;max-height:none;padding:12px;border:0;text-align:left}
+.experiment-tool-panel .geometry-color-control,.experiment-tool-panel .geometry-rotation-control,.experiment-tool-panel .geometry-proportion-control{width:100%}
+.experiment-footer{width:100%;min-width:0;height:auto;min-height:82px;margin:0;padding:8px 0 0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;overflow:visible;border:0;border-top:2px solid var(--black);background:transparent}
+.experiment-feedback{min-height:0;max-height:92px;overflow-y:auto}
+.experiment-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}.experiment-actions .primary-button,.experiment-actions .secondary-button{width:auto;min-width:128px;min-height:48px}
+.experiment-page .geometry-color-option,.experiment-page .geometry-angle,.experiment-page .geometry-proportion,.experiment-page .control-action{min-width:48px;min-height:48px}
+@media(orientation:landscape) and (max-height:900px){.experiment-workspace{grid-template-columns:minmax(165px,20%) minmax(0,1fr) minmax(155px,19%)}.experiment-workspace.no-right-tools{grid-template-columns:minmax(165px,20%) minmax(0,1fr) 0}.experiment-header{min-height:46px}.experiment-task p{line-height:1.25}.experiment-footer{min-height:76px}.experiment-tool-panel .geometry-control,.experiment-tool-panel .geometry-move-notice{padding-block:8px}}
+@media(orientation:portrait){.experiment-page{height:auto;min-height:100svh;overflow:visible;grid-template-rows:auto auto auto}.experiment-workspace,.experiment-workspace.no-right-tools{display:flex;flex-direction:column;gap:10px}.experiment-center-workspace{order:1;width:100%}.experiment-tool-panel-left{order:2;width:100%}.experiment-tool-panel-right{order:3;width:100%}.experiment-tool-panel{max-height:none;overflow:visible}.experiment-tool-panel .geometry-controls-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.experiment-side-group{justify-content:flex-start}.experiment-footer{grid-template-columns:1fr}.experiment-actions{justify-content:flex-end}}

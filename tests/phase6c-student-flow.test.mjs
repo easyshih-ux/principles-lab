@@ -129,11 +129,12 @@ test('reset clears only the active experiment review state', () => {
   assert.notEqual(course.feedbackById[other.id], null);
 });
 
-test('formal persistent dock keeps every tool and review action directly after the canvas', () => {
+test('formal three-column workspace keeps side tools around the canvas and actions directly below it', () => {
+  const workspaceIndex = rendererSource.indexOf('<section class="experiment-workspace');
+  const leftIndex = rendererSource.indexOf('experiment-tool-panel-left');
+  const centerIndex = rendererSource.indexOf('experiment-center-workspace');
   const canvasIndex = rendererSource.indexOf('<div class="experiment-canvas-wrap');
-  const dockIndex = rendererSource.indexOf('<section class="experiment-control-dock"');
-  const toolsIndex = rendererSource.indexOf('<div class="experiment-dock-tools"');
-  const controlsIndex = rendererSource.indexOf('<div class="geometry-control-panel" id="experiment-controls"></div>');
   const footerIndex = rendererSource.indexOf('<footer class="experiment-footer">');
-  assert.ok(canvasIndex >= 0 && dockIndex > canvasIndex && toolsIndex > dockIndex && controlsIndex > toolsIndex && footerIndex > controlsIndex);
+  const rightIndex = rendererSource.indexOf('experiment-tool-panel-right');
+  assert.ok(workspaceIndex >= 0 && leftIndex > workspaceIndex && centerIndex > leftIndex && canvasIndex > centerIndex && footerIndex > canvasIndex && rightIndex > footerIndex);
 });

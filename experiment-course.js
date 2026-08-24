@@ -75,6 +75,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
     const feedback = state.experimentCourse.feedbackById[definition.id];
     const index = phase6cDefinitions.findIndex((item) => item.id === definition.id);
     const enabledShapes = definition.allowedTools.shape ? GEOMETRY_SHAPES.filter((shape) => shape !== 'line') : [];
+    const hasRightTools = definition.allowedTools.rotation || definition.allowedTools.duplicate || definition.allowedTools.delete || definition.allowedTools.grid || definition.principleId === 'symmetry';
     app.innerHTML = `
       <section class="experiment-page principle-${definition.principleId} page-shell">
         <header class="experiment-header">
@@ -83,17 +84,22 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
           <strong>${index + 1}／${phase6cDefinitions.length}</strong>
         </header>
         <section class="experiment-task"><p>${definition.task}</p></section>
-        <div class="experiment-canvas-wrap ${definition.principleId === 'balance' ? 'show-balance-axis' : ''}"><div id="experiment-canvas"></div></div>
-        <section class="experiment-control-dock" aria-label="實驗操作工具">
-          <div class="experiment-dock-tools" tabindex="0" aria-label="可左右滑動的操作工具列">
-            ${definition.principleId === 'symmetry' ? `<div class="experiment-mode-bar experiment-dock-group" role="group" aria-label="選擇對稱方式"><strong>對稱模式</strong>${[['vertical','左右對稱'],['horizontal','上下對稱'],['cross','十字對稱']].map(([value,label]) => `<button type="button" data-symmetry-mode="${value}" aria-pressed="${experimentState.selectedExperimentOption === value}" class="${experimentState.selectedExperimentOption === value ? 'selected' : ''}">${label}</button>`).join('')}</div>` : ''}
-            ${enabledShapes.length ? `<div class="experiment-shape-bar experiment-dock-group"><strong>新增造形</strong>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
-            <div class="geometry-control-panel" id="experiment-controls"></div>
+        <section class="experiment-workspace ${hasRightTools ? '' : 'no-right-tools'}">
+          <aside class="experiment-tool-panel experiment-tool-panel-left" aria-label="建立與主要屬性工具">
+            ${enabledShapes.length ? `<div class="experiment-shape-bar experiment-side-group"><strong>新增造形</strong>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
+            <div class="geometry-control-panel" id="experiment-controls-primary"></div>
+          </aside>
+          <div class="experiment-center-workspace">
+            <div class="experiment-canvas-wrap ${definition.principleId === 'balance' ? 'show-balance-axis' : ''}"><div id="experiment-canvas"></div></div>
+            <footer class="experiment-footer">
+              <div class="experiment-feedback" id="experiment-feedback" aria-live="polite">${feedbackMarkup(definition, feedback)}</div>
+              <div class="experiment-actions">${experimentActionsMarkup(state.experimentCourse, definition, feedback)}</div>
+            </footer>
           </div>
-          <footer class="experiment-footer">
-            <div class="experiment-feedback" id="experiment-feedback" aria-live="polite">${feedbackMarkup(definition, feedback)}</div>
-            <div class="experiment-actions">${experimentActionsMarkup(state.experimentCourse, definition, feedback)}</div>
-          </footer>
+          <aside class="experiment-tool-panel experiment-tool-panel-right ${hasRightTools ? '' : 'is-empty'}" aria-label="操作與特殊工具">
+            ${definition.principleId === 'symmetry' ? `<div class="experiment-mode-bar experiment-side-group" role="group" aria-label="選擇對稱方式"><strong>對稱模式</strong>${[['vertical','左右對稱'],['horizontal','上下對稱'],['cross','十字對稱']].map(([value,label]) => `<button type="button" data-symmetry-mode="${value}" aria-pressed="${experimentState.selectedExperimentOption === value}" class="${experimentState.selectedExperimentOption === value ? 'selected' : ''}">${label}</button>`).join('')}</div>` : ''}
+            <div class="geometry-control-panel" id="experiment-controls-secondary"></div>
+          </aside>
         </section>
       </section>`;
 
@@ -103,15 +109,19 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
       grid: definition.initialState.gridConfig ?? undefined,
       toolConstraints: { rotation: { allowedValues: definition.principleId === 'symmetry' ? [0,45,90,135,180,225,270,315] : [0,45,90,135], defaultValue: 0 } }
     });
-    let panel;
+    let panels = [];
     const sync = () => {
       experimentState.workingElements = engine.getState().elements;
       experimentState.historyRef = engine.history;
-      panel?.render();
+      panels.forEach((panel) => panel.render());
     };
     const canvas = new ConstrainedGeometryCanvas({ container: document.querySelector('#experiment-canvas'), engine, grid: definition.principleId === 'symmetry' ? { ...definition.initialState.gridConfig, axis: experimentState.selectedExperimentOption } : { enabled: false }, onStateChange: sync });
-    panel = new GeometryControlPanel({ container: document.querySelector('#experiment-controls'), engine, onVisualChange: () => canvas.render(), onStateChange: () => { sync(); canvas.render(); } });
-    active = { canvas, engine, panel };
+    const panelOptions = { engine, onVisualChange: () => canvas.render(), onStateChange: () => { sync(); canvas.render(); } };
+    panels = [
+      new GeometryControlPanel({ ...panelOptions, container: document.querySelector('#experiment-controls-primary'), region: 'primary' }),
+      new GeometryControlPanel({ ...panelOptions, container: document.querySelector('#experiment-controls-secondary'), region: 'secondary' })
+    ];
+    active = { canvas, engine, panels };
 
     document.querySelectorAll('[data-symmetry-mode]').forEach((button) => button.addEventListener('click', () => { experimentState.selectedExperimentOption = button.dataset.symmetryMode; experiment(definition); }));
     document.querySelectorAll('[data-add-shape]').forEach((button) => button.addEventListener('click', () => {
