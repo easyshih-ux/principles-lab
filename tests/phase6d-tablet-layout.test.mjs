@@ -12,11 +12,13 @@ test('proportion formally exposes delete with shape ratio position and duplicate
  const tools=phase6cDefinitionsById['experiment-proportion'].allowedTools;
  assert.deepEqual(Object.entries(tools).filter(([,on])=>on).map(([key])=>key).sort(),['delete','duplicate','position','ratioSize','shape']);
 });
-test('tablet-first layout keeps canvas responsive and controls with review actions',()=>{
- assert.ok(css.includes('height:clamp(250px,calc(100svh - 390px),440px)'));
- assert.ok(css.includes('@media(max-width:900px)'));
- assert.match(css,/experiment-lower-workspace{[^}]*grid-template-columns/);
- const canvas=source.indexOf('experiment-canvas-wrap'); const lower=source.indexOf('experiment-lower-workspace'); const controls=source.indexOf('experiment-controls'); const footer=source.indexOf('experiment-footer'); assert.ok(canvas>=0 && lower>canvas && controls>lower && footer>controls);
+test('tablet-first layout uses a viewport workspace with a persistent control dock',()=>{
+ assert.match(css,/experiment-page\{height:100svh;min-height:0;overflow:hidden/);
+ assert.match(css,/experiment-control-dock\{[^}]*height:100%[^}]*overflow:hidden/);
+ assert.match(css,/experiment-dock-tools\{[^}]*overflow-x:auto;overflow-y:hidden/);
+ assert.match(css,/@media\(orientation:landscape\) and \(max-height:900px\)/);
+ assert.match(css,/@media\(orientation:portrait\)/);
+ const canvas=source.indexOf('experiment-canvas-wrap'); const dock=source.indexOf('experiment-control-dock'); const tools=source.indexOf('experiment-dock-tools'); const controls=source.indexOf('experiment-controls'); const footer=source.indexOf('experiment-footer'); assert.ok(canvas>=0 && dock>canvas && tools>dock && controls>tools && footer>controls);
 });
 test('formal review and success actions remain present in compact layout',()=>{
  const definition=phase6cDefinitionsById['experiment-proportion']; const course=createPhase6cCourseState([definition]);
@@ -31,4 +33,20 @@ test('tablet controls remain touch-sized and canvas uses unified pointer behavio
  assert.match(css,/geometry-element.selected{outline-width:4px/);
  const shared=fs.readFileSync(new URL('../styles.css',import.meta.url),'utf8');
  assert.match(shared,/.geometry-canvas{[^}]*touch-action:none/);
+});
+
+
+test('all seven formal experiments share one dock renderer instead of per-principle layouts',()=>{
+ const formal=['repetition','gradation','balance','rhythm','symmetry','contrast','proportion'];
+ assert.deepEqual(formal.map(id=>phase6cDefinitionsById[`experiment-${id}`].principleId),formal);
+ assert.equal((source.match(/class="experiment-control-dock"/g)||[]).length,1);
+ assert.equal((source.match(/class="experiment-dock-tools"/g)||[]).length,1);
+});
+
+test('dock tools keep complete groups horizontally scrollable without vertical clipping',()=>{
+ assert.match(css,/experiment-dock-group[^}]*flex:0 0 auto/);
+ assert.match(css,/experiment-dock-group\{[^}]*min-width:max-content/);
+ assert.match(css,/geometry-control-panel\{[^}]*min-width:max-content/);
+ assert.match(css,/touch-action:pan-x/);
+ assert.doesNotMatch(css,/experiment-dock-tools\{[^}]*overflow-y:(?:clip|auto|scroll)/);
 });

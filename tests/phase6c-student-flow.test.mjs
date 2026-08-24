@@ -129,9 +129,11 @@ test('reset clears only the active experiment review state', () => {
   assert.notEqual(course.feedbackById[other.id], null);
 });
 
-test('formal lower workspace keeps controls and review actions together after the canvas', () => {
+test('formal persistent dock keeps every tool and review action directly after the canvas', () => {
   const canvasIndex = rendererSource.indexOf('<div class="experiment-canvas-wrap');
-  const footerIndex = rendererSource.indexOf('<footer class="experiment-footer">');
+  const dockIndex = rendererSource.indexOf('<section class="experiment-control-dock"');
+  const toolsIndex = rendererSource.indexOf('<div class="experiment-dock-tools"');
   const controlsIndex = rendererSource.indexOf('<div class="geometry-control-panel" id="experiment-controls"></div>');
-  assert.ok(canvasIndex >= 0 && controlsIndex > canvasIndex && footerIndex > controlsIndex);
+  const footerIndex = rendererSource.indexOf('<footer class="experiment-footer">');
+  assert.ok(canvasIndex >= 0 && dockIndex > canvasIndex && toolsIndex > dockIndex && controlsIndex > toolsIndex && footerIndex > controlsIndex);
 });

@@ -37,3 +37,33 @@
 .experiment-page .geometry-element.selected{outline-width:4px;outline-color:var(--black);outline-offset:6px;filter:drop-shadow(0 0 2px rgba(37,37,37,.3))}
 @media(max-width:900px){.experiment-page{padding:8px 0 12px;gap:6px}.experiment-header{grid-template-columns:1fr auto}.experiment-header>div{grid-column:auto;grid-row:auto;text-align:center}.experiment-task p{font-size:15px}.experiment-canvas-wrap{height:clamp(270px,42svh,400px);min-height:270px}.experiment-page.principle-symmetry .experiment-canvas-wrap{height:clamp(250px,37svh,360px);min-height:250px}.experiment-lower-workspace{grid-template-columns:minmax(0,1.45fr) minmax(270px,.9fr);gap:8px}.experiment-page .geometry-controls-body{grid-template-columns:repeat(2,minmax(120px,1fr))}}
 @media(max-width:760px), (orientation:portrait) and (max-width:900px){.experiment-page{min-height:100svh}.experiment-header>div{grid-column:1/-1;grid-row:2;text-align:left}.experiment-shape-bar{justify-content:flex-start}.experiment-lower-workspace{grid-template-columns:1fr}.experiment-footer{padding-left:0}.experiment-canvas-wrap{height:clamp(300px,43svh,440px)}}
+
+
+/* Phase 6D tablet-first workspace: Canvas + persistent horizontal Control Dock. */
+.experiment-page{height:100svh;min-height:0;overflow:hidden;padding:8px 0 10px;display:grid;grid-template-rows:auto auto minmax(220px,1fr) clamp(170px,25svh,230px);gap:7px}
+.experiment-header{min-height:48px;padding-bottom:5px}.experiment-header .section-label{margin-bottom:2px}.experiment-header h1{font-size:clamp(23px,2.2vw,31px)}
+.experiment-task{min-height:0}.experiment-task p{margin:0;font-size:clamp(15px,1.55vw,18px);line-height:1.35}
+.experiment-canvas-wrap,.experiment-page.principle-symmetry .experiment-canvas-wrap{width:min(100%,1000px);height:auto;min-height:0;margin:auto;overflow:hidden}
+.experiment-canvas-wrap .geometry-canvas{width:100%;height:100%;max-height:none;aspect-ratio:auto}
+.experiment-control-dock{width:min(100%,1000px);height:100%;min-height:0;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,285px);overflow:hidden;border:2px solid var(--black);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-paper)}
+.experiment-dock-tools{min-width:0;min-height:0;display:flex;align-items:stretch;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-gutter:stable;scrollbar-color:var(--text-secondary) transparent;touch-action:pan-x;scroll-snap-type:x proximity}
+.experiment-dock-tools:focus-visible{outline:3px solid var(--blue);outline-offset:-4px}
+.experiment-dock-group,.experiment-page .geometry-control,.experiment-page .geometry-move-notice,.experiment-page .geometry-control-actions,.experiment-page .geometry-controls-empty{flex:0 0 auto;scroll-snap-align:start;border-right:1px solid var(--line);border-top:0;border-left:0}
+.experiment-dock-group{min-width:max-content;margin:0;padding:10px;display:flex;align-items:center;align-content:center;gap:8px;flex-wrap:nowrap}
+.experiment-dock-group>strong{align-self:flex-start;min-width:max-content;color:var(--text-secondary);font-size:14px}
+.experiment-shape-bar,.experiment-mode-bar{justify-content:flex-start}.experiment-shape-bar button,.experiment-mode-bar button{flex:0 0 auto;min-width:48px;min-height:48px;margin:0;padding:6px 12px}
+.experiment-page .geometry-control-panel{width:auto;min-width:max-content;height:100%;margin:0;display:flex;align-items:stretch;border:0;background:transparent}
+.experiment-page .geometry-controls-body{display:flex;align-items:stretch;grid-template-columns:none}
+.experiment-page .geometry-control,.experiment-page .geometry-move-notice{width:clamp(150px,18vw,210px);min-width:150px;padding:10px 12px}
+.experiment-page .geometry-color-control{width:330px}.experiment-page .geometry-rotation-control{width:250px}.experiment-page .geometry-proportion-control{width:200px}
+.experiment-page .geometry-control h3{margin:0 0 6px;font-size:15px}.experiment-page .geometry-move-notice span{font-size:13px}
+.experiment-page .geometry-control-actions{min-width:max-content;padding:10px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px}
+.experiment-page .control-action{min-width:72px;min-height:48px;padding:7px 12px}
+.experiment-page .geometry-controls-empty{min-width:310px;display:grid;place-items:center;padding:14px;color:var(--text-secondary);text-align:center}
+.experiment-footer{width:auto;min-width:0;height:100%;margin:0;padding:10px;display:flex;flex-direction:column;justify-content:space-between;gap:8px;overflow:hidden;border:0;border-left:2px solid var(--black);background:rgba(244,240,232,.55)}
+.experiment-feedback{min-height:0;overflow-y:auto;font-size:15px;line-height:1.4}.experiment-feedback p{margin:2px 0}.experiment-discovery{margin-top:4px!important}
+.experiment-actions{flex:0 0 auto;display:grid;grid-template-columns:1fr;gap:8px}.experiment-actions .primary-button,.experiment-actions .secondary-button{width:100%;min-height:48px;margin:0;padding:8px 12px;font-size:16px}
+.experiment-page .geometry-color-option,.experiment-page .geometry-angle,.experiment-page .geometry-proportion{min-width:48px;min-height:48px}
+.experiment-page .geometry-element.selected{outline-width:4px;outline-color:var(--black);outline-offset:6px;filter:drop-shadow(0 0 2px rgba(37,37,37,.3))}
+@media(orientation:landscape) and (max-height:900px){.experiment-page{grid-template-rows:auto auto minmax(220px,1fr) clamp(176px,27svh,220px)}.experiment-control-dock{grid-template-columns:minmax(0,1fr) minmax(230px,27vw)}.experiment-page .geometry-control,.experiment-page .geometry-move-notice{width:170px}.experiment-page .geometry-color-control{width:315px}}
+@media(orientation:portrait){.experiment-page{height:auto;min-height:100svh;overflow:visible;grid-template-rows:auto auto minmax(360px,45svh) auto}.experiment-control-dock{height:auto;min-height:190px;grid-template-columns:1fr;overflow:visible}.experiment-dock-tools{min-height:154px;border-bottom:2px solid var(--black)}.experiment-footer{min-height:150px;border-left:0}.experiment-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}

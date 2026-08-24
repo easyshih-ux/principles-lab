@@ -83,16 +83,18 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
           <strong>${index + 1}／${phase6cDefinitions.length}</strong>
         </header>
         <section class="experiment-task"><p>${definition.task}</p></section>
-        ${definition.principleId === 'symmetry' ? `<div class="experiment-mode-bar" role="group" aria-label="選擇對稱方式">${[['vertical','左右對稱'],['horizontal','上下對稱'],['cross','十字對稱']].map(([value,label]) => `<button type="button" data-symmetry-mode="${value}" aria-pressed="${experimentState.selectedExperimentOption === value}" class="${experimentState.selectedExperimentOption === value ? 'selected' : ''}">${label}</button>`).join('')}</div>` : ''}
-        ${enabledShapes.length ? `<div class="experiment-shape-bar"><span>新增造形</span>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
         <div class="experiment-canvas-wrap ${definition.principleId === 'balance' ? 'show-balance-axis' : ''}"><div id="experiment-canvas"></div></div>
-        <div class="experiment-lower-workspace">
-          <div class="geometry-control-panel" id="experiment-controls"></div>
+        <section class="experiment-control-dock" aria-label="實驗操作工具">
+          <div class="experiment-dock-tools" tabindex="0" aria-label="可左右滑動的操作工具列">
+            ${definition.principleId === 'symmetry' ? `<div class="experiment-mode-bar experiment-dock-group" role="group" aria-label="選擇對稱方式"><strong>對稱模式</strong>${[['vertical','左右對稱'],['horizontal','上下對稱'],['cross','十字對稱']].map(([value,label]) => `<button type="button" data-symmetry-mode="${value}" aria-pressed="${experimentState.selectedExperimentOption === value}" class="${experimentState.selectedExperimentOption === value ? 'selected' : ''}">${label}</button>`).join('')}</div>` : ''}
+            ${enabledShapes.length ? `<div class="experiment-shape-bar experiment-dock-group"><strong>新增造形</strong>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
+            <div class="geometry-control-panel" id="experiment-controls"></div>
+          </div>
           <footer class="experiment-footer">
-          <div class="experiment-feedback" id="experiment-feedback" aria-live="polite">${feedbackMarkup(definition, feedback)}</div>
-          <div class="experiment-actions">${experimentActionsMarkup(state.experimentCourse, definition, feedback)}</div>
+            <div class="experiment-feedback" id="experiment-feedback" aria-live="polite">${feedbackMarkup(definition, feedback)}</div>
+            <div class="experiment-actions">${experimentActionsMarkup(state.experimentCourse, definition, feedback)}</div>
           </footer>
-        </div>
+        </section>
       </section>`;
 
     const engine = new ConstrainedGeometryEngine({
