@@ -105,8 +105,15 @@ export function createRenderers({ app, state, navigate }) {
             <h1>選擇形式原理</h1>
           </div>
           <div class="wall-course-entry">
-            <p>從辨認到分析，找出形式原理的視覺線索。</p>
-            <div class="wall-course-actions"><button type="button" class="primary-button compact" id="start-recognize-course">開始第一關</button><button type="button" class="secondary-button compact" id="start-discover-course">開始第二關</button><button type="button" class="secondary-button compact" id="start-experiment-course">開始第三關</button></div>
+            <p>從辨認、分析到親手製作，依序理解形式原理。</p>
+            <div class="wall-course-actions" aria-label="學習關卡">
+              <button type="button" class="primary-button compact" id="start-recognize-course">第一關｜你看得出來嗎？</button>
+              <button type="button" class="secondary-button compact" id="start-discover-course">第二關｜哪裡不對勁？</button>
+              <button type="button" class="secondary-button compact course-entry-featured" id="start-experiment-course">
+                <strong>第三關｜製作實驗</strong>
+                <span>這次不只是找答案，而是由你親手把形式原理做出來。</span>
+              </button>
+            </div>
           </div>
         </header>
         <div class="sample-wall">
