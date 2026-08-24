@@ -1,9 +1,5 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
 
-const element = (id, values = {}) => ({
-  id, shape: 'circle', x: 200, y: 300, size: 3, hue: 'blue',
-  lightness: 3, rotation: 0, proportion: 1, ...values
-});
 
 function formal(principleId, overrides) {
   const base = experimentDefinitionsById[`experiment-${principleId}`];
@@ -23,7 +19,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('repetition', {
     title: '挑戰｜做出「反覆」',
     task: '運用畫面中的造形，讓某個造形或組合有「再次出現」的感覺。怎麼安排，由你決定。',
-    initialState: { elements: [element('rep-1', { x: 300 }), element('rep-2', { x: 560 })] },
+    initialState: { elements: [] },
     validationSpec: { minimumOccurrences: 3, signatureFields: ['shape', 'size', 'hue', 'lightness', 'rotation'], allowGroupUnit: true, groupDistance: 180, groupOffsetTolerance: 20 },
     diagnosticHints: {
       NO_REPEAT_UNIT: { observe: '找找看，畫面裡有沒有哪個造形或組合，讓人有「又看到它了」的感覺？', think: '哪個造形或組合，可以成為畫面中一直出現的角色？', action: '選一個造形或一組造形，試著讓它再次出現。' },
@@ -36,7 +32,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('gradation', {
     title: '挑戰｜做出「漸層」',
     task: '運用造形的變化，讓畫面產生「一步一步改變」的感覺。怎麼變化，由你決定。',
-    initialState: { elements: [1, 2, 3, 4, 5].map((size, index) => element(`grad-${index}`, { x: 180 + index * 155, size: index === 2 ? 2 : size, hue: 'blue' })) },
+    initialState: { elements: [] },
     validationSpec: { minimumStages: 4, allowedModes: ['size', 'lightness', 'spacing'], minimumSizeRange: 2, minimumLightnessRange: 2, minimumSpacingRange: 35 },
     diagnosticHints: {
       NO_CLEAR_GRADATION: { observe: '你的畫面有變化了，但哪一種變化有「一步一步」的感覺呢？', think: '看看大小、顏色深淺或間距，有沒有一項可以慢慢改變？', action: '選一種變化，試著讓它一步一步朝同一個方向前進。' },
@@ -50,7 +46,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('balance', {
     title: '挑戰｜做出「均衡」',
     task: '運用造形的大小、數量和位置，讓整個畫面看起來穩定。左右可以不一樣，怎麼安排由你決定。',
-    initialState: { elements: [element('bal-left', { x: 230, size: 4, hue: 'red' }), element('bal-right', { x: 720, size: 2 }), element('bal-right-2', { x: 820, y: 390, size: 1 })], gridConfig: { enabled: false, visible: true, step: 20, axis: 'vertical' } },
+    initialState: { elements: [], gridConfig: { enabled: false, visible: true, step: 20, axis: 'vertical' } },
     validationSpec: { balanceTolerance: 0.45, allowSymmetrical: true, allowAsymmetrical: true, centerDeadZone: 45, requireAsymmetry: false },
     diagnosticHints: {
       ONE_SIDE_EMPTY: { observe: '看看整張畫面，造形是不是都集中到同一邊了？', think: '如果希望整個畫面更穩定，另一邊需要出現什麼力量呢？', action: '試著把部分造形安排到另一側，再觀察整體的感覺。' },
@@ -64,7 +60,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('rhythm', {
     title: '挑戰｜做出「律動」',
     task: '運用造形的位置、方向、大小或間距變化，讓視線在畫面中產生移動、起伏或前進的感覺。可以有規律，也可以不規律，怎麼安排由你決定。',
-    initialState: { elements: [0, 1, 2, 3, 4].map((index) => element(`rhy-${index}`, { x: 180 + index * 155, y: 300, size: 2 })) },
+    initialState: { elements: [] },
     validationSpec: { minimumElements: 5, allowedMotionChannels: ['position', 'rotation', 'size', 'spacing', 'mixed'], minimumYRange: 80, minimumRotationRange: 90, minimumSizeRange: 2, minimumSpacingRange: 35, repetitionRequired: false },
     diagnosticHints: {
       NO_CLEAR_MOTION: { observe: '看著你的畫面，眼睛會自然地往某個方向移動嗎？', think: '位置、方向、大小或間距的變化，哪一種可以帶著視線走？', action: '選一種變化，讓視線能順著造形移動看看。' },
@@ -78,7 +74,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('symmetry', {
     title: '挑戰｜做出「對稱」',
     task: '選擇一種對稱方式，利用方格和對稱軸安排造形，讓兩側彼此對應。',
-    initialState: { elements: [element('sym-left', { shape: 'triangle', x: 320, y: 220, size: 3 })], selectedSymmetryMode: 'vertical', gridConfig: { enabled: true, visible: true, step: 20, axis: 'vertical' } },
+    initialState: { elements: [], selectedSymmetryMode: 'vertical', gridConfig: { enabled: true, visible: true, step: 20, axis: 'vertical' } },
     validationSpec: { allowedSymmetryModes: ['vertical', 'horizontal', 'cross'], axisX: 500, axisY: 300, gridStep: 20, positionTolerance: 1, directionAwareShapes: true },
     diagnosticHints: {
       NO_SYMMETRY_PAIR: { observe: '沿著對稱軸看看，這個造形在另一邊有找到它的「對應夥伴」嗎？', think: '如果把畫面沿著對稱軸對折，哪些造形還找不到彼此？', action: '找一個沒有對應的造形，在對稱軸另一側安排它的對應造形。' },
@@ -92,7 +88,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('contrast', {
     title: '挑戰｜做出「對比」',
     task: '利用造形之間的差異，讓某種不同變得明顯。你可以從大小、色彩或造形開始。',
-    initialState: { elements: [element('con-1', { x: 360 }), element('con-2', { x: 640 })] },
+    initialState: { elements: [] },
     validationSpec: { minimumElements: 3, minimumSizeDifference: 3, minimumHueDistance: 2, minimumLightnessDifference: 3, comparisonCoverage: 0.75 },
     diagnosticHints: {
       NO_CLEAR_CONTRAST: { observe: '第一眼看過去，哪一種「不同」最明顯？', think: '大小、色彩或造形之中，有沒有一種差異可以再清楚一點？', action: '選一種差異，把兩邊的不同拉得更明顯，再檢查看看。' },
@@ -105,7 +101,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('proportion', {
     title: '挑戰｜做出「比例」',
     task: '運用不同大小的造形，讓它們之間形成清楚的大小關係。怎麼排列，由你決定。',
-    initialState: { elements: ['circle', 'square', 'triangle', 'rectangle', 'semicircle', 'circle'].map((shape, index) => element('pro-' + index, { shape, x: 150 + index * 140, y: index % 2 ? 380 : 220, proportion: 1 })) },
+    initialState: { elements: [] },
     validationSpec: { requiredRatioLevels: [1, 2, 3], ratioLogicalSizes: { 1: 40, 2: 80, 3: 120 }, minimumElements: 6 },
     diagnosticHints: {
       RATIO_LEVELS_INCOMPLETE: { observe: '看看畫面裡的大小，目前能看出幾種不同的尺度？', think: '如果想讓大小之間的關係更完整，還缺少哪一種尺度？', action: '試著使用目前還沒出現的比例大小，再檢查看看。' },

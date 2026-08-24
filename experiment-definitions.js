@@ -1,5 +1,6 @@
 import { experimentValidatorIds } from './experiment-validators.js';
 import { normalizeAllowedTools } from './geometry/constrained-tools.js';
+import { createSimplicityInitialArtwork, SIMPLICITY_CORE_ELEMENT_IDS } from './simplicity-initial-state.js';
 
 const baseInitialState = () => ({
   elements: [],
@@ -139,7 +140,13 @@ export const experimentDefinitions = Object.freeze([
     task: '保留重要部分，減少不必要的複雜。',
     studentConcept: '保留重要部分，減少不必要的複雜。',
     allowedTools: { position: true, size: true, color: true, delete: true },
-    initialState: { beforeState: [], coreElementIds: [], simplificationMethods: [] },
+    initialState: {
+      elements: createSimplicityInitialArtwork(),
+      beforeState: createSimplicityInitialArtwork(),
+      coreElementIds: [...SIMPLICITY_CORE_ELEMENT_IDS],
+      nonDeletableElementIds: [...SIMPLICITY_CORE_ELEMENT_IDS],
+      simplificationMethods: []
+    },
     experimentOptions: { simplificationMethods: ['reduce', 'organize', 'simplifyVariety'] },
     validatorId: experimentValidatorIds.simplicity,
     validationSpec: { complexityWeights: { element: 1, color: 1, shape: 1, decoration: 1 }, minimumSimplification: 1, coreProtection: true },
