@@ -74,6 +74,46 @@ export const phase6cDefinitions = Object.freeze([
     },
     successFeedback: { general: '成功！畫面已形成律動。', byMethod: { position: '成功！造形的位置變化帶著視線移動，形成了「律動」。', rotation: '成功！方向的變化帶著視線前進，形成了「律動」。', size: '成功！大小的變化讓畫面產生了視覺律動。', spacing: '成功！疏密與間距的變化，讓畫面產生了節奏與律動。', mixed: '成功！你運用了多種變化，讓視線在畫面中產生明顯動勢。' } },
     discoveryFeedback: { position: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。', rotation: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。', size: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。', spacing: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。', mixed: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。' }
+  }),
+  formal('symmetry', {
+    title: '挑戰｜做出「對稱」',
+    task: '選擇一種對稱方式，利用方格和對稱軸安排造形，讓兩側彼此對應。',
+    initialState: { elements: [element('sym-left', { shape: 'triangle', x: 320, y: 220, size: 3 })], selectedSymmetryMode: 'vertical', gridConfig: { enabled: true, visible: true, step: 20, axis: 'vertical' } },
+    validationSpec: { allowedSymmetryModes: ['vertical', 'horizontal', 'cross'], axisX: 500, axisY: 300, gridStep: 20, positionTolerance: 1, directionAwareShapes: true },
+    diagnosticHints: {
+      NO_SYMMETRY_PAIR: { observe: '沿著對稱軸看看，這個造形在另一邊有找到它的「對應夥伴」嗎？', think: '如果把畫面沿著對稱軸對折，哪些造形還找不到彼此？', action: '找一個沒有對應的造形，在對稱軸另一側安排它的對應造形。' },
+      POSITION_MISMATCH: { observe: '兩邊好像有相同造形，但如果沿著中線對折，它們真的會碰在一起嗎？', think: '看看它們離對稱軸的距離是不是一樣。', action: '利用方格調整位置，讓兩邊距離對稱軸相同。' },
+      ATTRIBUTE_MISMATCH: { observe: '位置已經很接近了，再看看兩邊造形本身有沒有哪裡不同？', think: '造形、大小或方向，有沒有一項沒有彼此對應？', action: '調整兩側造形的大小、種類或方向，再檢查看看。' },
+      CROSS_INCOMPLETE: { observe: '一個方向看起來已經很像了，那另一個方向呢？', think: '十字對稱要同時觀察左右和上下兩個方向。', action: '再沿另一條對稱軸檢查一次，補上還沒有對應的部分。' }
+    },
+    successFeedback: { general: '成功！造形已沿對稱軸彼此對應。', byMethod: { vertical: '成功！你讓造形沿著垂直中軸彼此對應，形成了左右對稱。', horizontal: '成功！你讓造形沿著水平中軸彼此對應，形成了上下對稱。', cross: '成功！你的構圖同時沿著水平與垂直方向彼此對應，形成了十字對稱。' } },
+    discoveryFeedback: { vertical: '對稱不只有左右。改變對稱軸，也能形成上下或更多方向的對稱關係。', horizontal: '對稱不只有左右。改變對稱軸，也能形成上下或更多方向的對稱關係。', cross: '對稱不只有左右。改變對稱軸，也能形成上下或更多方向的對稱關係。' }
+  }),
+  formal('contrast', {
+    title: '挑戰｜做出「對比」',
+    task: '利用造形之間的差異，讓某種不同變得明顯。你可以從大小、色彩或造形開始。',
+    initialState: { elements: [element('con-1', { x: 360 }), element('con-2', { x: 640 })] },
+    validationSpec: { minimumElements: 3, minimumSizeDifference: 3, minimumHueDistance: 2, minimumLightnessDifference: 3, comparisonCoverage: 0.75 },
+    diagnosticHints: {
+      NO_CLEAR_CONTRAST: { observe: '第一眼看過去，哪一種「不同」最明顯？', think: '大小、色彩或造形之中，有沒有一種差異可以再清楚一點？', action: '選一種差異，把兩邊的不同拉得更明顯，再檢查看看。' },
+      DIFFERENCE_TOO_SMALL: { observe: '看得出它們有一點不同，但這個差異第一眼就能發現嗎？', think: '如果想讓這個不同更有力量，可以把差距再拉開嗎？', action: '把你正在使用的大小或色彩差異再加強一些。' },
+      TOO_MANY_UNRELATED_DIFFERENCES: { observe: '畫面裡有很多不同，但你最想讓大家看到的是哪一組差異？', think: '對比不是「全部都不一樣」，而是讓某個差異變得特別清楚。', action: '保留一個主要的比較關係，減少會搶走注意力的其他變化。' }
+    },
+    successFeedback: { general: '成功！畫面已形成明顯對比。', byMethod: { size: '成功！你利用明顯的大小差異形成了「對比」。', color: '成功！你利用明顯的色彩差異形成了「對比」。', shape: '成功！不同的造形特徵形成了清楚的「對比」。', multiple: '成功！你同時運用了不只一種差異，讓對比更加明顯。' } },
+    discoveryFeedback: { size: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', color: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', shape: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', multiple: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。' }
+  }),
+  formal('proportion', {
+    title: '挑戰｜做出「比例」',
+    task: '運用不同大小的造形，讓它們之間形成清楚的大小關係。怎麼排列，由你決定。',
+    initialState: { elements: [1, 2, 3, 1, 2, 3].map((proportion, index) => element('pro-' + index, { shape: ['circle', 'square', 'triangle'][index % 3], x: 150 + index * 140, y: index % 2 ? 380 : 220, proportion })) },
+    validationSpec: { requiredRatioLevels: [1, 2, 3], ratioLogicalSizes: { 1: 40, 2: 80, 3: 120 }, minimumElements: 6 },
+    diagnosticHints: {
+      RATIO_LEVELS_INCOMPLETE: { observe: '看看畫面裡的大小，目前能看出幾種不同的尺度？', think: '如果想讓大小之間的關係更完整，還缺少哪一種尺度？', action: '試著使用目前還沒出現的比例大小，再檢查看看。' },
+      RATIO_RELATION_TOO_WEAK: { observe: '畫面裡有大小差異，但它們之間的關係清楚嗎？', think: '試著比較小、中、大三種尺度，它們有沒有真正形成不同層級？', action: '利用固定比例尺標重新調整其中一些造形的大小。' },
+      TOO_FEW_ELEMENTS: { observe: '目前的造形還不太容易讓人比較大小之間的關係。', think: '如果多一點可以互相比較的造形，比例會不會更清楚？', action: '再加入一些造形，讓不同尺度之間可以被比較。' }
+    },
+    successFeedback: { general: '成功！你利用不同尺度的造形，建立了清楚的「比例」關係。', byMethod: { ratio: '成功！你利用不同尺度的造形，建立了清楚的「比例」關係。' } },
+    discoveryFeedback: { ratio: '比例看的是大小彼此之間的關係，不一定要按照小到大排列。' }
   })
 ]);
 

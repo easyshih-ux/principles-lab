@@ -168,7 +168,7 @@ export class GeometryControlPanel {
               data-value="${value}"
               ${allowed.includes(value) ? '' : 'disabled'}
               aria-pressed="${element.proportion === value}"
-            >${value}</button>`).join('')}
+            >${value}×</button>`).join('')}
         </div>
       </section>`;
   }

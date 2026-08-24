@@ -176,15 +176,107 @@ export function validateFormalRhythm({ elements = [], spec = {} }) {
   return response(false, path.traceable ? 'NO_CLEAR_MOTION' : 'TOO_RANDOM', metrics);
 }
 
+
+const directionalPeriods = Object.freeze({ triangle: 360, semicircle: 360, rectangle: 180, line: 180 });
+const normalizeAngle = (angle, period = 360) => ((angle % period) + period) % period;
+function mirrorRotation(element, axis) {
+  const period = directionalPeriods[element.shape];
+  if (!period) return null;
+  const rotation = element.rotation ?? 0;
+  return normalizeAngle(axis === 'vertical' ? -rotation : 180 - rotation, period);
+}
+function attributesMatch(source, target, axis) {
+  if (source.shape !== target.shape || source.size !== target.size) return false;
+  const expected = mirrorRotation(source, axis);
+  return expected == null || normalizeAngle(target.rotation ?? 0, directionalPeriods[source.shape]) === expected;
+}
+function axisAudit(elements, axis, spec) {
+  const tolerance = spec.positionTolerance ?? 1;
+  const axisX = spec.axisX ?? 500;
+  const axisY = spec.axisY ?? 300;
+  let positionMismatch = false;
+  let attributeMismatch = false;
+  let missing = false;
+  for (const source of elements) {
+    const expected = axis === 'vertical' ? { x: 2 * axisX - source.x, y: source.y } : { x: source.x, y: 2 * axisY - source.y };
+    const atPosition = elements.filter((target) => Math.abs(target.x - expected.x) <= tolerance && Math.abs(target.y - expected.y) <= tolerance);
+    if (atPosition.some((target) => attributesMatch(source, target, axis))) continue;
+    if (atPosition.length) { attributeMismatch = true; continue; }
+    const correctAttributeElsewhere = elements.some((target) => target.id !== source.id && attributesMatch(source, target, axis));
+    if (correctAttributeElsewhere) positionMismatch = true;
+    else missing = true;
+  }
+  return { passed: !positionMismatch && !attributeMismatch && !missing, positionMismatch, attributeMismatch, missing };
+}
+export function validateFormalSymmetry({ elements = [], spec = {}, selectedSymmetryMode = 'vertical' }) {
+  const vertical = axisAudit(elements, 'vertical', spec);
+  const horizontal = axisAudit(elements, 'horizontal', spec);
+  const required = selectedSymmetryMode === 'cross' ? [vertical, horizontal] : [selectedSymmetryMode === 'horizontal' ? horizontal : vertical];
+  const metrics = { selectedSymmetryMode, vertical, horizontal, elementCount: elements.length };
+  if (elements.length && required.every((audit) => audit.passed)) return response(true, 'valid', metrics, [selectedSymmetryMode]);
+  if (selectedSymmetryMode === 'cross' && vertical.passed !== horizontal.passed) return response(false, 'CROSS_INCOMPLETE', metrics);
+  if (required.some((audit) => audit.attributeMismatch)) return response(false, 'ATTRIBUTE_MISMATCH', metrics);
+  if (required.some((audit) => audit.positionMismatch)) return response(false, 'POSITION_MISMATCH', metrics);
+  return response(false, 'NO_SYMMETRY_PAIR', metrics);
+}
+
+function valueCounts(elements, key) {
+  const counts = new Map();
+  elements.forEach((item) => { const value = key(item); counts.set(value, (counts.get(value) ?? 0) + 1); });
+  return counts;
+}
+function clearTwoGroup(counts, total, coverage) {
+  const ordered = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  return ordered.length >= 2 && ordered[0][1] >= 2 && (ordered[0][1] + ordered[1][1]) / total >= coverage ? ordered.slice(0, 2) : null;
+}
+const hueOrder = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
+const shapeFamily = (shape) => shape === 'circle' || shape === 'semicircle' ? 'rounded' : shape === 'triangle' ? 'pointed' : 'angular';
+export function validateFormalContrast({ elements = [], spec = {} }) {
+  const coverage = spec.comparisonCoverage ?? 0.75;
+  const sizeGroups = clearTwoGroup(valueCounts(elements, (item) => item.size), elements.length, coverage);
+  const colorGroups = clearTwoGroup(valueCounts(elements, (item) => item.hue + ':' + item.lightness), elements.length, coverage);
+  const shapeGroups = clearTwoGroup(valueCounts(elements, (item) => item.shape), elements.length, coverage);
+  const methods = [];
+  if (sizeGroups && Math.abs(Number(sizeGroups[0][0]) - Number(sizeGroups[1][0])) >= (spec.minimumSizeDifference ?? 3)) methods.push('size');
+  if (colorGroups) {
+    const parse = ([key]) => { const [hue, lightness] = key.split(':'); return { hue, lightness: Number(lightness) }; };
+    const [a, b] = colorGroups.map(parse);
+    const ai = hueOrder.indexOf(a.hue); const bi = hueOrder.indexOf(b.hue);
+    const hueDistance = ai < 0 || bi < 0 ? 0 : Math.min(Math.abs(ai - bi), hueOrder.length - Math.abs(ai - bi));
+    if (hueDistance >= (spec.minimumHueDistance ?? 2) || Math.abs(a.lightness - b.lightness) >= (spec.minimumLightnessDifference ?? 3)) methods.push('color');
+  }
+  if (shapeGroups && shapeFamily(shapeGroups[0][0]) !== shapeFamily(shapeGroups[1][0])) methods.push('shape');
+  const metrics = { sizeGroups, colorGroups, shapeGroups, methods, elementCount: elements.length };
+  if (methods.length) return response(true, 'valid', metrics, methods.length > 1 ? ['multiple', ...methods] : methods);
+  const diversity = ['size', 'hue', 'shape'].filter((key) => new Set(elements.map((item) => item[key])).size >= Math.min(4, elements.length)).length;
+  if (elements.length >= 4 && diversity >= 2) return response(false, 'TOO_MANY_UNRELATED_DIFFERENCES', metrics);
+  if (sizeGroups || colorGroups || shapeGroups) return response(false, 'DIFFERENCE_TOO_SMALL', metrics);
+  return response(false, 'NO_CLEAR_CONTRAST', metrics);
+}
+
+export function validateFormalProportion({ elements = [], spec = {} }) {
+  const required = spec.requiredRatioLevels ?? [1, 2, 3];
+  const levels = elements.map((item) => item.ratioLevel ?? item.proportion).filter((value) => value != null);
+  const present = [...new Set(levels)].sort();
+  const metrics = { presentRatioLevels: present, requiredRatioLevels: required, elementCount: elements.length };
+  if (elements.length < (spec.minimumElements ?? 6)) return response(false, 'TOO_FEW_ELEMENTS', metrics);
+  if (!required.every((level) => present.includes(level))) return response(false, 'RATIO_LEVELS_INCOMPLETE', metrics);
+  if (present.some((level) => !required.includes(level))) return response(false, 'RATIO_RELATION_TOO_WEAK', metrics);
+  return response(true, 'valid', metrics, ['ratio']);
+}
+
 export const phase6cValidators = Object.freeze({
   repetition: validateFormalRepetition,
   gradation: validateFormalGradation,
   balance: validateFormalBalance,
-  rhythm: validateFormalRhythm
+  rhythm: validateFormalRhythm,
+  symmetry: validateFormalSymmetry,
+  contrast: validateFormalContrast,
+  proportion: validateFormalProportion
 });
 
 export function validatePhase6cExperiment(definition, state) {
   const validator = phase6cValidators[definition.principleId];
   if (!validator) throw new Error(`No Phase 6C validator for ${definition.principleId}`);
-  return validator({ elements: state.workingElements ?? [], spec: definition.validationSpec });
+  return validator({ elements: state.workingElements ?? [], spec: definition.validationSpec, selectedSymmetryMode: state.selectedExperimentOption ?? definition.initialState.selectedSymmetryMode });
 }

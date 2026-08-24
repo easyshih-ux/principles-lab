@@ -1,4 +1,4 @@
-import { GeometryCanvas } from './geometry/canvas.js';
+import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js';
 import { GeometryControlPanel } from './geometry/control-panel.js';
 import { ConstrainedGeometryEngine } from './geometry/constrained-engine.js';
 import { GEOMETRY_SHAPES } from './geometry/config.js';
@@ -83,6 +83,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
           <strong>${index + 1}／${phase6cDefinitions.length}</strong>
         </header>
         <section class="experiment-task"><p>${definition.task}</p></section>
+        ${definition.principleId === 'symmetry' ? `<div class="experiment-mode-bar" role="group" aria-label="選擇對稱方式">${[['vertical','左右對稱'],['horizontal','上下對稱'],['cross','十字對稱']].map(([value,label]) => `<button type="button" data-symmetry-mode="${value}" aria-pressed="${experimentState.selectedExperimentOption === value}" class="${experimentState.selectedExperimentOption === value ? 'selected' : ''}">${label}</button>`).join('')}</div>` : ''}
         ${enabledShapes.length ? `<div class="experiment-shape-bar"><span>新增造形</span>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
         <div class="experiment-canvas-wrap ${definition.principleId === 'balance' ? 'show-balance-axis' : ''}"><div id="experiment-canvas"></div></div>
         <footer class="experiment-footer">
@@ -95,7 +96,8 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
     const engine = new ConstrainedGeometryEngine({
       elements: experimentState.workingElements,
       allowedTools: definition.allowedTools,
-      toolConstraints: { rotation: { allowedValues: [0, 45, 90, 135], defaultValue: 0 } }
+      grid: definition.initialState.gridConfig ?? undefined,
+      toolConstraints: { rotation: { allowedValues: definition.principleId === 'symmetry' ? [0,45,90,135,180,225,270,315] : [0,45,90,135], defaultValue: 0 } }
     });
     let panel;
     const sync = () => {
@@ -103,10 +105,11 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
       experimentState.historyRef = engine.history;
       panel?.render();
     };
-    const canvas = new GeometryCanvas({ container: document.querySelector('#experiment-canvas'), engine, onStateChange: sync });
+    const canvas = new ConstrainedGeometryCanvas({ container: document.querySelector('#experiment-canvas'), engine, grid: definition.principleId === 'symmetry' ? { ...definition.initialState.gridConfig, axis: experimentState.selectedExperimentOption } : { enabled: false }, onStateChange: sync });
     panel = new GeometryControlPanel({ container: document.querySelector('#experiment-controls'), engine, onVisualChange: () => canvas.render(), onStateChange: () => { sync(); canvas.render(); } });
     active = { canvas, engine, panel };
 
+    document.querySelectorAll('[data-symmetry-mode]').forEach((button) => button.addEventListener('click', () => { experimentState.selectedExperimentOption = button.dataset.symmetryMode; experiment(definition); }));
     document.querySelectorAll('[data-add-shape]').forEach((button) => button.addEventListener('click', () => {
       engine.add(button.dataset.addShape, { x: 500, y: 300 });
       sync(); canvas.render();
@@ -129,7 +132,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
 
   function complete() {
     destroy();
-    app.innerHTML = `<section class="experiment-complete page-shell"><div><p class="section-label">第三關｜第一組</p><h1>第一組實驗完成</h1><p>你已完成反覆、漸層、均衡與律動。後續形式原理仍在施工中。</p><button class="primary-button" id="experiment-return">返回實驗室</button></div><div class="experiment-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
+    app.innerHTML = `<section class="experiment-complete page-shell"><div><p class="section-label">第三關｜第二組</p><h1>第二組實驗完成</h1><p>你已完成反覆、漸層、均衡、律動、對稱、對比與比例。後續形式原理仍在施工中。</p><button class="primary-button" id="experiment-return">返回實驗室</button></div><div class="experiment-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
     document.querySelector('#experiment-return').addEventListener('click', () => navigate('#principles'));
   }
 
@@ -141,7 +144,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
     app.innerHTML = `<section class="experiment-dev page-shell"><header class="validator-lab-header"><div><p class="section-label">開發驗收工具・非學生關卡</p><h1>Experiment Lab</h1></div><button class="back-link" id="experiment-dev-back">返回</button></header><div class="experiment-dev-controls"><select id="experiment-dev-select">${phase6cDefinitions.map((item) => `<option value="${item.id}">${item.title}</option>`).join('')}</select><button data-fixture="pass">載入 PASS</button><button data-fixture="fail">載入 FAIL</button><button id="experiment-dev-reset">Reset</button><label>提示層級<select id="experiment-dev-attempt"><option value="1">attempt 1</option><option value="2">attempt 2</option><option value="3">attempt 3</option></select></label></div><div id="experiment-dev-output"></div></section>`;
     const renderOutput = () => {
       const definition = phase6cDefinitionsById[currentId];
-      const result = validatePhase6cExperiment(definition, { workingElements: elements });
+      const result = validatePhase6cExperiment(definition, { workingElements: elements, selectedExperimentOption: definition.initialState.selectedSymmetryMode });
       const hint = result.passed ? null : resolveDiagnosticHint(definition, result.primaryDiagnosticCode, attempts);
       document.querySelector('#experiment-dev-output').innerHTML = `<div class="validator-lab-output"><section><h2>狀態</h2><strong>${result.passed ? 'PASS' : 'FAIL'}</strong></section><section><h2>diagnostic code</h2><p>${result.primaryDiagnosticCode}</p><h2>detectedMethods</h2><p>${result.detectedMethods.join(', ') || '—'}</p></section><section><h2>提示</h2><p>${hint ? `${hint.level}｜${hint.text}` : '成功'}</p></section><section class="validator-metrics"><h2>metrics</h2><pre>${JSON.stringify(result.metrics, null, 2)}</pre></section></div>`;
     };

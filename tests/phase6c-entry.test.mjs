@@ -33,13 +33,16 @@ test('discover completion preserves the wall exit and enables the experiment cou
   assert.match(discoverCourseSource, /#discover-experiment'[\s\S]*?navigate\('#level\/experiment\/start'\)/);
 });
 
-test('experiment start and the complete four-experiment route chain resolve safely', () => {
+test('experiment start and the complete seven-experiment route chain resolve safely', () => {
   const expected = [
     ['#level/experiment/start', 'experimentStart'],
     ['#level/experiment/repetition', 'experiment'],
     ['#level/experiment/gradation', 'experiment'],
     ['#level/experiment/balance', 'experiment'],
     ['#level/experiment/rhythm', 'experiment'],
+    ['#level/experiment/symmetry', 'experiment'],
+    ['#level/experiment/contrast', 'experiment'],
+    ['#level/experiment/proportion', 'experiment'],
     ['#level/experiment/complete', 'experimentComplete']
   ];
 
@@ -54,9 +57,9 @@ test('entry release uses a fresh application cache marker', () => {
   assert.match(indexSource, /app\.js\?v=phase6c-review-flow/);
   assert.match(indexSource, /phase6c\.css\?v=phase6c-review-flow/);
 });
-test('explicit completion advances through repetition, gradation, balance, rhythm and then completion', () => {
+test('explicit completion advances through repetition through proportion and then completion', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
-  const expectedNextIds = ['experiment-gradation', 'experiment-balance', 'experiment-rhythm', null];
+  const expectedNextIds = ['experiment-gradation', 'experiment-balance', 'experiment-rhythm', 'experiment-symmetry', 'experiment-contrast', 'experiment-proportion', null];
 
   phase6cDefinitions.forEach((definition, index) => {
     getExperimentState(course, definition.id).completed = true;

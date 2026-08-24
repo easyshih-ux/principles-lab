@@ -2,7 +2,7 @@ import { snapPoint } from './grid.js';
 import { getLogicalSize } from './palette.js';
 
 export function getShapeDimensions(element) {
-  const size = getLogicalSize(element.size);
+  const size = Number.isFinite(element.logicalSize) ? element.logicalSize : getLogicalSize(element.size);
   switch (element.shape) {
     case 'rectangle':
       return { width: size * 1.5, height: size };

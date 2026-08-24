@@ -81,5 +81,43 @@ export const phase6cFixtures = Object.freeze({
         [100, 300, 2, 0], [260, 300, 3, 45], [430, 300, 2, 0], [580, 300, 3, 45], [750, 300, 2, 0]
       ].map(([x, y, size, rotation], index) => element(`yu-${index}`, { x, y, size, rotation }))
     }
+  },
+  symmetry: {
+    pass: {
+      vertical: [element('sv1',{shape:'triangle',x:300,y:220,rotation:45}),element('sv2',{shape:'triangle',x:700,y:220,rotation:315})],
+      horizontal: [element('sh1',{shape:'semicircle',x:360,y:180,rotation:0}),element('sh2',{shape:'semicircle',x:360,y:420,rotation:180})],
+      cross: [[300,180],[700,180],[300,420],[700,420]].map(([x,y],i)=>element('sc' + i,{x,y})),
+      axis: [element('sa',{shape:'circle',x:500,y:300})],
+      directional: [element('sd1',{shape:'triangle',x:300,y:220,rotation:45}),element('sd2',{shape:'triangle',x:700,y:220,rotation:315})]
+    },
+    fail: {
+      missing: [element('sm1',{x:300,y:220})],
+      position: [element('sp1',{x:300,y:220}),element('sp2',{x:720,y:220})],
+      attribute: [element('st1',{x:300,y:220}),element('st2',{shape:'square',x:700,y:220})],
+      crossIncomplete: [element('sx1',{x:300,y:220}),element('sx2',{x:700,y:220})]
+    }
+  },
+  contrast: {
+    pass: {
+      size: [1,1,1,5].map((size,i)=>element('cz' + i,{x:180+i*180,size})),
+      color: ['blue','blue','blue','orange'].map((hue,i)=>element('cc' + i,{x:180+i*180,hue})),
+      shape: ['circle','circle','circle','triangle'].map((shape,i)=>element('cs' + i,{x:180+i*180,shape})),
+      multiple: [0,1,2,3].map((i)=>element('cm' + i,{x:180+i*180,size:i===3?5:1,hue:i===3?'orange':'blue'}))
+    },
+    fail: {
+      weak: [3,3,3,4].map((size,i)=>element('cw' + i,{x:180+i*180,size})),
+      unrelated: ['circle','square','triangle','rectangle','semicircle'].map((shape,i)=>element('cu' + i,{x:100+i*190,shape,size:i+1,hue:['red','orange','yellow','green','blue'][i]}))
+    }
+  },
+  proportion: {
+    pass: {
+      ordered: [1,2,3,1,2,3].map((proportion,i)=>element('po' + i,{x:120+i*150,proportion})),
+      unordered: [3,1,2,3,1,2].map((proportion,i)=>element('pu' + i,{x:120+i*150,proportion})),
+      mixedShapes: [1,2,3,1,2,3].map((proportion,i)=>element('pm' + i,{x:120+i*150,proportion,shape:['circle','square','triangle'][i%3]}))
+    },
+    fail: {
+      incomplete: [1,2,1,2,1,2].map((proportion,i)=>element('pi' + i,{x:120+i*150,proportion})),
+      tooFew: [1,2,3].map((proportion,i)=>element('pf' + i,{x:250+i*220,proportion}))
+    }
   }
 });
