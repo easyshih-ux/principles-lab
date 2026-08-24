@@ -55,7 +55,7 @@ test('experiment start and the complete seven-experiment route chain resolve saf
 
 test('entry release uses a fresh application cache marker', () => {
   assert.match(indexSource, /app\.js\?v=phase6d-three-column/);
-  assert.match(indexSource, /phase6c\.css\?v=phase6d-feedback-row/);
+  assert.match(indexSource, /phase6c\.css\?v=phase6d-center-height/);
 });
 test('explicit completion advances through repetition through proportion and then completion', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);

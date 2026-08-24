@@ -134,3 +134,24 @@
 .experiment-actions .primary-button,.experiment-actions .secondary-button{flex:0 0 auto;white-space:nowrap}
 @media(orientation:landscape){.experiment-footer{height:clamp(76px,11svh,92px);min-height:0;max-height:92px;grid-template-columns:minmax(0,1fr) max-content;align-items:stretch}.experiment-feedback{height:100%;max-height:100%;padding-block:3px}.experiment-actions{height:100%;align-content:center}}
 @media(orientation:portrait){.experiment-footer{height:auto;max-height:none;overflow:visible}.experiment-feedback{height:auto;max-height:none}.experiment-actions{min-width:0;flex-wrap:wrap}}
+
+
+/* Reserve center-column height for CanvasArea and FeedbackActionArea. */
+.experiment-workspace,.experiment-workspace.no-right-tools{height:100%;min-height:0;max-height:100%;overflow:hidden;align-items:stretch}
+.experiment-center-workspace{height:100%;min-height:0;max-height:100%;overflow:hidden;display:grid;grid-template-rows:minmax(0,1fr) clamp(104px,20%,128px);gap:8px;align-content:stretch}
+.experiment-canvas-wrap,.experiment-page.principle-symmetry .experiment-canvas-wrap{width:100%;height:100%;min-height:0;max-height:100%;margin:0;display:grid;place-items:center;overflow:hidden}
+.experiment-canvas-wrap>#experiment-canvas{width:100%;height:100%;min-height:0;display:grid;place-items:center}
+.experiment-canvas-wrap .geometry-canvas{width:auto;height:100%;max-width:100%;max-height:100%;aspect-ratio:5/3}
+.experiment-tool-panel{height:100%;min-height:0;max-height:100%;align-self:stretch;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain}
+.experiment-footer{width:100%;height:100%;min-height:0;max-height:100%;overflow:hidden;align-self:stretch}
+.experiment-feedback{height:100%;min-height:0;max-height:100%;overflow-y:auto}
+@media(orientation:landscape){.experiment-footer{height:100%;min-height:0;max-height:100%}}
+@media(orientation:portrait){.experiment-workspace,.experiment-workspace.no-right-tools{height:auto;max-height:none;overflow:visible}.experiment-center-workspace{height:auto;max-height:none;grid-template-rows:auto auto;overflow:visible}.experiment-canvas-wrap,.experiment-page.principle-symmetry .experiment-canvas-wrap{height:auto;max-height:none}.experiment-canvas-wrap>#experiment-canvas{height:auto}.experiment-canvas-wrap .geometry-canvas{width:100%;height:auto;max-height:none}.experiment-tool-panel{height:auto;max-height:none}.experiment-footer{height:auto;max-height:none}}
+
+
+/* Deterministic landscape tracks: 54 header + 28 task + remaining workspace. */
+@media(orientation:landscape){.experiment-page{grid-template-rows:54px 28px minmax(0,1fr)}.experiment-center-workspace{grid-template-rows:minmax(0,1fr) clamp(112px,20%,140px)}}
+
+
+/* Keep any aspect-ratio remainder above the Canvas, not between Canvas and feedback. */
+.experiment-canvas-wrap,.experiment-page.principle-symmetry .experiment-canvas-wrap,.experiment-canvas-wrap>#experiment-canvas{place-items:end center}

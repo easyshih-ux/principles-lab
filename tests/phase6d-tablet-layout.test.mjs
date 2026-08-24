@@ -18,7 +18,7 @@ test('proportion formally exposes delete with shape ratio position and duplicate
 test('tablet-first layout uses one shared three-column workspace',()=>{
  assert.match(css,/experiment-page\{height:100svh;min-height:0;overflow:hidden/);
  assert.match(css,/experiment-workspace\{[^}]*display:grid[^}]*grid-template-columns:minmax\(170px,220px\) minmax\(0,1fr\) minmax\(160px,210px\)/);
- assert.match(css,/experiment-center-workspace\{[^}]*grid-template-rows:auto auto/);
+ assert.match(css,/experiment-center-workspace\{[^}]*height:100%[^}]*grid-template-rows:minmax\(0,1fr\) clamp\(104px,20%,128px\)/);
  assert.match(css,/@media\(orientation:landscape\) and \(max-height:900px\)/);
  assert.match(css,/@media\(orientation:portrait\)/);
  assert.equal((source.match(/class="experiment-workspace/g)||[]).length,1);
@@ -78,7 +78,9 @@ test('portrait tablet stacks canvas and tool panels with natural page scrolling'
 test('shared landscape feedback row bounds long text without moving actions',()=>{
  assert.match(css,/experiment-feedback\{[^}]*min-width:0[^}]*overflow-x:hidden;overflow-y:auto[^}]*overflow-wrap:anywhere/);
  assert.match(css,/experiment-actions\{[^}]*flex:0 0 auto[^}]*min-width:max-content[^}]*flex-wrap:nowrap/);
- assert.match(css,/@media\(orientation:landscape\)\{\.experiment-footer\{height:clamp\(76px,11svh,92px\);min-height:0;max-height:92px;grid-template-columns:minmax\(0,1fr\) max-content/);
+ assert.match(css,/experiment-workspace,.experiment-workspace.no-right-tools\{height:100%;min-height:0;max-height:100%;overflow:hidden/);
+ assert.match(css,/experiment-tool-panel\{height:100%;min-height:0;max-height:100%[^}]*overflow-y:auto/);
+ assert.match(css,/@media\(orientation:landscape\)\{\.experiment-page\{grid-template-rows:54px 28px minmax\(0,1fr\)\}\.experiment-center-workspace\{grid-template-rows:minmax\(0,1fr\) clamp\(112px,20%,140px\)/);
  assert.match(css,/experiment-actions \.primary-button[^}]*flex:0 0 auto;white-space:nowrap/);
 });
 
@@ -93,4 +95,18 @@ test('gradation and contrast feedback use the same bounded component despite dif
  assert.match(gradationFail,/再觀察一下/);
  assert.equal((source.match(/class="experiment-feedback"/g)||[]).length,1);
  assert.equal((source.match(/class="experiment-actions"/g)||[]).length,1);
+});
+
+
+test('landscape height tracks reserve feedback without whole-page overflow',()=>{
+ const tracks=(height)=>{
+  const header=54, task=28, pagePadding=18, pageGaps=12, centerGap=8;
+  const workspace=height-header-task-pagePadding-pageGaps;
+  const feedback=Math.min(Math.max(workspace*.2,112),140);
+  return {header,task,workspace,canvas:workspace-feedback-centerGap,feedback,toolPanel:workspace,total:header+task+pagePadding+pageGaps+workspace};
+ };
+ assert.deepEqual(tracks(768),{header:54,task:28,workspace:656,canvas:516.8,feedback:131.20000000000002,toolPanel:656,total:768});
+ assert.deepEqual(tracks(820),{header:54,task:28,workspace:708,canvas:560,feedback:140,toolPanel:708,total:820});
+ assert.equal(tracks(768).total,768);
+ assert.equal(tracks(820).total,820);
 });
