@@ -7,8 +7,8 @@ import { renderValidatorLab } from './validator-lab.js';
 import { recognizeQuestions } from './recognize-questions.js';
 import { createRecognizeCourseRenderers } from './recognize-course.js';
 import { discoverQuestions } from './discover-questions.js';
-import { createDiscoverCourseRenderers } from './discover-course.js';
-import { createExperimentCourseRenderers } from './experiment-course.js';
+import { createDiscoverCourseRenderers } from './discover-course.js?v=phase6c-review-flow';
+import { createExperimentCourseRenderers } from './experiment-course.js?v=phase6c-review-flow';
 import { createPhase6cCourseState } from './phase6c-course-state.js';
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js';
 

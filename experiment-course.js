@@ -20,22 +20,31 @@ function clone(value) {
   return structuredClone(value);
 }
 
-function nextHash(definition) {
+export function nextHash(definition) {
   const index = phase6cDefinitions.findIndex((item) => item.id === definition.id);
   const next = phase6cDefinitions[index + 1];
   return next ? `#level/experiment/${next.principleId}` : '#level/experiment/complete';
 }
 
-function feedbackMarkup(definition, feedback) {
+export function feedbackMarkup(definition, feedback) {
   if (!feedback) return '<p>完成構圖後，再按「檢查構圖」。</p>';
   if (!feedback.result.passed) {
-    return `<p class="experiment-feedback-label">重新觀察</p><p>${feedback.hint?.text ?? '再觀察構圖中的變化。'}</p>`;
+    return `<p class="experiment-feedback-label">再觀察一下</p><p>${feedback.hint?.text ?? '再觀察構圖中的變化。'}</p>`;
   }
   const methods = feedback.result.detectedMethods;
   const method = methods.includes('multiple') || methods.includes('mixed') ? methods[0] : methods[0];
   const success = definition.successFeedback.byMethod[method] ?? definition.successFeedback.general;
   const discovery = definition.discoveryFeedback[method] ?? definition.discoveryFeedback.general ?? '';
-  return `<p class="experiment-feedback-label success">實驗成立</p><p>${success}</p>${discovery ? `<p class="experiment-discovery"><strong>小發現</strong>${discovery}</p>` : ''}`;
+  return `<p class="experiment-feedback-label success">成功！</p><p>${success}</p>${discovery ? `<p class="experiment-discovery"><strong>小發現</strong>${discovery}</p>` : ''}`;
+}
+
+export function experimentActionsMarkup(course, definition, feedback) {
+  const reset = '<button type="button" class="secondary-button" id="experiment-reset">復原本題</button>';
+  if (canAdvancePhase6c(course, definition)) {
+    return `${reset}<button type="button" class="primary-button" id="experiment-next">下一個挑戰</button>`;
+  }
+  const label = feedback && !feedback.result.passed ? '再次檢查' : '檢查構圖';
+  return `${reset}<button type="button" class="primary-button" id="experiment-check">${label}</button>`;
 }
 
 export function createExperimentCourseRenderers({ app, state, navigate }) {
@@ -76,11 +85,11 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
         <section class="experiment-task"><p>${definition.task}</p></section>
         ${enabledShapes.length ? `<div class="experiment-shape-bar"><span>新增造形</span>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
         <div class="experiment-canvas-wrap ${definition.principleId === 'balance' ? 'show-balance-axis' : ''}"><div id="experiment-canvas"></div></div>
-        <div class="geometry-control-panel" id="experiment-controls"></div>
         <footer class="experiment-footer">
           <div class="experiment-feedback" id="experiment-feedback" aria-live="polite">${feedbackMarkup(definition, feedback)}</div>
-          <div class="experiment-actions"><button class="secondary-button" id="experiment-reset">復原本題</button><button class="primary-button" id="experiment-check">檢查構圖</button>${canAdvancePhase6c(state.experimentCourse, definition) ? '<button class="primary-button" id="experiment-next">下一個實驗</button>' : ''}</div>
+          <div class="experiment-actions">${experimentActionsMarkup(state.experimentCourse, definition, feedback)}</div>
         </footer>
+        <div class="geometry-control-panel" id="experiment-controls"></div>
       </section>`;
 
     const engine = new ConstrainedGeometryEngine({
@@ -107,7 +116,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
       resetPhase6cExperiment(state.experimentCourse, definition);
       experiment(definition);
     });
-    document.querySelector('#experiment-check').addEventListener('click', () => {
+    document.querySelector('#experiment-check')?.addEventListener('click', () => {
       sync();
       submitPhase6cExperiment(state.experimentCourse, definition);
       experiment(definition);

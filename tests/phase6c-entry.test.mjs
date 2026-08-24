@@ -51,7 +51,8 @@ test('experiment start and the complete four-experiment route chain resolve safe
 });
 
 test('entry release uses a fresh application cache marker', () => {
-  assert.match(indexSource, /app\.js\?v=phase6c-entry/);
+  assert.match(indexSource, /app\.js\?v=phase6c-review-flow/);
+  assert.match(indexSource, /phase6c\.css\?v=phase6c-review-flow/);
 });
 test('explicit completion advances through repetition, gradation, balance, rhythm and then completion', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
