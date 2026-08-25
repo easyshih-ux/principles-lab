@@ -55,9 +55,9 @@ export function validateFormalRepetition({ elements = [], spec = {} }) {
   return response(false, code, metrics);
 }
 
-function gradationTrend(values) {
-  if (values.length < 2) return { direction: null, turnCount: 0 };
-  const signs = values.slice(1).map((value, index) => Math.sign(value - values[index]));
+function trendFromDifferences(differences) {
+  if (!differences.length) return { direction: null, turnCount: 0 };
+  const signs = differences.map(Math.sign);
   if (signs.some((sign) => sign === 0)) return { direction: null, turnCount: 0 };
   const runs = signs.filter((sign, index) => index === 0 || sign !== signs[index - 1]);
   const turnCount = Math.max(0, runs.length - 1);
@@ -65,12 +65,32 @@ function gradationTrend(values) {
     return { direction: runs[0] > 0 ? 'ascending' : 'descending', turnCount };
   }
   if (runs.length === 2) {
-    return {
-      direction: runs[0] > 0 ? 'single-peak' : 'single-valley',
-      turnCount
-    };
+    return { direction: runs[0] > 0 ? 'single-peak' : 'single-valley', turnCount };
   }
   return { direction: null, turnCount };
+}
+
+function gradationTrend(values) {
+  if (values.length < 2) return { direction: null, turnCount: 0 };
+  return trendFromDifferences(values.slice(1).map((value, index) => value - values[index]));
+}
+
+function hueGradationTrend(hues, maximumStep = 1) {
+  const indexes = hues.map((hue) => HUE_FAMILIES.indexOf(hue));
+  if (indexes.length < 2 || indexes.some((index) => index < 0)) {
+    return { direction: null, turnCount: 0, steps: [], range: 0 };
+  }
+  const count = HUE_FAMILIES.length;
+  const steps = indexes.slice(1).map((index, position) => {
+    const raw = index - indexes[position];
+    return ((raw + count / 2) % count + count) % count - count / 2;
+  });
+  if (steps.some((step) => step === 0 || Math.abs(step) > maximumStep)) {
+    return { direction: null, turnCount: 0, steps, range: 0 };
+  }
+  const trend = trendFromDifferences(steps);
+  const cumulative = steps.reduce((positions, step) => [...positions, positions.at(-1) + step], [0]);
+  return { ...trend, steps, range: range(cumulative) };
 }
 
 function range(values) {
@@ -83,14 +103,23 @@ export function validateFormalGradation({ elements = [], spec = {} }) {
   const values = {
     size: ordered.map((item) => item.size),
     lightness: ordered.map((item) => item.lightness),
+    hue: ordered.map((item) => item.hueFamily ?? item.hue),
     spacing: ordered.slice(1).map((item, index) => item.x - ordered[index].x)
   };
-  const thresholds = { size: spec.minimumSizeRange ?? 2, lightness: spec.minimumLightnessRange ?? 2, spacing: spec.minimumSpacingRange ?? 35 };
+  const thresholds = {
+    size: spec.minimumSizeRange ?? 2,
+    lightness: spec.minimumLightnessRange ?? 2,
+    hue: spec.minimumHueRange ?? 2,
+    spacing: spec.minimumSpacingRange ?? 35
+  };
   const modes = {};
-  for (const mode of spec.allowedModes ?? ['size', 'lightness', 'spacing']) {
+  for (const mode of spec.allowedModes ?? ['size', 'lightness', 'hue', 'spacing']) {
     const enough = ordered.length >= minimumStages && (mode !== 'spacing' || values.spacing.length >= minimumStages - 1);
-    const trend = gradationTrend(values[mode]);
-    modes[mode] = { values: values[mode], ...trend, range: range(values[mode]), enough };
+    const trend = mode === 'hue'
+      ? hueGradationTrend(values.hue, spec.maximumHueStep ?? 1)
+      : gradationTrend(values[mode]);
+    const modeRange = mode === 'hue' ? trend.range : range(values[mode]);
+    modes[mode] = { values: values[mode], ...trend, range: modeRange, enough };
     modes[mode].passed = enough && Boolean(modes[mode].direction) && modes[mode].range >= thresholds[mode];
   }
   const detected = Object.entries(modes).filter(([, data]) => data.passed).map(([mode]) => mode);

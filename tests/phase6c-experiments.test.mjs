@@ -58,18 +58,23 @@ test('two occurrences and inconsistent collections fail with specific diagnostic
   assert.equal(validate('repetition', phase6cFixtures.repetition.fail.inconsistent).primaryDiagnosticCode, 'INCONSISTENT_REPEAT');
 });
 
-for (const fixture of ['size', 'descending', 'nonEqual', 'singlePeak', 'singleValley', 'unevenPeak', 'offCenterPeak', 'lightness', 'spacing']) {
+for (const fixture of ['size', 'descending', 'nonEqual', 'singlePeak', 'singleValley', 'unevenPeak', 'offCenterPeak', 'lightness', 'lightnessDescending', 'lightnessPeak', 'lightnessValley', 'lightnessUneven', 'hueForward', 'hueReverse', 'hueReturn', 'hueWrapForward', 'spacing']) {
   test(`${fixture} gradation path passes`, () => {
     assert.equal(validate('gradation', phase6cFixtures.gradation.pass[fixture]).passed, true);
   });
 }
 
 test('multiple gradation paths are reported together', () => {
-  const result = validate('gradation', phase6cFixtures.gradation.pass.multiple);
-  assert.equal(result.passed, true);
-  assert.ok(result.detectedMethods.includes('multiple'));
-  assert.ok(result.detectedMethods.includes('size'));
-  assert.ok(result.detectedMethods.includes('spacing'));
+  for (const [fixture, methods] of [
+    ['multiple', ['size', 'spacing']],
+    ['sizeLightness', ['size', 'lightness']],
+    ['sizeHue', ['size', 'hue']]
+  ]) {
+    const result = validate('gradation', phase6cFixtures.gradation.pass[fixture]);
+    assert.equal(result.passed, true);
+    assert.equal(result.detectedMethods[0], 'multiple');
+    for (const method of methods) assert.ok(result.detectedMethods.includes(method));
+  }
 });
 
 test('single-peak and single-valley gradations report one valid direction reversal', () => {
@@ -83,12 +88,36 @@ test('single-peak and single-valley gradations report one valid direction revers
   assert.equal(valley.metrics.modes.size.turnCount, 1);
 });
 
+test('lightness and hue use the shared zero-or-one-turn trend rule', () => {
+  const lightnessPeak = validate('gradation', phase6cFixtures.gradation.pass.lightnessPeak);
+  const hueReturn = validate('gradation', phase6cFixtures.gradation.pass.hueReturn);
+  assert.equal(lightnessPeak.metrics.modes.lightness.direction, 'single-peak');
+  assert.equal(lightnessPeak.metrics.modes.lightness.turnCount, 1);
+  assert.equal(hueReturn.metrics.modes.hue.direction, 'single-peak');
+  assert.equal(hueReturn.metrics.modes.hue.turnCount, 1);
+  assert.deepEqual(hueReturn.metrics.modes.hue.steps, [1, 1, 1, 1, -1, -1, -1, -1]);
+});
+
 test('gradation rejects subtle, random, repeatedly reversing and two-stage sequences', () => {
   assert.equal(validate('gradation', phase6cFixtures.gradation.fail.tooSubtle).passed, false);
-  for (const fixture of ['directionBreak', 'randomSizes', 'multipleReversals']) {
+  for (const fixture of [
+    'directionBreak', 'randomSizes', 'multipleReversals', 'lightnessOscillation',
+    'hueRandomJumps', 'hueAlternating', 'hueDifferentNoSequence'
+  ]) {
     assert.equal(validate('gradation', phase6cFixtures.gradation.fail[fixture]).primaryDiagnosticCode, 'DIRECTION_BREAK');
   }
   assert.equal(validate('gradation', phase6cFixtures.gradation.fail.tooFew).primaryDiagnosticCode, 'TOO_FEW_STAGES');
+});
+
+test('gradation exposes student-facing feedback for size lightness hue and multiple', () => {
+  const feedback = definition('gradation').successFeedback.byMethod;
+  assert.match(feedback.size, /大小/);
+  assert.match(feedback.lightness, /深淺/);
+  assert.match(feedback.hue, /色相/);
+  assert.match(feedback.multiple, /不只一種/);
+  for (const text of Object.values(feedback)) {
+    assert.doesNotMatch(text, /monotonic|single-turn|distance|tolerance|threshold/i);
+  }
 });
 
 test('symmetrical and asymmetrical balance both pass and classify correctly', () => {

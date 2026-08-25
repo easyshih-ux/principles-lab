@@ -40,13 +40,27 @@ export const phase6cFixtures = Object.freeze({
       unevenPeak: row('gup', [1, 2, 5, 4, 1], 'size'),
       offCenterPeak: row('gop', [1, 3, 5, 4, 3, 2, 1], 'size'),
       lightness: row('gl', [1, 2, 3, 4, 5], 'lightness'),
+      lightnessDescending: row('gld', [5, 4, 3, 2, 1], 'lightness'),
+      lightnessPeak: row('glp', [1, 2, 3, 5, 3, 2, 1], 'lightness'),
+      lightnessValley: row('glv', [5, 3, 1, 3, 5], 'lightness'),
+      lightnessUneven: row('glu', [1, 2, 3, 5, 3, 2], 'lightness'),
+      hueForward: row('ghf', ['red', 'red-orange', 'orange', 'yellow-orange', 'yellow'], 'hue'),
+      hueReverse: row('ghr', ['yellow', 'yellow-orange', 'orange', 'red-orange', 'red'], 'hue'),
+      hueReturn: row('ght', ['red', 'red-orange', 'orange', 'yellow-orange', 'yellow', 'yellow-orange', 'orange', 'red-orange', 'red'], 'hue'),
+      hueWrapForward: row('ghw', ['red-violet', 'red', 'red-orange', 'orange'], 'hue'),
       spacing: row('gp', [3, 3, 3, 3, 3], 'size', [100, 210, 350, 520, 720]),
-      multiple: row('gm', [1, 2, 3, 4, 5], 'size', [100, 210, 350, 520, 720])
+      multiple: row('gm', [1, 2, 3, 4, 5], 'size', [100, 210, 350, 520, 720]),
+      sizeLightness: row('gml', [1, 2, 3, 4, 5], 'size').map((item, index) => ({ ...item, lightness: index + 1 })),
+      sizeHue: row('gmh', [1, 2, 3, 4, 5], 'size').map((item, index) => ({ ...item, hue: ['red', 'red-orange', 'orange', 'yellow-orange', 'yellow'][index] }))
     },
     fail: {
       directionBreak: row('gb', [1, 3, 2, 5], 'size'),
       randomSizes: row('grn', [1, 5, 2, 4, 1], 'size'),
       multipleReversals: row('gmr', [1, 5, 1, 5, 1], 'size'),
+      lightnessOscillation: row('glo', [1, 5, 1, 5, 1], 'lightness'),
+      hueRandomJumps: row('ghj', ['red', 'blue', 'yellow', 'violet', 'green'], 'hue'),
+      hueAlternating: row('gha', ['red', 'yellow', 'red', 'yellow', 'red'], 'hue'),
+      hueDifferentNoSequence: row('ghn', ['green', 'red', 'blue-violet', 'yellow-orange', 'blue'], 'hue'),
       tooSubtle: row('gts', [3, 3, 3, 3], 'size'),
       tooFew: row('gf', [1, 5], 'size')
     }

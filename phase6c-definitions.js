@@ -33,15 +33,15 @@ export const phase6cDefinitions = Object.freeze([
     title: '挑戰｜做出「漸層」',
     task: '運用造形的變化，讓畫面產生「一步一步改變」的感覺。怎麼變化，由你決定。',
     initialState: { elements: [] },
-    validationSpec: { minimumStages: 4, allowedModes: ['size', 'lightness', 'spacing'], minimumSizeRange: 2, minimumLightnessRange: 2, minimumSpacingRange: 35 },
+    validationSpec: { minimumStages: 4, allowedModes: ['size', 'lightness', 'hue', 'spacing'], minimumSizeRange: 2, minimumLightnessRange: 2, minimumHueRange: 2, maximumHueStep: 1, minimumSpacingRange: 35 },
     diagnosticHints: {
       NO_CLEAR_GRADATION: { observe: '你的畫面有變化了，但哪一種變化有「一步一步」的感覺呢？', think: '看看大小、顏色深淺或間距，有沒有一項可以慢慢改變？', action: '選一種變化，試著讓它一步一步朝同一個方向前進。' },
       TOO_FEW_STAGES: { observe: '已經看得到變化了！但它比較像一下子從這裡跳到那裡。怎麼讓變化更有「過程」？', think: '可以在兩個差異之間，再加入一些變化嗎？', action: '讓中間多出幾個逐步改變的階段，再檢查看看。' },
-      DIRECTION_BREAK: { observe: '前面正在慢慢改變，但後面好像突然改變方向了。你找得到在哪裡嗎？', think: '如果前面正在慢慢變大、變深或變疏，接下來可以繼續朝哪個方向？', action: '調整中途改變方向的地方，讓變化一路朝同一方向前進。' },
+      DIRECTION_BREAK: { observe: '畫面裡有變化，但方向來回改變了好幾次。你找得到哪些地方打斷了漸變嗎？', think: '漸層可以前進後返回一次；如果一直來回，會更像反覆或律動。', action: '保留一個清楚的前進方向，或只留下峰值／谷值的一次轉折。' },
       CHANGE_TOO_SUBTLE: { observe: '仔細看有變化，但如果不靠近看，還能發現嗎？', think: '試著讓每一步的差異再明顯一點。', action: '把正在使用的變化稍微拉開，再檢查看看。' }
     },
-    successFeedback: { general: '成功！畫面已形成漸層。', byMethod: { size: '成功！你讓造形的大小一步一步改變，形成了「漸層」。', lightness: '成功！你利用色彩的深淺變化做出了「漸層」。', spacing: '成功！即使造形沒有變，改變它們之間的距離，也能形成「漸層」。', multiple: '成功！你同時運用了不只一種變化來形成漸層。' } },
-    discoveryFeedback: { size: '漸層不只可以改變大小，色彩深淺、間距等視覺特徵，也能產生一步一步的變化。', lightness: '漸層不只可以改變大小，色彩深淺、間距等視覺特徵，也能產生一步一步的變化。', spacing: '漸層不只可以改變大小，色彩深淺、間距等視覺特徵，也能產生一步一步的變化。', multiple: '漸層不只可以改變大小，色彩深淺、間距等視覺特徵，也能產生一步一步的變化。' }
+    successFeedback: { general: '成功！畫面已形成漸層。', byMethod: { size: '你利用大小的變化，做出了清楚的漸層。', lightness: '你利用深淺的變化，做出了清楚的漸層。', hue: '你讓色彩一步一步改變，形成了色相的漸變。', spacing: '成功！即使造形沒有變，改變它們之間的距離，也能形成「漸層」。', multiple: '你同時用了不只一種變化方式來形成漸層。' } },
+    discoveryFeedback: { size: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', lightness: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', hue: '色相沿著色相環一步一步移動，也能形成清楚的漸變。', spacing: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', multiple: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。' }
   }),
   formal('balance', {
     title: '挑戰｜做出「均衡」',
