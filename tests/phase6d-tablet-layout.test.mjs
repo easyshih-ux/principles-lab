@@ -12,7 +12,7 @@ const panelSource=fs.readFileSync(new URL('../geometry/control-panel.js',import.
 
 test('proportion formally exposes delete with shape ratio position and duplicate',()=>{
  const tools=phase6cDefinitionsById['experiment-proportion'].allowedTools;
- assert.deepEqual(Object.entries(tools).filter(([,on])=>on).map(([key])=>key).sort(),['delete','duplicate','position','ratioSize','shape']);
+ assert.deepEqual(Object.entries(tools).filter(([,on])=>on).map(([key])=>key).sort(),['addShape','delete','duplicate','position','ratioSize']);
 });
 
 test('tablet-first layout uses one shared three-column workspace',()=>{
@@ -60,8 +60,8 @@ test('tablet controls remain touch-sized and canvas uses unified pointer behavio
  assert.match(shared,/.geometry-canvas\{[^}]*touch-action:none/);
 });
 
-test('all seven formal experiments share the same three-column renderer',()=>{
- const formal=['repetition','gradation','balance','rhythm','symmetry','contrast','proportion'];
+test('all ten formal experiments share the same three-column renderer',()=>{
+ const formal=['repetition','gradation','balance','rhythm','symmetry','contrast','proportion','unity','harmony','simplicity'];
  assert.deepEqual(formal.map(id=>phase6cDefinitionsById[`experiment-${id}`].principleId),formal);
  assert.equal((source.match(/experiment-controls-primary/g)||[]).length,2);
  assert.equal((source.match(/experiment-controls-secondary/g)||[]).length,2);

@@ -155,3 +155,7 @@
 
 /* Keep any aspect-ratio remainder above the Canvas, not between Canvas and feedback. */
 .experiment-canvas-wrap,.experiment-page.principle-symmetry .experiment-canvas-wrap,.experiment-canvas-wrap>#experiment-canvas{place-items:end center}
+
+/* Final tool-spec task visibility: reserve real text height before the workspace. */
+.experiment-task{min-height:0;overflow:visible}
+@media(orientation:landscape){.experiment-page{grid-template-rows:54px minmax(44px,auto) minmax(0,1fr)}.experiment-task{align-self:start}.experiment-task p{overflow:visible}}

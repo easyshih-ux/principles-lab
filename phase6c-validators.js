@@ -232,7 +232,7 @@ function clearTwoGroup(counts, total, coverage) {
   if (total === 2 && ordered.length === 2) return ordered;
   return ordered.length >= 2 && ordered[0][1] >= 2 && (ordered[0][1] + ordered[1][1]) / total >= coverage ? ordered.slice(0, 2) : null;
 }
-const hueOrder = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
+const hueOrder = HUE_FAMILIES;
 const shapeFamily = (shape) => shape === 'circle' || shape === 'semicircle' ? 'rounded' : shape === 'triangle' ? 'pointed' : 'angular';
 export function validateFormalContrast({ elements = [], spec = {} }) {
   const coverage = spec.comparisonCoverage ?? 0.75;

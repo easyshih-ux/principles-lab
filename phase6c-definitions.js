@@ -138,7 +138,7 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('simplicity', {
     title: '挑戰｜做出「單純」',
-    task: '讓這個構圖變得更單純，但不能刪掉最重要的核心元素。',
+    task: '試著讓畫面變得更單純。你可以從「減少、整理、減少變化」三種方法開始，不一定每一種都要使用。',
     initialState: experimentDefinitionsById['experiment-simplicity'].initialState,
     validationSpec: { minimumElementReduction: 2, minimumVarietyReduction: 2, minimumOrganizationGain: 0.16, minimumNonCoreRemaining: 1, coreElementIds: experimentDefinitionsById['experiment-simplicity'].initialState.coreElementIds, coreProtection: true },
     diagnosticHints: {

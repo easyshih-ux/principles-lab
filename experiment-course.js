@@ -74,7 +74,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
     const experimentState = getExperimentState(state.experimentCourse, definition.id);
     const feedback = state.experimentCourse.feedbackById[definition.id];
     const index = phase6cDefinitions.findIndex((item) => item.id === definition.id);
-    const enabledShapes = definition.allowedTools.shape ? GEOMETRY_SHAPES.filter((shape) => shape !== 'line') : [];
+    const enabledShapes = definition.allowedTools.addShape ? GEOMETRY_SHAPES.filter((shape) => shape !== 'line') : [];
     const hasRightTools = definition.allowedTools.rotation || definition.allowedTools.duplicate || definition.allowedTools.delete || definition.allowedTools.grid || definition.principleId === 'symmetry';
     app.innerHTML = `
       <section class="experiment-page principle-${definition.principleId} page-shell">
@@ -83,7 +83,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
           <div><p class="section-label">第三關｜有限工具實驗</p><h1>${definition.title}</h1></div>
           <strong>${index + 1}／${phase6cDefinitions.length}</strong>
         </header>
-        <section class="experiment-task"><p>${definition.task}</p>${definition.principleId === 'simplicity' ? '<div class="simplicity-method-hint"><strong>想一想，可以從三個方向開始：</strong><span>減少不必要的元素</span><span>整理元素的位置</span><span>減少太多不同的變化</span></div>' : ''}</section>
+        <section class="experiment-task"><p>${definition.task}</p>${definition.principleId === 'simplicity' ? '<div class="simplicity-method-hint"><strong>可以從三種方法開始，不一定每一種都要使用：</strong><span><b>減少</b>拿掉不必要的元素</span><span><b>整理</b>重新安排，讓畫面更清楚</span><span><b>減少變化</b>減少太多不同的大小或色彩</span><em>核心元素要保留下來。</em></div>' : ''}</section>
         <section class="experiment-workspace ${hasRightTools ? '' : 'no-right-tools'}">
           <aside class="experiment-tool-panel experiment-tool-panel-left" aria-label="建立與主要屬性工具">
             ${enabledShapes.length ? `<div class="experiment-shape-bar experiment-side-group"><strong>新增造形</strong>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
