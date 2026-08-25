@@ -55,12 +55,22 @@ export function validateFormalRepetition({ elements = [], spec = {} }) {
   return response(false, code, metrics);
 }
 
-function direction(values) {
-  if (values.length < 2) return null;
-  const differences = values.slice(1).map((value, index) => value - values[index]);
-  if (differences.every((value) => value > 0)) return 'ascending';
-  if (differences.every((value) => value < 0)) return 'descending';
-  return null;
+function gradationTrend(values) {
+  if (values.length < 2) return { direction: null, turnCount: 0 };
+  const signs = values.slice(1).map((value, index) => Math.sign(value - values[index]));
+  if (signs.some((sign) => sign === 0)) return { direction: null, turnCount: 0 };
+  const runs = signs.filter((sign, index) => index === 0 || sign !== signs[index - 1]);
+  const turnCount = Math.max(0, runs.length - 1);
+  if (runs.length === 1) {
+    return { direction: runs[0] > 0 ? 'ascending' : 'descending', turnCount };
+  }
+  if (runs.length === 2) {
+    return {
+      direction: runs[0] > 0 ? 'single-peak' : 'single-valley',
+      turnCount
+    };
+  }
+  return { direction: null, turnCount };
 }
 
 function range(values) {
@@ -79,7 +89,8 @@ export function validateFormalGradation({ elements = [], spec = {} }) {
   const modes = {};
   for (const mode of spec.allowedModes ?? ['size', 'lightness', 'spacing']) {
     const enough = ordered.length >= minimumStages && (mode !== 'spacing' || values.spacing.length >= minimumStages - 1);
-    modes[mode] = { values: values[mode], direction: direction(values[mode]), range: range(values[mode]), enough };
+    const trend = gradationTrend(values[mode]);
+    modes[mode] = { values: values[mode], ...trend, range: range(values[mode]), enough };
     modes[mode].passed = enough && Boolean(modes[mode].direction) && modes[mode].range >= thresholds[mode];
   }
   const detected = Object.entries(modes).filter(([, data]) => data.passed).map(([mode]) => mode);

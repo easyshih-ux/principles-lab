@@ -35,13 +35,20 @@ export const phase6cFixtures = Object.freeze({
       size: row('gs', [1, 2, 3, 4, 5], 'size'),
       descending: row('gd', [5, 4, 3, 2, 1], 'size'),
       nonEqual: row('gn', [1, 2, 4, 5], 'size'),
+      singlePeak: row('gpk', [1, 2, 3, 5, 4, 2, 1], 'size'),
+      singleValley: row('gvl', [5, 3, 1, 3, 5], 'size'),
+      unevenPeak: row('gup', [1, 2, 5, 4, 1], 'size'),
+      offCenterPeak: row('gop', [1, 3, 5, 4, 3, 2, 1], 'size'),
       lightness: row('gl', [1, 2, 3, 4, 5], 'lightness'),
       spacing: row('gp', [3, 3, 3, 3, 3], 'size', [100, 210, 350, 520, 720]),
       multiple: row('gm', [1, 2, 3, 4, 5], 'size', [100, 210, 350, 520, 720])
     },
     fail: {
       directionBreak: row('gb', [1, 3, 2, 5], 'size'),
-      tooFew: row('gf', [1, 3, 5], 'size')
+      randomSizes: row('grn', [1, 5, 2, 4, 1], 'size'),
+      multipleReversals: row('gmr', [1, 5, 1, 5, 1], 'size'),
+      tooSubtle: row('gts', [3, 3, 3, 3], 'size'),
+      tooFew: row('gf', [1, 5], 'size')
     }
   },
   balance: {

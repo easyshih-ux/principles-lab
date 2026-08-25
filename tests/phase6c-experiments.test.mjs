@@ -58,7 +58,7 @@ test('two occurrences and inconsistent collections fail with specific diagnostic
   assert.equal(validate('repetition', phase6cFixtures.repetition.fail.inconsistent).primaryDiagnosticCode, 'INCONSISTENT_REPEAT');
 });
 
-for (const fixture of ['size', 'descending', 'nonEqual', 'lightness', 'spacing']) {
+for (const fixture of ['size', 'descending', 'nonEqual', 'singlePeak', 'singleValley', 'unevenPeak', 'offCenterPeak', 'lightness', 'spacing']) {
   test(`${fixture} gradation path passes`, () => {
     assert.equal(validate('gradation', phase6cFixtures.gradation.pass[fixture]).passed, true);
   });
@@ -72,8 +72,22 @@ test('multiple gradation paths are reported together', () => {
   assert.ok(result.detectedMethods.includes('spacing'));
 });
 
-test('gradation direction break and too few stages fail specifically', () => {
-  assert.equal(validate('gradation', phase6cFixtures.gradation.fail.directionBreak).primaryDiagnosticCode, 'DIRECTION_BREAK');
+test('single-peak and single-valley gradations report one valid direction reversal', () => {
+  const peak = validate('gradation', phase6cFixtures.gradation.pass.singlePeak);
+  const valley = validate('gradation', phase6cFixtures.gradation.pass.singleValley);
+  assert.equal(peak.passed, true);
+  assert.equal(peak.metrics.modes.size.direction, 'single-peak');
+  assert.equal(peak.metrics.modes.size.turnCount, 1);
+  assert.equal(valley.passed, true);
+  assert.equal(valley.metrics.modes.size.direction, 'single-valley');
+  assert.equal(valley.metrics.modes.size.turnCount, 1);
+});
+
+test('gradation rejects subtle, random, repeatedly reversing and two-stage sequences', () => {
+  assert.equal(validate('gradation', phase6cFixtures.gradation.fail.tooSubtle).passed, false);
+  for (const fixture of ['directionBreak', 'randomSizes', 'multipleReversals']) {
+    assert.equal(validate('gradation', phase6cFixtures.gradation.fail[fixture]).primaryDiagnosticCode, 'DIRECTION_BREAK');
+  }
   assert.equal(validate('gradation', phase6cFixtures.gradation.fail.tooFew).primaryDiagnosticCode, 'TOO_FEW_STAGES');
 });
 
