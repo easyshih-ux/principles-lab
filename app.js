@@ -5,10 +5,10 @@ import { createAppState, setCurrentRoute } from './state.js';
 import { renderGeometryPlayground } from './geometry/playground.js';
 import { renderValidatorLab } from './validator-lab.js';
 import { recognizeQuestions } from './recognize-questions.js';
-import { createRecognizeCourseRenderers } from './recognize-course.js?v=final-phase-1';
+import { createRecognizeCourseRenderers } from './recognize-course.js?v=final-phase-2';
 import { discoverQuestions } from './discover-questions.js';
-import { createDiscoverCourseRenderers } from './discover-course.js?v=final-phase-1';
-import { createExperimentCourseRenderers } from './experiment-course.js?v=final-phase-1';
+import { createDiscoverCourseRenderers } from './discover-course.js?v=final-phase-2';
+import { createExperimentCourseRenderers } from './experiment-course.js?v=final-phase-2';
 import { createPhase6cCourseState } from './phase6c-course-state.js';
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js';
 
@@ -21,6 +21,13 @@ if (captureWidth) {
 const app = document.querySelector('#app');
 const state = createAppState(stages, recognizeQuestions, discoverQuestions);
 state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
+
+function focusRouteHeading() {
+  const heading = app.querySelector('h1');
+  if (!heading) return;
+  heading.setAttribute('tabindex', '-1');
+  heading.focus({ preventScroll: true });
+}
 
 function navigate(hash) {
   if (location.hash === hash) {
@@ -82,6 +89,7 @@ function renderCurrentRoute() {
   }
 
   window.scrollTo(0, 0);
+  focusRouteHeading();
 }
 
 window.addEventListener('hashchange', renderCurrentRoute);

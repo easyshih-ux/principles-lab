@@ -47,6 +47,7 @@ export function createDiscoverCourseRenderers({app,state,navigate}) {
     document.querySelector('#discover-hint')?.addEventListener('click',()=>{qs.feedback=q.hints[Math.min(qs.attempts,q.hints.length-1)];question();});
     document.querySelector('#discover-check')?.addEventListener('click',()=>{applyDiscoverResult(course,q,validateDiscoverQuestion(q,qs.selection));question();});
     document.querySelector('#discover-next')?.addEventListener('click',()=>{advanceDiscoverCourse(course,discoverQuestions);navigate(course.completed?'#level/discover/complete':'#level/discover/question');});
+    if(qs.completed) document.querySelector('#discover-next')?.focus();
   }
   function complete(){
     if(!course.completed){

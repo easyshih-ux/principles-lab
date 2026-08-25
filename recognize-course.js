@@ -137,6 +137,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
         navigate('#level/recognize/complete');
       }
     });
+    if (questionState.isCorrect) document.querySelector('#recognize-next')?.focus();
   }
 
   function renderComplete() {

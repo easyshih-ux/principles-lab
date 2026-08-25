@@ -135,9 +135,14 @@ test('accessibility and Final Phase cache markers remain scoped', () => {
   assert.doesNotMatch(indexSource, /<main[^>]*aria-live/);
   assert.match(recognizeSource, /aria-live="polite"/);
   assert.match(experimentSource, /id="experiment-feedback" aria-live="polite"/);
-  assert.ok(indexSource.includes('app.js?v=final-phase-1'));
+  assert.ok(indexSource.includes('app.js?v=final-phase-2'));
   assert.ok(indexSource.includes('phase6c.css?v=final-phase-1'));
-  assert.ok(appSource.includes('recognize-course.js?v=final-phase-1'));
-  assert.ok(appSource.includes('discover-course.js?v=final-phase-1'));
-  assert.ok(appSource.includes('experiment-course.js?v=final-phase-1'));
+  assert.ok(appSource.includes('recognize-course.js?v=final-phase-2'));
+  assert.ok(appSource.includes('discover-course.js?v=final-phase-2'));
+  assert.ok(appSource.includes('experiment-course.js?v=final-phase-2'));
+  assert.ok(appSource.includes("heading.setAttribute('tabindex', '-1')"));
+  assert.ok(appSource.includes('heading.focus({ preventScroll: true })'));
+  assert.ok(recognizeSource.includes("document.querySelector('#recognize-next')?.focus()"));
+  assert.ok(discoverSource.includes("document.querySelector('#discover-next')?.focus()"));
+  assert.ok(experimentSource.includes("document.querySelector('#experiment-next')?.focus()"));
 });

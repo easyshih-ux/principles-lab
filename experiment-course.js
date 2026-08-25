@@ -181,6 +181,9 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
       advancePhase6c(state.experimentCourse, definition);
       navigate(nextHash(definition));
     });
+    if (canAdvancePhase6c(state.experimentCourse, definition)) {
+      document.querySelector('#experiment-next')?.focus();
+    }
   }
 
   function complete() {
