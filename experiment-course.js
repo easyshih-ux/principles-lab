@@ -17,7 +17,7 @@ import { resolveDiagnosticHint } from './experiment-hints.js';
 const shapeLabels = { circle: '圓形', square: '正方形', triangle: '三角形', rectangle: '長方形', semicircle: '半圓', line: '線條' };
 export function addShapeControlsMarkup(allowedTools = {}) {
   if (!allowedTools.addShape) return '';
-  const shapes = GEOMETRY_SHAPES.filter((shape) => shape !== 'line');
+  const shapes = GEOMETRY_SHAPES.filter((shape) => !['line', 'semicircle'].includes(shape));
   return `<div class="experiment-shape-bar experiment-side-group"><strong>新增造形</strong>${shapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>`;
 }
 

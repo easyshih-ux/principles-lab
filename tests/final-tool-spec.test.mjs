@@ -76,7 +76,8 @@ test('student renderer exposes add buttons from addShape and simplicity displays
 test('addShape alone controls the formal student add-shape row',()=>{
  const controls=addShapeControlsMarkup({addShape:true,shape:false});
  assert.match(controls,/新增造形/);
- for(const shape of ['circle','square','triangle','rectangle','semicircle']) assert.match(controls,new RegExp(`data-add-shape="${shape}"`));
+ for(const shape of ['circle','square','triangle','rectangle']) assert.match(controls,new RegExp(`data-add-shape="${shape}"`));
+ assert.doesNotMatch(controls,/data-add-shape="semicircle"/);
  assert.equal(addShapeControlsMarkup({addShape:false,shape:true}),'');
  assert.equal(addShapeControlsMarkup({shape:true}),'');
 });
