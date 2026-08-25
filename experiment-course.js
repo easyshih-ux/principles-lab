@@ -1,4 +1,4 @@
-import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js';
+import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js?v=geometry-aspect-1';
 import { GeometryControlPanel } from './geometry/control-panel.js';
 import { ConstrainedGeometryEngine } from './geometry/constrained-engine.js';
 import { GEOMETRY_SHAPES } from './geometry/config.js';

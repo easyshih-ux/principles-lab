@@ -1,10 +1,10 @@
 import { getShapeDimensions } from './bounds.js';
 import { GEOMETRY_TOOLS } from './config.js';
 import {
-  logicalLengthToScreen,
+  logicalScaleToScreen,
   logicalToScreen,
   screenToLogical
-} from './coordinates.js';
+} from './coordinates.js?v=geometry-aspect-1';
 import { getDisplayColor } from './palette.js';
 
 export class GeometryCanvas {
@@ -73,8 +73,9 @@ export class GeometryCanvas {
     const rect = this.surface.getBoundingClientRect();
     const screen = logicalToScreen(position, rect, this.engine.canvas);
     const dimensions = getShapeDimensions(element);
-    const width = logicalLengthToScreen(dimensions.width, rect, this.engine.canvas, 'x');
-    const height = logicalLengthToScreen(dimensions.height, rect, this.engine.canvas, 'y');
+    const scale = logicalScaleToScreen(rect, this.engine.canvas);
+    const width = dimensions.width * scale;
+    const height = dimensions.height * scale;
     node.className = `geometry-element shape-${element.shape}${node.classList.contains('selected') ? ' selected' : ''}`;
     node.style.width = `${width}px`;
     node.style.height = `${height}px`;

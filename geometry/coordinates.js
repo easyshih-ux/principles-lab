@@ -17,3 +17,7 @@ export function logicalLengthToScreen(length, rect, canvas, axis = 'x') {
   const screenLength = axis === 'y' ? rect.height : rect.width;
   return (length / logicalLength) * screenLength;
 }
+
+export function logicalScaleToScreen(rect, canvas) {
+  return Math.min(rect.width / canvas.width, rect.height / canvas.height);
+}
