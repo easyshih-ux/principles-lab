@@ -5,6 +5,7 @@ import { phase6cDefinitions, phase6cDefinitionsById } from '../phase6c-definitio
 import { ConstrainedGeometryEngine } from '../geometry/constrained-engine.js';
 import { createPhase6cCourseState, resetPhase6cExperiment } from '../phase6c-course-state.js';
 import { getExperimentState } from '../experiment-session.js';
+import { addShapeControlsMarkup } from '../experiment-course.js';
 
 const enabled = (id) => Object.entries(phase6cDefinitionsById[`experiment-${id}`].allowedTools).filter(([,on])=>on).map(([tool])=>tool).sort();
 const expected = {
@@ -68,8 +69,32 @@ test('fixtures are not used as formal initial artwork',()=>{
 
 test('student renderer exposes add buttons from addShape and simplicity displays three optional methods',()=>{
  const source=fs.readFileSync(new URL('../experiment-course.js',import.meta.url),'utf8');
- assert.match(source,/definition\.allowedTools\.addShape/); assert.match(source,/data-add-shape/);
+ assert.match(source,/addShapeControlsMarkup\(definition\.allowedTools\)/); assert.match(source,/data-add-shape/);
  assert.match(source,/不一定每一種都要使用/); assert.match(source,/核心元素要保留下來/);
+});
+
+test('addShape alone controls the formal student add-shape row',()=>{
+ const controls=addShapeControlsMarkup({addShape:true,shape:false});
+ assert.match(controls,/新增造形/);
+ for(const shape of ['circle','square','triangle','rectangle','semicircle']) assert.match(controls,new RegExp(`data-add-shape="${shape}"`));
+ assert.equal(addShapeControlsMarkup({addShape:false,shape:true}),'');
+ assert.equal(addShapeControlsMarkup({shape:true}),'');
+});
+
+test('the first nine formal experiments can add their first element',()=>{
+ for(const def of phase6cDefinitions.filter((item)=>item.principleId!=='simplicity')){
+  assert.equal(def.allowedTools.addShape,true,def.principleId);
+  const engine=new ConstrainedGeometryEngine({allowedTools:def.allowedTools,elements:[]});
+  const result=engine.add('circle',{x:500,y:300});
+  assert.equal(result.changed,true,def.principleId);
+  assert.equal(engine.getState().elements.length,1,def.principleId);
+  assert.equal(engine.getState().elements[0].shape,'circle',def.principleId);
+  assert.equal(engine.getState().selectedId,engine.getState().elements[0].id,def.principleId);
+ }
+ const simplicity=phase6cDefinitionsById['experiment-simplicity'];
+ assert.equal(addShapeControlsMarkup(simplicity.allowedTools),'');
+ const engine=new ConstrainedGeometryEngine({allowedTools:simplicity.allowedTools,elements:simplicity.initialState.elements});
+ assert.equal(engine.add('circle').changed,false);
 });
 
 test('landscape task row grows with content instead of clipping rhythm copy',()=>{

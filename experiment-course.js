@@ -15,6 +15,12 @@ import { validatePhase6cExperiment } from './phase6c-validators.js';
 import { resolveDiagnosticHint } from './experiment-hints.js';
 
 const shapeLabels = { circle: '圓形', square: '正方形', triangle: '三角形', rectangle: '長方形', semicircle: '半圓', line: '線條' };
+export function addShapeControlsMarkup(allowedTools = {}) {
+  if (!allowedTools.addShape) return '';
+  const shapes = GEOMETRY_SHAPES.filter((shape) => shape !== 'line');
+  return `<div class="experiment-shape-bar experiment-side-group"><strong>新增造形</strong>${shapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>`;
+}
+
 
 function clone(value) {
   return structuredClone(value);
@@ -74,7 +80,6 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
     const experimentState = getExperimentState(state.experimentCourse, definition.id);
     const feedback = state.experimentCourse.feedbackById[definition.id];
     const index = phase6cDefinitions.findIndex((item) => item.id === definition.id);
-    const enabledShapes = definition.allowedTools.addShape ? GEOMETRY_SHAPES.filter((shape) => shape !== 'line') : [];
     const hasRightTools = definition.allowedTools.rotation || definition.allowedTools.duplicate || definition.allowedTools.delete || definition.allowedTools.grid || definition.principleId === 'symmetry';
     app.innerHTML = `
       <section class="experiment-page principle-${definition.principleId} page-shell">
@@ -86,7 +91,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
         <section class="experiment-task"><p>${definition.task}</p>${definition.principleId === 'simplicity' ? '<div class="simplicity-method-hint"><strong>可以從三種方法開始，不一定每一種都要使用：</strong><span><b>減少</b>拿掉不必要的元素</span><span><b>整理</b>重新安排，讓畫面更清楚</span><span><b>減少變化</b>減少太多不同的大小或色彩</span><em>核心元素要保留下來。</em></div>' : ''}</section>
         <section class="experiment-workspace ${hasRightTools ? '' : 'no-right-tools'}">
           <aside class="experiment-tool-panel experiment-tool-panel-left" aria-label="建立與主要屬性工具">
-            ${enabledShapes.length ? `<div class="experiment-shape-bar experiment-side-group"><strong>新增造形</strong>${enabledShapes.map((shape) => `<button type="button" data-add-shape="${shape}">${shapeLabels[shape]}</button>`).join('')}</div>` : ''}
+            ${addShapeControlsMarkup(definition.allowedTools)}
             <div class="geometry-control-panel" id="experiment-controls-primary"></div>
           </aside>
           <div class="experiment-center-workspace">
