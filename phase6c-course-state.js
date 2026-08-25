@@ -7,6 +7,7 @@ export function createPhase6cCourseState(definitions) {
     ...createExperimentSessionState(definitions),
     order: definitions.map((item) => item.id),
     currentIndex: 0,
+    completed: false,
     feedbackById: Object.fromEntries(definitions.map((item) => [item.id, null]))
   };
 }
@@ -27,6 +28,7 @@ export function submitPhase6cExperiment(course, definition) {
 export function resetPhase6cExperiment(course, definition) {
   resetExperimentState(course, definition);
   course.feedbackById[definition.id] = null;
+  course.completed = false;
   return getExperimentState(course, definition.id);
 }
 
@@ -39,5 +41,6 @@ export function advancePhase6c(course, definition) {
   const index = course.order.indexOf(definition.id);
   course.currentIndex = Math.min(index + 1, course.order.length);
   course.currentExperimentId = course.order[course.currentIndex] ?? null;
+  course.completed = course.currentIndex >= course.order.length;
   return course.currentExperimentId;
 }

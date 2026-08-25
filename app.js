@@ -5,10 +5,10 @@ import { createAppState, setCurrentRoute } from './state.js';
 import { renderGeometryPlayground } from './geometry/playground.js';
 import { renderValidatorLab } from './validator-lab.js';
 import { recognizeQuestions } from './recognize-questions.js';
-import { createRecognizeCourseRenderers } from './recognize-course.js';
+import { createRecognizeCourseRenderers } from './recognize-course.js?v=final-phase-1';
 import { discoverQuestions } from './discover-questions.js';
-import { createDiscoverCourseRenderers } from './discover-course.js?v=phase6c-review-flow';
-import { createExperimentCourseRenderers } from './experiment-course.js?v=student-shapes-1';
+import { createDiscoverCourseRenderers } from './discover-course.js?v=final-phase-1';
+import { createExperimentCourseRenderers } from './experiment-course.js?v=final-phase-1';
 import { createPhase6cCourseState } from './phase6c-course-state.js';
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js';
 

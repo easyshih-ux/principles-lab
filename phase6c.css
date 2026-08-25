@@ -159,3 +159,16 @@
 /* Final tool-spec task visibility: reserve real text height before the workspace. */
 .experiment-task{min-height:0;overflow:visible}
 @media(orientation:landscape){.experiment-page{grid-template-rows:54px minmax(44px,auto) minmax(0,1fr)}.experiment-task{align-self:start}.experiment-task p{overflow:visible}}
+
+/* Final Phase course completion */
+.final-completion-copy{min-width:0}
+.final-completion .section-label{margin:0 0 10px}
+.final-completion p{margin:14px 0}
+.final-learning-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:20px 0}
+.final-learning-summary strong{padding:10px 12px;border-left:4px solid var(--blue);background:rgba(255,253,248,.58);font-size:17px;line-height:1.4}
+.final-learning-summary strong:nth-child(2){border-color:var(--red)}
+.final-learning-summary strong:nth-child(3){border-color:var(--yellow)}
+.final-principle-list{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;max-width:720px;margin:18px 0 22px;padding:0;list-style:none}
+.final-principle-list li{padding:8px 6px;border:1px solid var(--line);background:var(--surface);font-weight:900;text-align:center}
+@media(max-width:900px){.final-completion{grid-template-columns:minmax(0,68%) minmax(0,32%);padding-block:22px}.final-completion h1{font-size:clamp(42px,6vw,62px)}.final-completion-art{height:390px}.final-learning-summary{margin:14px 0}.final-learning-summary strong{padding:8px;font-size:15px}.final-principle-list{margin:14px 0 18px}}
+@media(orientation:portrait) and (max-width:900px){.final-completion{grid-template-columns:1fr;align-content:start;min-height:100svh;padding-block:28px}.final-completion-art{min-height:230px;height:32svh}.final-learning-summary{grid-template-columns:1fr}.final-principle-list{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -117,7 +117,8 @@ test('new experiments require explicit review and expose next only after success
     getExperimentState(course,item.id).workingElements = structuredClone(phase6cFixtures[id].pass[Object.keys(phase6cFixtures[id].pass)[0]]);
     const feedback = submitPhase6cExperiment(course,item);
     assert.equal(feedback.result.passed,true,id);
-    assert.match(experimentActionsMarkup(course,item,feedback), /下一個挑戰/);
+    const nextLabel = id === 'simplicity' ? '完成視覺實驗室' : '下一個挑戰';
+    assert.match(experimentActionsMarkup(course,item,feedback), new RegExp(nextLabel));
   }
 });
 

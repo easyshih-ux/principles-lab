@@ -107,10 +107,10 @@ export function createRenderers({ app, state, navigate }) {
           <div class="wall-course-entry">
             <p>從辨認、分析到親手製作，依序理解形式原理。</p>
             <div class="wall-course-actions" aria-label="學習關卡">
-              <button type="button" class="primary-button compact" id="start-recognize-course">第一關｜你看得出來嗎？</button>
-              <button type="button" class="secondary-button compact" id="start-discover-course">第二關｜哪裡不對勁？</button>
+              <button type="button" class="primary-button compact" id="start-recognize-course">第一關｜我看得出來</button>
+              <button type="button" class="secondary-button compact" id="start-discover-course">第二關｜我找得到問題</button>
               <button type="button" class="secondary-button compact course-entry-featured" id="start-experiment-course">
-                <strong>第三關｜製作實驗</strong>
+                <strong>第三關｜我自己做得出來</strong>
                 <span>這次不只是找答案，而是由你親手把形式原理做出來。</span>
               </button>
             </div>
@@ -128,7 +128,7 @@ export function createRenderers({ app, state, navigate }) {
                   <p>${principle.shortDescription}</p>
                   ${isAvailable
                     ? `<button class="sample-enter" data-principle-id="${principle.id}">開始實驗 →</button>`
-                    : '<span class="sample-status">即將開放</span>'}
+                    : '<span class="sample-status">形式樣本</span>'}
                 </div>
               </article>`;
           }).join('')}

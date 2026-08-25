@@ -79,7 +79,8 @@ test('success keeps the composition, renders feedback and only then exposes next
     assert.deepEqual(state.workingElements, passingWork);
     assert.match(feedbackMarkup(definition, feedback), /成功！/);
     assert.match(feedbackMarkup(definition, feedback), /小發現/);
-    assert.match(experimentActionsMarkup(course, definition, feedback), /id="experiment-next">下一個挑戰<\/button>/);
+    const nextLabel = definition.principleId === 'simplicity' ? '完成視覺實驗室' : '下一個挑戰';
+    assert.match(experimentActionsMarkup(course, definition, feedback), new RegExp(`id="experiment-next">${nextLabel}<\\/button>`));
     assert.doesNotMatch(experimentActionsMarkup(course, definition, feedback), /id="experiment-check"/);
     assert.equal(course.currentIndex, 0, 'success must not auto-advance');
   }

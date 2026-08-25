@@ -39,11 +39,28 @@ export function createAppState(stages, recognizeQuestions = [], discoverQuestion
     temporary: {},
     completion: {
       stages: {},
-      principles: {}
+      principles: {},
+      courses: {
+        recognize: false,
+        discover: false,
+        experiment: false,
+        all: false
+      }
     },
     recognizeCourse: createRecognizeCourseState(recognizeQuestions),
     discoverCourse: createDiscoverCourseState(discoverQuestions)
   };
+}
+
+export function syncCourseCompletion(state) {
+  const courses = {
+    recognize: Boolean(state.recognizeCourse?.completed),
+    discover: Boolean(state.discoverCourse?.completed),
+    experiment: Boolean(state.experimentCourse?.completed)
+  };
+  courses.all = courses.recognize && courses.discover && courses.experiment;
+  state.completion.courses = courses;
+  return courses;
 }
 
 export function setCurrentRoute(state, route) {

@@ -13,6 +13,8 @@ import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definition
 import { phase6cFixtures } from './phase6c-fixtures.js';
 import { validatePhase6cExperiment } from './phase6c-validators.js';
 import { resolveDiagnosticHint } from './experiment-hints.js';
+import { principles as principleMetadata } from './data.js';
+import { syncCourseCompletion } from './state.js';
 
 const shapeLabels = { circle: '圓形', square: '正方形', triangle: '三角形', rectangle: '長方形', semicircle: '半圓', line: '線條' };
 export function addShapeControlsMarkup(allowedTools = {}) {
@@ -24,6 +26,27 @@ export function addShapeControlsMarkup(allowedTools = {}) {
 
 function clone(value) {
   return structuredClone(value);
+}
+
+export function finalCompletionMarkup(principles = principleMetadata) {
+  return `
+    <section class="experiment-complete final-completion page-shell">
+      <div class="final-completion-copy">
+        <p class="section-label">我真的會用了</p>
+        <h1>視覺實驗室完成！</h1>
+        <div class="final-learning-summary" aria-label="三階段學習成果">
+          <strong>你看得出來。</strong>
+          <strong>你找得到問題。</strong>
+          <strong>你也做得出來。</strong>
+        </div>
+        <p>形式原理不是只有一個標準答案，而是可以被觀察、理解，也可以被你自己運用。</p>
+        <ul class="final-principle-list" aria-label="完成的十項形式原理">
+          ${principles.map((principle) => `<li>${principle.name}</li>`).join('')}
+        </ul>
+        <button type="button" class="primary-button" id="experiment-return">回到形式原理實驗室</button>
+      </div>
+      <div class="experiment-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </section>`;
 }
 
 export function nextHash(definition) {
@@ -47,7 +70,8 @@ export function feedbackMarkup(definition, feedback) {
 export function experimentActionsMarkup(course, definition, feedback) {
   const reset = '<button type="button" class="secondary-button" id="experiment-reset">復原本題</button>';
   if (canAdvancePhase6c(course, definition)) {
-    return `${reset}<button type="button" class="primary-button" id="experiment-next">下一個挑戰</button>`;
+    const label = definition.principleId === 'simplicity' ? '完成視覺實驗室' : '下一個挑戰';
+    return `${reset}<button type="button" class="primary-button" id="experiment-next">${label}</button>`;
   }
   const label = feedback && !feedback.result.passed ? '再次檢查' : '檢查構圖';
   return `${reset}<button type="button" class="primary-button" id="experiment-check">${label}</button>`;
@@ -161,7 +185,9 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
 
   function complete() {
     destroy();
-    app.innerHTML = `<section class="experiment-complete page-shell"><div><p class="section-label">第三關｜有限工具實驗</p><h1>第三關完成！</h1><p>你不只看得出形式原理，也已經能自己把它做出來了。</p><p>同一種形式原理，沒有只有一個正確答案。</p><button class="primary-button" id="experiment-return">返回形式原理實驗室</button></div><div class="experiment-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
+    state.experimentCourse.completed = state.experimentCourse.currentIndex >= state.experimentCourse.order.length;
+    syncCourseCompletion(state);
+    app.innerHTML = finalCompletionMarkup();
     document.querySelector('#experiment-return').addEventListener('click', () => navigate('#principles'));
   }
 
