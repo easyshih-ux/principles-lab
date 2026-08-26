@@ -4,10 +4,12 @@ import {
   applyRecognizeValidation,
   completeRecognizeCourse,
   firstIncompleteQuestion,
+  getRecognizeSessionQuestion,
   resetRecognizeCourse,
   selectRecognizeAnswer
 } from './recognize-course-state.js';
 import { recognizeQuestions } from './recognize-questions.js';
+import { getRecognizeVariant } from './recognize-template-pool.js';
 import { recognizeQuestionHash } from './router.js';
 import { validateStage } from './validators.js';
 import { syncCourseCompletion } from './state.js';
@@ -27,11 +29,18 @@ export function recognizeCompletionMarkup() {
       </section>`;
 }
 
-function compositionMarkup(question) {
+function guideStyle(guide) {
+  return [
+    Number.isFinite(guide.x) ? `--guide-x:${guide.x / 10}%` : '',
+    Number.isFinite(guide.y) ? `--guide-y:${guide.y / 6}%` : ''
+  ].filter(Boolean).join(';');
+}
+
+export function recognizeCompositionMarkup(question, ariaLabel = '形式原理幾何構圖') {
   return `
-    <div class="recognize-composition" role="img" aria-label="第 ${recognizeQuestions.indexOf(question) + 1} 題幾何構圖">
+    <div class="recognize-composition" role="img" aria-label="${ariaLabel}">
       ${(question.guides ?? []).map((guide) => `
-        <i class="composition-guide ${guide.type}" style="--guide-x:${guide.x / 10}%" aria-hidden="true"></i>`).join('')}
+        <i class="composition-guide ${guide.type}" style="${guideStyle(guide)}" aria-hidden="true"></i>`).join('')}
       ${question.elements.map((element) => {
         const dimensions = getShapeDimensions(element);
         return `
@@ -46,6 +55,7 @@ function compositionMarkup(question) {
 
 export function createRecognizeCourseRenderers({ app, state, navigate }) {
   const courseState = state.recognizeCourse;
+  const devSelection = { questionId: recognizeQuestions[0].id, variantId: 'A' };
 
   function renderStart() {
     app.innerHTML = `
@@ -75,6 +85,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
       return;
     }
 
+    const sessionQuestion = getRecognizeSessionQuestion(courseState, question);
     const questionState = courseState.questions[question.id];
     const progress = `${requestedIndex + 1} / ${recognizeQuestions.length}`;
     app.innerHTML = `
@@ -84,11 +95,11 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
           <h1>第一關｜你看得出來嗎？</h1>
           <strong>${progress}</strong>
         </header>
-        <div class="recognize-artboard">${compositionMarkup(question)}</div>
+        <div class="recognize-artboard">${recognizeCompositionMarkup(sessionQuestion, `第 ${requestedIndex + 1} 題幾何構圖`)}</div>
         <div class="recognize-question-copy">
           <h2>${question.prompt}</h2>
           <div class="recognize-options" role="group" aria-label="答案選項">
-            ${question.options.map((option) => `
+            ${sessionQuestion.options.map((option) => `
               <button
                 type="button"
                 class="recognize-option ${questionState.selectedAnswer === option.id ? 'selected' : ''}"
@@ -133,9 +144,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
         navigate(recognizeQuestionHash(nextQuestion.id));
         return;
       }
-      if (completeRecognizeCourse(courseState, recognizeQuestions)) {
-        navigate('#level/recognize/complete');
-      }
+      if (completeRecognizeCourse(courseState, recognizeQuestions)) navigate('#level/recognize/complete');
     });
     if (questionState.isCorrect) document.querySelector('#recognize-next')?.focus();
   }
@@ -152,5 +161,35 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
     document.querySelector('#recognize-wall-return').addEventListener('click', () => navigate('#principles'));
   }
 
-  return { start: renderStart, question: renderQuestion, complete: renderComplete };
+  function renderDev() {
+    const question = recognizeQuestions.find(({ id }) => id === devSelection.questionId) ?? recognizeQuestions[0];
+    const variant = getRecognizeVariant(question, devSelection.variantId) ?? getRecognizeVariant(question, 'A');
+    const previewQuestion = { ...question, ...variant };
+    app.innerHTML = `
+      <section class="recognize-template-dev page-shell">
+        <header class="dev-preview-header">
+          <div><p class="section-label">Development only</p><h1>第一關｜24模板驗收</h1></div>
+          <button type="button" class="back-link" id="template-dev-back">返回首頁</button>
+        </header>
+        <div class="dev-preview-controls">
+          <label>原理
+            <select id="template-principle">${recognizeQuestions.map((item) => `<option value="${item.id}" ${item.id === question.id ? 'selected' : ''}>${item.title}</option>`).join('')}</select>
+          </label>
+          <div role="group" aria-label="模板版本">${['A', 'B', 'C'].map((id) => `<button type="button" class="geometry-tool ${id === variant.variantId ? 'active' : ''}" data-template-variant="${id}" aria-pressed="${id === variant.variantId}">Variant ${id}</button>`).join('')}</div>
+        </div>
+        <div class="dev-preview-meta"><strong>${question.title}｜Variant ${variant.variantId}</strong><span>${variant.variantLabel}</span></div>
+        <div class="recognize-artboard">${recognizeCompositionMarkup(previewQuestion, `${question.title} Variant ${variant.variantId} 預覽`)}</div>
+      </section>`;
+    document.querySelector('#template-dev-back').addEventListener('click', () => navigate('#home'));
+    document.querySelector('#template-principle').addEventListener('change', (event) => {
+      devSelection.questionId = event.target.value;
+      renderDev();
+    });
+    document.querySelectorAll('[data-template-variant]').forEach((button) => button.addEventListener('click', () => {
+      devSelection.variantId = button.dataset.templateVariant;
+      renderDev();
+    }));
+  }
+
+  return { start: renderStart, question: renderQuestion, complete: renderComplete, dev: renderDev };
 }

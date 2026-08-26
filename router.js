@@ -56,6 +56,10 @@ export function resolveRoute(hash, stages, principles, recognizeQuestions = []) 
   if (normalizedHash === '#level/discover/question') return { name: 'discoverQuestion', hash: normalizedHash };
   if (normalizedHash === '#level/discover/complete') return { name: 'discoverComplete', hash: normalizedHash };
 
+  if (normalizedHash === '#dev/recognize-templates') {
+    return { name: 'recognizeTemplateDev', hash: normalizedHash };
+  }
+
   if (normalizedHash === '#level/recognize/start') {
     return { name: 'recognizeStart', hash: normalizedHash };
   }

@@ -1,7 +1,12 @@
+import { createRecognizeSession } from './recognize-randomizer.js';
+import { getRecognizeVariant } from './recognize-template-pool.js';
+
 export function createRecognizeCourseState(questions) {
   return {
     started: false,
     completed: false,
+    variantSelections: {},
+    optionOrders: {},
     questions: Object.fromEntries(questions.map((question) => [question.id, {
       selectedAnswer: null,
       attempts: 0,
@@ -11,8 +16,24 @@ export function createRecognizeCourseState(questions) {
   };
 }
 
-export function resetRecognizeCourse(courseState, questions) {
-  Object.assign(courseState, createRecognizeCourseState(questions), { started: true });
+export function resetRecognizeCourse(courseState, questions, random = Math.random, forcedVariants = {}) {
+  const session = createRecognizeSession(questions, random, forcedVariants);
+  Object.assign(courseState, createRecognizeCourseState(questions), session, { started: true });
+}
+
+export function getRecognizeSessionQuestion(courseState, question) {
+  const variantId = courseState.variantSelections[question.id] ?? 'A';
+  const variant = getRecognizeVariant(question, variantId) ?? getRecognizeVariant(question, 'A');
+  const optionIds = courseState.optionOrders[question.id] ?? question.options.map(({ id }) => id);
+  const optionsById = Object.fromEntries(question.options.map((item) => [item.id, item]));
+  return {
+    ...question,
+    variantId,
+    variantLabel: variant.variantLabel,
+    elements: variant.elements,
+    guides: variant.guides,
+    options: optionIds.map((id) => optionsById[id]).filter(Boolean)
+  };
 }
 
 export function selectRecognizeAnswer(courseState, questionId, answerId) {

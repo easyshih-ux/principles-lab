@@ -5,7 +5,7 @@ import { createAppState, setCurrentRoute } from './state.js';
 import { renderGeometryPlayground } from './geometry/playground.js';
 import { renderValidatorLab } from './validator-lab.js';
 import { recognizeQuestions } from './recognize-questions.js';
-import { createRecognizeCourseRenderers } from './recognize-course.js?v=final-phase-2';
+import { createRecognizeCourseRenderers } from './recognize-course.js?v=post-final-a-templates';
 import { discoverQuestions } from './discover-questions.js';
 import { createDiscoverCourseRenderers } from './discover-course.js?v=final-phase-2';
 import { createExperimentCourseRenderers } from './experiment-course.js?v=final-phase-2';
@@ -58,6 +58,8 @@ function renderCurrentRoute() {
     activePlayground = renderGeometryPlayground({ app, navigate });
   } else if (route.name === 'validatorLab') {
     renderValidatorLab({ app, navigate });
+  } else if (route.name === 'recognizeTemplateDev') {
+    recognizeRenderers.dev();
   } else if (route.name === 'recognizeStart') {
     recognizeRenderers.start();
   } else if (route.name === 'recognizeQuestion') {
