@@ -57,7 +57,7 @@ test('experiment start and the complete ten-experiment route chain resolve safel
 });
 
 test('entry release uses a fresh application cache marker', () => {
-  assert.match(indexSource, /app\.js\?v=post-final-a-templates/);
+  assert.match(indexSource, /app\.js\?v=final-qa-question-order/);
   assert.match(indexSource, /phase6c\.css\?v=final-phase-1/);
 });
 test('explicit completion advances through all ten experiments and then completion', () => {

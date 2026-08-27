@@ -7,8 +7,11 @@ import { recognizeQuestions } from '../recognize-questions.js';
 import { recognizeTemplateCount, recognizeTemplatePools, getRecognizeVariant } from '../recognize-template-pool.js';
 import { createRecognizeSession, fisherYates } from '../recognize-randomizer.js';
 import {
+  applyRecognizeValidation,
   createRecognizeCourseState,
+  firstIncompleteQuestion,
   getRecognizeSessionQuestion,
+  getRecognizeSessionQuestions,
   resetRecognizeCourse
 } from '../recognize-course-state.js';
 import { getRotatedHalfExtents } from '../geometry/bounds.js';
@@ -207,6 +210,38 @@ test('injectable RNG and forced variants create deterministic eight-question ses
   assert.deepEqual(new Set(Object.values(high.variantSelections)), new Set(['C']));
 });
 
+test('question order uses deterministic Fisher-Yates once per recognize session', () => {
+  const sourceIds = recognizeQuestions.map(({ id }) => id);
+  const session = createRecognizeSession(recognizeQuestions, constantRandom(0));
+  assert.equal(session.questionOrder.length, 8);
+  assert.deepEqual(new Set(session.questionOrder), new Set(sourceIds));
+  assert.notDeepEqual(session.questionOrder, sourceIds);
+  assert.deepEqual(session.questionOrder, fisherYates(sourceIds, constantRandom(0)));
+});
+
+test('session question order stays stable through render wrong answers and route changes', () => {
+  const state = createRecognizeCourseState(recognizeQuestions);
+  resetRecognizeCourse(state, recognizeQuestions, constantRandom(0));
+  const snapshot = state.questionOrder.slice();
+  const ordered = getRecognizeSessionQuestions(state, recognizeQuestions);
+  getRecognizeSessionQuestion(state, ordered[0]);
+  applyRecognizeValidation(state, ordered[0], { isValid: false });
+  getRecognizeSessionQuestion(state, ordered[1]);
+  assert.deepEqual(state.questionOrder, snapshot);
+  assert.deepEqual(getRecognizeSessionQuestions(state, recognizeQuestions).map(({ id }) => id), snapshot);
+  assert.equal(firstIncompleteQuestion(state, recognizeQuestions).id, snapshot[0]);
+});
+
+test('reset alone creates a new question order and progress follows that order', () => {
+  const state = createRecognizeCourseState(recognizeQuestions);
+  resetRecognizeCourse(state, recognizeQuestions, constantRandom(0));
+  const firstOrder = state.questionOrder.slice();
+  state.questions[firstOrder[0]].isCorrect = true;
+  assert.equal(firstIncompleteQuestion(state, recognizeQuestions).id, firstOrder[1]);
+  resetRecognizeCourse(state, recognizeQuestions, constantRandom(0.999999));
+  assert.notDeepEqual(state.questionOrder, firstOrder);
+  assert.deepEqual(new Set(state.questionOrder), new Set(recognizeQuestions.map(({ id }) => id)));
+});
 test('Fisher-Yates is deterministic without mutating source and can move every correct answer', () => {
   const input = ['a', 'b', 'c', 'd'];
   assert.deepEqual(fisherYates(input, constantRandom(0)), ['b', 'c', 'd', 'a']);
@@ -224,19 +259,21 @@ test('Fisher-Yates is deterministic without mutating source and can move every c
 test('one session keeps variants and options stable while reset alone creates a new selection', () => {
   const state = createRecognizeCourseState(recognizeQuestions);
   resetRecognizeCourse(state, recognizeQuestions, constantRandom(0));
-  const firstSnapshot = JSON.stringify({ variants: state.variantSelections, options: state.optionOrders });
+  const firstSnapshot = JSON.stringify({ order: state.questionOrder, variants: state.variantSelections, options: state.optionOrders });
   const firstRender = getRecognizeSessionQuestion(state, recognizeQuestions[0]);
   const secondRender = getRecognizeSessionQuestion(state, recognizeQuestions[0]);
   assert.equal(firstRender.variantId, secondRender.variantId);
   assert.deepEqual(firstRender.options, secondRender.options);
-  assert.equal(JSON.stringify({ variants: state.variantSelections, options: state.optionOrders }), firstSnapshot);
+  assert.equal(JSON.stringify({ order: state.questionOrder, variants: state.variantSelections, options: state.optionOrders }), firstSnapshot);
   resetRecognizeCourse(state, recognizeQuestions, constantRandom(0.999999));
-  assert.notEqual(JSON.stringify({ variants: state.variantSelections, options: state.optionOrders }), firstSnapshot);
+  assert.notEqual(JSON.stringify({ order: state.questionOrder, variants: state.variantSelections, options: state.optionOrders }), firstSnapshot);
 });
 
 test('renderer reads session-selected data and still validates by answer id', () => {
   const rendererSource = source('../recognize-course.js');
   assert.match(rendererSource, /getRecognizeSessionQuestion\(courseState, question\)/);
+  assert.match(rendererSource, /getRecognizeSessionQuestions\(courseState, recognizeQuestions\)/);
+  assert.match(rendererSource, /const nextQuestion = orderedQuestions\[requestedIndex \+ 1\]/);
   assert.match(rendererSource, /sessionQuestion\.options\.map/);
   assert.match(rendererSource, /correctOptionId: question\.correctAnswer/);
   assert.equal(rendererSource.includes('correctOptionIndex'), false);
@@ -259,8 +296,8 @@ test('first-course completion and Post-Final A cache marker remain wired without
   const appSource = source('../app.js');
   const indexSource = source('../index.html');
   assert.match(rendererSource, /navigate\('#level\/discover\/start'\)/);
-  assert.match(appSource, /recognize-course\.js\?v=post-final-a-templates/);
-  assert.match(indexSource, /app\.js\?v=post-final-a-templates/);
+  assert.match(appSource, /recognize-course\.js\?v=final-qa-question-order/);
+  assert.match(indexSource, /app\.js\?v=final-qa-question-order/);
   assert.match(indexSource, /post-final-a\.css\?v=post-final-a-templates/);
   assert.match(appSource, /discover-course\.js\?v=final-phase-2/);
   assert.match(appSource, /experiment-course\.js\?v=final-phase-2/);

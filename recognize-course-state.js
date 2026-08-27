@@ -1,10 +1,11 @@
-import { createRecognizeSession } from './recognize-randomizer.js';
+import { createRecognizeSession } from './recognize-randomizer.js?v=final-qa-question-order';
 import { getRecognizeVariant } from './recognize-template-pool.js';
 
 export function createRecognizeCourseState(questions) {
   return {
     started: false,
     completed: false,
+    questionOrder: [],
     variantSelections: {},
     optionOrders: {},
     questions: Object.fromEntries(questions.map((question) => [question.id, {
@@ -36,6 +37,12 @@ export function getRecognizeSessionQuestion(courseState, question) {
   };
 }
 
+export function getRecognizeSessionQuestions(courseState, questions) {
+  const questionsById = Object.fromEntries(questions.map((question) => [question.id, question]));
+  const ordered = courseState.questionOrder.map((id) => questionsById[id]).filter(Boolean);
+  return ordered.length === questions.length ? ordered : questions;
+}
+
 export function selectRecognizeAnswer(courseState, questionId, answerId) {
   const questionState = courseState.questions[questionId];
   questionState.selectedAnswer = answerId;
@@ -59,7 +66,8 @@ export function applyRecognizeValidation(courseState, question, validation) {
 }
 
 export function firstIncompleteQuestion(courseState, questions) {
-  return questions.find((question) => !courseState.questions[question.id].isCorrect) ?? null;
+  return getRecognizeSessionQuestions(courseState, questions)
+    .find((question) => !courseState.questions[question.id].isCorrect) ?? null;
 }
 
 export function completeRecognizeCourse(courseState, questions) {

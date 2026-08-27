@@ -5,7 +5,7 @@ import { createAppState, setCurrentRoute } from './state.js';
 import { renderGeometryPlayground } from './geometry/playground.js';
 import { renderValidatorLab } from './validator-lab.js';
 import { recognizeQuestions } from './recognize-questions.js';
-import { createRecognizeCourseRenderers } from './recognize-course.js?v=post-final-a-templates';
+import { createRecognizeCourseRenderers } from './recognize-course.js?v=final-qa-question-order';
 import { discoverQuestions } from './discover-questions.js';
 import { createDiscoverCourseRenderers } from './discover-course.js?v=final-phase-2';
 import { createExperimentCourseRenderers } from './experiment-course.js?v=final-phase-2';

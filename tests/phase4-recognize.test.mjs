@@ -6,6 +6,7 @@ import {
   completeRecognizeCourse,
   createRecognizeCourseState,
   firstIncompleteQuestion,
+  getRecognizeSessionQuestions,
   resetRecognizeCourse,
   selectRecognizeAnswer
 } from '../recognize-course-state.js';
@@ -121,19 +122,21 @@ test('a question may give more explicit feedback after a second wrong attempt', 
 test('only a correct validation makes the next question available', () => {
   const course = createRecognizeCourseState(recognizeQuestions);
   resetRecognizeCourse(course, recognizeQuestions);
-  assert.equal(firstIncompleteQuestion(course, recognizeQuestions).id, recognizeQuestions[0].id);
-  applyRecognizeValidation(course, recognizeQuestions[0], { isValid: false });
-  assert.equal(firstIncompleteQuestion(course, recognizeQuestions).id, recognizeQuestions[0].id);
-  applyRecognizeValidation(course, recognizeQuestions[0], { isValid: true });
-  assert.equal(firstIncompleteQuestion(course, recognizeQuestions).id, recognizeQuestions[1].id);
+  const [firstQuestion, secondQuestion] = getRecognizeSessionQuestions(course, recognizeQuestions);
+  assert.equal(firstIncompleteQuestion(course, recognizeQuestions).id, firstQuestion.id);
+  applyRecognizeValidation(course, firstQuestion, { isValid: false });
+  assert.equal(firstIncompleteQuestion(course, recognizeQuestions).id, firstQuestion.id);
+  applyRecognizeValidation(course, firstQuestion, { isValid: true });
+  assert.equal(firstIncompleteQuestion(course, recognizeQuestions).id, secondQuestion.id);
 });
 
 test('answer validation does not automatically change route or complete the course', () => {
   const course = createRecognizeCourseState(recognizeQuestions);
   resetRecognizeCourse(course, recognizeQuestions);
-  applyRecognizeValidation(course, recognizeQuestions[0], { isValid: true });
+  const [firstQuestion, secondQuestion] = getRecognizeSessionQuestions(course, recognizeQuestions);
+  applyRecognizeValidation(course, firstQuestion, { isValid: true });
   assert.equal(course.completed, false);
-  assert.equal(firstIncompleteQuestion(course, recognizeQuestions).id, recognizeQuestions[1].id);
+  assert.equal(firstIncompleteQuestion(course, recognizeQuestions).id, secondQuestion.id);
 });
 
 test('the completion state is available only after all eight correct answers', () => {

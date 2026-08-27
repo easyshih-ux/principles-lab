@@ -5,9 +5,10 @@ import {
   completeRecognizeCourse,
   firstIncompleteQuestion,
   getRecognizeSessionQuestion,
+  getRecognizeSessionQuestions,
   resetRecognizeCourse,
   selectRecognizeAnswer
-} from './recognize-course-state.js';
+} from './recognize-course-state.js?v=final-qa-question-order';
 import { recognizeQuestions } from './recognize-questions.js';
 import { getRecognizeVariant } from './recognize-template-pool.js';
 import { recognizeQuestionHash } from './router.js';
@@ -71,15 +72,17 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
       </section>`;
     document.querySelector('#begin-recognize').addEventListener('click', () => {
       resetRecognizeCourse(courseState, recognizeQuestions);
-      navigate(recognizeQuestionHash(recognizeQuestions[0].id));
+      const [firstQuestion] = getRecognizeSessionQuestions(courseState, recognizeQuestions);
+      navigate(recognizeQuestionHash(firstQuestion.id));
     });
   }
 
   function renderQuestion(question) {
     if (!courseState.started) resetRecognizeCourse(courseState, recognizeQuestions);
+    const orderedQuestions = getRecognizeSessionQuestions(courseState, recognizeQuestions);
     const firstIncomplete = firstIncompleteQuestion(courseState, recognizeQuestions);
-    const requestedIndex = recognizeQuestions.indexOf(question);
-    const availableIndex = firstIncomplete ? recognizeQuestions.indexOf(firstIncomplete) : recognizeQuestions.length;
+    const requestedIndex = orderedQuestions.indexOf(question);
+    const availableIndex = firstIncomplete ? orderedQuestions.indexOf(firstIncomplete) : orderedQuestions.length;
     if (requestedIndex > availableIndex) {
       navigate(recognizeQuestionHash(firstIncomplete.id));
       return;
@@ -87,7 +90,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
 
     const sessionQuestion = getRecognizeSessionQuestion(courseState, question);
     const questionState = courseState.questions[question.id];
-    const progress = `${requestedIndex + 1} / ${recognizeQuestions.length}`;
+    const progress = `${requestedIndex + 1} / ${orderedQuestions.length}`;
     app.innerHTML = `
       <section class="recognize-question-page page-shell">
         <header class="recognize-question-header">
@@ -117,7 +120,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
           </div>
           <div class="recognize-actions">
             ${questionState.isCorrect
-              ? `<button type="button" class="primary-button compact" id="recognize-next">${requestedIndex === recognizeQuestions.length - 1 ? '完成第一關' : '下一題'}</button>`
+              ? `<button type="button" class="primary-button compact" id="recognize-next">${requestedIndex === orderedQuestions.length - 1 ? '完成第一關' : '下一題'}</button>`
               : '<button type="button" class="primary-button compact" id="recognize-check">確認答案</button>'}
           </div>
         </footer>
@@ -139,7 +142,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
       renderQuestion(question);
     });
     document.querySelector('#recognize-next')?.addEventListener('click', () => {
-      const nextQuestion = recognizeQuestions[requestedIndex + 1];
+      const nextQuestion = orderedQuestions[requestedIndex + 1];
       if (nextQuestion) {
         navigate(recognizeQuestionHash(nextQuestion.id));
         return;

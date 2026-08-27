@@ -10,6 +10,7 @@ export function fisherYates(items, random = Math.random) {
 }
 
 export function createRecognizeSession(questions, random = Math.random, forcedVariants = {}) {
+  const questionOrder = fisherYates(questions.map(({ id }) => id), random);
   const variantSelections = {};
   const optionOrders = {};
 
@@ -23,6 +24,6 @@ export function createRecognizeSession(questions, random = Math.random, forcedVa
     optionOrders[question.id] = fisherYates(question.options.map(({ id }) => id), random);
   });
 
-  return { variantSelections, optionOrders };
+  return { questionOrder, variantSelections, optionOrders };
 }
 
