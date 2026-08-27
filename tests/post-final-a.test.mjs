@@ -291,14 +291,16 @@ test('development preview resolves separately and is absent from formal student 
   assert.equal(rendererSource.includes("navigate('#dev/recognize-templates')"), false);
 });
 
-test('first-course completion and Post-Final A cache marker remain wired without changing later courses', () => {
+test('first-course completion returns to the gated laboratory and classroom cache markers are current', () => {
   const rendererSource = source('../recognize-course.js');
   const appSource = source('../app.js');
   const indexSource = source('../index.html');
-  assert.match(rendererSource, /navigate\('#level\/discover\/start'\)/);
-  assert.match(appSource, /recognize-course\.js\?v=final-qa-question-order/);
-  assert.match(indexSource, /app\.js\?v=final-qa-question-order/);
+  assert.match(rendererSource, /navigate\('#principles'\)/);
+  assert.doesNotMatch(rendererSource, /navigate\('#level\/discover\/start'\)/);
+  assert.match(appSource, /recognize-course\.js\?v=classroom-control-1/);
+  assert.match(indexSource, /app\.js\?v=classroom-control-1/);
+  assert.match(indexSource, /classroom-control\.css\?v=classroom-control-1/);
   assert.match(indexSource, /post-final-a\.css\?v=post-final-a-templates/);
-  assert.match(appSource, /discover-course\.js\?v=final-phase-2/);
+  assert.match(appSource, /discover-course\.js\?v=classroom-control-1/);
   assert.match(appSource, /experiment-course\.js\?v=final-phase-2/);
 });

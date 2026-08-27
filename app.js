@@ -1,16 +1,17 @@
 import { principles, stages } from './data.js';
-import { createRenderers } from './renderers.js';
+import { createRenderers } from './renderers.js?v=classroom-control-1';
 import { resolveRoute } from './router.js';
 import { createAppState, setCurrentRoute } from './state.js';
 import { renderGeometryPlayground } from './geometry/playground.js';
 import { renderValidatorLab } from './validator-lab.js';
 import { recognizeQuestions } from './recognize-questions.js';
-import { createRecognizeCourseRenderers } from './recognize-course.js?v=final-qa-question-order';
+import { createRecognizeCourseRenderers } from './recognize-course.js?v=classroom-control-1';
 import { discoverQuestions } from './discover-questions.js';
-import { createDiscoverCourseRenderers } from './discover-course.js?v=final-phase-2';
+import { createDiscoverCourseRenderers } from './discover-course.js?v=classroom-control-1';
 import { createExperimentCourseRenderers } from './experiment-course.js?v=final-phase-2';
 import { createPhase6cCourseState } from './phase6c-course-state.js';
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js';
+import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute } from './classroom-unlocks.js?v=classroom-control-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -20,6 +21,9 @@ if (captureWidth) {
 
 const app = document.querySelector('#app');
 const state = createAppState(stages, recognizeQuestions, discoverQuestions);
+let classroomStorage = null;
+try { classroomStorage = window.localStorage; } catch { /* storage may be unavailable */ }
+state.classroomUnlocks = loadClassroomUnlocks(classroomStorage);
 state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
 
 function focusRouteHeading() {
@@ -37,7 +41,7 @@ function navigate(hash) {
   location.hash = hash;
 }
 
-const renderers = createRenderers({ app, state, navigate });
+const renderers = createRenderers({ app, state, navigate, classroomStorage });
 const recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate });
 const discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate });
 const experimentRenderers = createExperimentCourseRenderers({ app, state, navigate });
@@ -47,7 +51,15 @@ function renderCurrentRoute() {
   activePlayground?.canvas.destroy();
   activePlayground = null;
   experimentRenderers.destroy();
-  const route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
+  let route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
+  if (!isClassroomRouteAllowed(route, state.classroomUnlocks)) {
+    const courseId = requiredUnlockForRoute(route);
+    state.classroomGate.activeCourseId = courseId;
+    state.classroomGate.error = '';
+    state.classroomGate.message = '這一關尚未開放，請等待老師公布通行碼。';
+    history.replaceState(null, '', '#principles');
+    route = resolveRoute('#principles', stages, principles, recognizeQuestions);
+  }
   setCurrentRoute(state, route);
 
   if (route.isFallback || route.isLegacyAlias) {

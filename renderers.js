@@ -14,6 +14,26 @@ import {
 } from './state.js';
 import { nextHashForStage, stageHash } from './router.js';
 import { validateStage } from './validators.js';
+import { attemptClassroomUnlock, CLASSROOM_COURSES } from './classroom-unlocks.js?v=classroom-control-1';
+
+export function classroomCourseCardsMarkup(unlocks = {}, completion = {}, gate = {}) {
+  return CLASSROOM_COURSES.map((course) => {
+    const unlocked = unlocks[course.id] === true;
+    const completed = completion[course.id] === true;
+    const active = gate.activeCourseId === course.id;
+    const status = unlocked ? (completed ? '✓ 已完成' : '🔓 已開放') : '🔒 等待老師開放';
+    const action = unlocked
+      ? `<button type="button" class="${course.id === 'recognize' ? 'primary-button' : 'secondary-button'} compact" data-course-enter="${course.id}">${completed ? '再次進入' : `進入${course.name}`}</button>`
+      : `<button type="button" class="secondary-button compact" data-unlock-open="${course.id}">輸入通行碼</button>`;
+    const form = !unlocked && active ? `
+      <form class="classroom-passcode-form" data-unlock-form="${course.id}">
+        <label for="classroom-code-${course.id}">${course.name}通行碼</label>
+        <div><input id="classroom-code-${course.id}" name="passcode" type="text" autocomplete="off" autocapitalize="characters" required><button type="submit" class="primary-button compact">確認開放</button></div>
+        ${gate.error ? `<p class="classroom-gate-error" role="alert">${gate.error}</p>` : ''}
+      </form>` : '';
+    return `<article class="classroom-course-card ${unlocked ? 'is-unlocked' : 'is-locked'}"><div><span class="classroom-course-status">${status}</span><h2>${course.name}｜${course.title}</h2>${course.id === 'experiment' ? '<p>運用有限工具，親手做出形式原理。</p>' : ''}</div>${action}${form}</article>`;
+  }).join('');
+}
 
 const dotColors = [
   'var(--red)',
@@ -69,7 +89,7 @@ function taskFrame({ principle, stage, canvas, controls, feedback }) {
     </section>`;
 }
 
-export function createRenderers({ app, state, navigate }) {
+export function createRenderers({ app, state, navigate, classroomStorage = null }) {
   function renderHome() {
     app.innerHTML = `
       <section class="home" aria-labelledby="home-title">
@@ -105,15 +125,11 @@ export function createRenderers({ app, state, navigate }) {
             <h1>選擇形式原理</h1>
           </div>
           <div class="wall-course-entry">
-            <p>從辨認、分析到親手製作，依序理解形式原理。</p>
+            <p>三關由老師依課堂進度逐一開放。</p>
             <div class="wall-course-actions" aria-label="學習關卡">
-              <button type="button" class="primary-button compact" id="start-recognize-course">第一關｜我看得出來</button>
-              <button type="button" class="secondary-button compact" id="start-discover-course">第二關｜我找得到問題</button>
-              <button type="button" class="secondary-button compact course-entry-featured" id="start-experiment-course">
-                <strong>第三關｜我自己做得出來</strong>
-                <span>這次不只是找答案，而是由你親手把形式原理做出來。</span>
-              </button>
+              ${classroomCourseCardsMarkup(state.classroomUnlocks, state.completion.courses, state.classroomGate)}
             </div>
+            <p class="classroom-gate-message" role="status" aria-live="polite">${state.classroomGate.message}</p>
           </div>
         </header>
         <div class="sample-wall">
@@ -136,9 +152,36 @@ export function createRenderers({ app, state, navigate }) {
       </section>`;
 
     document.querySelector('#home-back').addEventListener('click', () => navigate('#home'));
-    document.querySelector('#start-recognize-course').addEventListener('click', () => navigate('#level/recognize/start'));
-    document.querySelector('#start-discover-course').addEventListener('click', () => navigate('#level/discover/start'));
-    document.querySelector('#start-experiment-course').addEventListener('click', () => navigate('#level/experiment/start'));
+    document.querySelectorAll('[data-course-enter]').forEach((button) => button.addEventListener('click', () => {
+      const course = CLASSROOM_COURSES.find(({ id }) => id === button.dataset.courseEnter);
+      if (course) navigate(course.route);
+    }));
+    document.querySelectorAll('[data-unlock-open]').forEach((button) => button.addEventListener('click', () => {
+      state.classroomGate.activeCourseId = button.dataset.unlockOpen;
+      state.classroomGate.message = '';
+      state.classroomGate.error = '';
+      renderPrinciples();
+      queueMicrotask(() => document.querySelector(`#classroom-code-${button.dataset.unlockOpen}`)?.focus());
+    }));
+    document.querySelectorAll('[data-unlock-form]').forEach((form) => form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const courseId = form.dataset.unlockForm;
+      const result = attemptClassroomUnlock(courseId, new FormData(form).get('passcode'), state.classroomUnlocks, classroomStorage);
+      state.classroomUnlocks = result.unlocks;
+      if (result.ok) {
+        const course = CLASSROOM_COURSES.find(({ id }) => id === courseId);
+        state.classroomGate.activeCourseId = null;
+        state.classroomGate.error = '';
+        state.classroomGate.message = `${course.name}已開放！`;
+        renderPrinciples();
+        queueMicrotask(() => document.querySelector(`[data-course-enter="${courseId}"]`)?.focus());
+        return;
+      }
+      state.classroomGate.error = '通行碼不正確，請確認老師公布的通行碼。';
+      state.classroomGate.message = '';
+      renderPrinciples();
+      queueMicrotask(() => document.querySelector(`#classroom-code-${courseId}`)?.focus());
+    }));
     document.querySelectorAll('[data-principle-id]').forEach((element) => {
       element.addEventListener('click', () => {
         const principleId = element.dataset.principleId;

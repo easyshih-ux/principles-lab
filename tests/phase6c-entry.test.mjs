@@ -7,30 +7,33 @@ import { resolveRoute } from '../router.js';
 import { phase6cDefinitions } from '../phase6c-definitions.js';
 import { advancePhase6c, createPhase6cCourseState } from '../phase6c-course-state.js';
 import { getExperimentState } from '../experiment-session.js';
+import { classroomCourseCardsMarkup } from '../renderers.js';
 
 const rendererSource = readFileSync(new URL('../renderers.js', import.meta.url), 'utf8');
 const discoverCourseSource = readFileSync(new URL('../discover-course.js', import.meta.url), 'utf8');
 const indexSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-test('principle wall exposes all three student course entries', () => {
-  assert.match(rendererSource, /id="start-recognize-course"[^>]*>第一關｜我看得出來/);
-  assert.match(rendererSource, /id="start-discover-course"[^>]*>第二關｜我找得到問題/);
-  assert.match(rendererSource, /id="start-experiment-course"[\s\S]*?<strong>第三關｜我自己做得出來<\/strong>/);
-  assert.match(rendererSource, /這次不只是找答案，而是由你親手把形式原理做出來。/);
+test('principle wall exposes all three student courses behind classroom gates', () => {
+  const html = classroomCourseCardsMarkup(
+    { recognize: false, discover: false, experiment: false },
+    { courses: { recognize: false, discover: false, experiment: false } },
+    {}
+  );
+  assert.match(html, /第一關｜我看得出來/);
+  assert.match(html, /第二關｜我找得到問題/);
+  assert.match(html, /第三關｜我自己做得出來/);
+  assert.equal((html.match(/等待老師開放/g) ?? []).length, 3);
 });
 
-test('course entry click handlers preserve first, second and third routes', () => {
-  assert.match(rendererSource, /#start-recognize-course'[\s\S]*?navigate\('#level\/recognize\/start'\)/);
-  assert.match(rendererSource, /#start-discover-course'[\s\S]*?navigate\('#level\/discover\/start'\)/);
-  assert.match(rendererSource, /#start-experiment-course'[\s\S]*?navigate\('#level\/experiment\/start'\)/);
+test('unlocked course entry handler navigates to the selected guarded route', () => {
+  assert.match(rendererSource, /\[data-course-enter\]/);
+  assert.match(rendererSource, /navigate\(course\.route\)/);
 });
 
-test('discover completion preserves the wall exit and enables the experiment course', () => {
+test('discover completion preserves the wall exit without bypassing the experiment gate', () => {
   assert.match(discoverCourseSource, /id="discover-wall">返回實驗室<\/button>/);
   assert.match(discoverCourseSource, /#discover-wall'[\s\S]*?navigate\('#principles'\)/);
-  assert.match(discoverCourseSource, /id="discover-experiment">前往第三關<\/button>/);
-  assert.doesNotMatch(discoverCourseSource, /id="discover-experiment"[^>]*disabled/);
-  assert.match(discoverCourseSource, /#discover-experiment'[\s\S]*?navigate\('#level\/experiment\/start'\)/);
+  assert.doesNotMatch(discoverCourseSource, /discover-experiment|前往第三關/);
 });
 
 test('experiment start and the complete ten-experiment route chain resolve safely', () => {
@@ -57,7 +60,8 @@ test('experiment start and the complete ten-experiment route chain resolve safel
 });
 
 test('entry release uses a fresh application cache marker', () => {
-  assert.match(indexSource, /app\.js\?v=final-qa-question-order/);
+  assert.match(indexSource, /app\.js\?v=classroom-control-1/);
+  assert.match(indexSource, /classroom-control\.css\?v=classroom-control-1/);
   assert.match(indexSource, /phase6c\.css\?v=final-phase-1/);
 });
 test('explicit completion advances through all ten experiments and then completion', () => {

@@ -23,8 +23,7 @@ export function recognizeCompletionMarkup() {
           <h1>第一關完成</h1>
           <p class="recognize-complete-lead">你已經開始看得出畫面中的規律了。</p>
           <p>接下來，不只要看出來，還要找出——<br><strong>畫面到底是哪裡變了？</strong></p>
-          <button type="button" class="primary-button" id="recognize-discover">前往第二關</button>
-          <button type="button" class="back-link recognize-wall-return" id="recognize-wall-return">返回實驗室</button>
+          <button type="button" class="primary-button" id="recognize-wall-return">返回實驗室</button>
         </div>
         <div class="recognize-complete-pattern" aria-hidden="true">${Array.from({ length: 8 }, (_, index) => `<i style="--index:${index}"></i>`).join('')}</div>
       </section>`;
@@ -160,7 +159,6 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
     }
     syncCourseCompletion(state);
     app.innerHTML = recognizeCompletionMarkup();
-    document.querySelector('#recognize-discover').addEventListener('click', () => navigate('#level/discover/start'));
     document.querySelector('#recognize-wall-return').addEventListener('click', () => navigate('#principles'));
   }
 

@@ -16,6 +16,7 @@ import { phase6cDefinitions } from '../phase6c-definitions.js';
 import { getExperimentState } from '../experiment-session.js';
 import { createAppState, syncCourseCompletion } from '../state.js';
 import { resolveRoute } from '../router.js';
+import { classroomCourseCardsMarkup } from '../renderers.js';
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const rendererSource = source('../renderers.js');
@@ -25,36 +26,32 @@ const experimentSource = source('../experiment-course.js');
 const appSource = source('../app.js');
 const indexSource = source('../index.html');
 
-test('FLOW A exposes home to principles and three unlocked course entries', () => {
+test('FLOW A exposes home to principles and three teacher-gated course cards', () => {
   assert.ok(rendererSource.includes("button('進入實驗室', 'primary-button', 'enter-lab')"));
   assert.ok(rendererSource.includes("navigate('#principles')"));
-  for (const [id, label, hash] of [
-    ['start-recognize-course', '第一關｜我看得出來', '#level/recognize/start'],
-    ['start-discover-course', '第二關｜我找得到問題', '#level/discover/start'],
-    ['start-experiment-course', '第三關｜我自己做得出來', '#level/experiment/start']
-  ]) {
-    assert.ok(rendererSource.includes(`id="${id}"`));
-    assert.ok(rendererSource.includes(label));
-    assert.ok(rendererSource.includes(`navigate('${hash}')`));
-  }
-  assert.doesNotMatch(rendererSource, /id="start-(?:discover|experiment)-course"[^>]*disabled/);
+  const html = classroomCourseCardsMarkup(
+    { recognize: false, discover: false, experiment: false },
+    { courses: { recognize: false, discover: false, experiment: false } },
+    {}
+  );
+  assert.equal((html.match(/等待老師開放/g) ?? []).length, 3);
+  assert.equal((html.match(/輸入通行碼/g) ?? []).length, 3);
+  assert.doesNotMatch(html, /data-course-enter/);
 });
 
-test('FLOW B first completion exposes second course without auto navigation', () => {
+test('FLOW B first completion returns to the laboratory without opening the second course', () => {
   const html = recognizeCompletionMarkup();
-  assert.match(html, /id="recognize-discover">前往第二關/);
   assert.match(html, /id="recognize-wall-return">返回實驗室/);
-  assert.doesNotMatch(html, /施工中|disabled/);
-  assert.ok(recognizeSource.includes("document.querySelector('#recognize-discover')"));
+  assert.doesNotMatch(html, /recognize-discover|前往第二關/);
+  assert.equal(recognizeSource.includes("document.querySelector('#recognize-discover')"), false);
   assert.equal(recognizeSource.includes('setTimeout'), false);
 });
 
-test('FLOW C second completion exposes third course without auto navigation', () => {
+test('FLOW C second completion returns to the laboratory without opening the third course', () => {
   const html = discoverCompletionMarkup();
-  assert.match(html, /id="discover-experiment">前往第三關/);
   assert.match(html, /id="discover-wall">返回實驗室/);
-  assert.doesNotMatch(html, /準備中|disabled/);
-  assert.ok(discoverSource.includes("document.querySelector('#discover-experiment')"));
+  assert.doesNotMatch(html, /discover-experiment|前往第三關/);
+  assert.equal(discoverSource.includes("document.querySelector('#discover-experiment')"), false);
   assert.equal(discoverSource.includes('setTimeout'), false);
 });
 
@@ -135,10 +132,12 @@ test('accessibility and Final Phase cache markers remain scoped', () => {
   assert.doesNotMatch(indexSource, /<main[^>]*aria-live/);
   assert.match(recognizeSource, /aria-live="polite"/);
   assert.match(experimentSource, /id="experiment-feedback" aria-live="polite"/);
-  assert.ok(indexSource.includes('app.js?v=final-qa-question-order'));
+  assert.ok(indexSource.includes('app.js?v=classroom-control-1'));
+  assert.ok(indexSource.includes('classroom-control.css?v=classroom-control-1'));
   assert.ok(indexSource.includes('phase6c.css?v=final-phase-1'));
-  assert.ok(appSource.includes('recognize-course.js?v=final-qa-question-order'));
-  assert.ok(appSource.includes('discover-course.js?v=final-phase-2'));
+  assert.ok(appSource.includes('recognize-course.js?v=classroom-control-1'));
+  assert.ok(appSource.includes('discover-course.js?v=classroom-control-1'));
+  assert.ok(appSource.includes('classroom-unlocks.js?v=classroom-control-1'));
   assert.ok(appSource.includes('experiment-course.js?v=final-phase-2'));
   assert.ok(appSource.includes("heading.setAttribute('tabindex', '-1')"));
   assert.ok(appSource.includes('heading.focus({ preventScroll: true })'));

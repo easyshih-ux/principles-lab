@@ -6,7 +6,7 @@ import { validateDiscoverQuestion } from './discover-validators.js';
 import { syncCourseCompletion } from './state.js';
 
 export function discoverCompletionMarkup() {
-  return `<section class="recognize-complete page-shell"><div><p class="section-label">分析完成</p><h1>第二關完成</h1><p class="recognize-complete-lead">你不只看得出來，也開始知道「為什麼」。</p><p>同一項形式原理，換了造形、位置、色彩或排列方式，你仍然能找到判斷的線索。</p><button class="primary-button" id="discover-experiment">前往第三關</button><button class="back-link recognize-wall-return" id="discover-wall">返回實驗室</button></div><div class="discover-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
+  return `<section class="recognize-complete page-shell"><div><p class="section-label">分析完成</p><h1>第二關完成</h1><p class="recognize-complete-lead">你不只看得出來，也開始知道「為什麼」。</p><p>同一項形式原理，換了造形、位置、色彩或排列方式，你仍然能找到判斷的線索。</p><button class="primary-button" id="discover-wall">返回實驗室</button></div><div class="discover-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
 }
 
 function shapeMarkup(item, selectable = false, selected = false) {
@@ -56,7 +56,6 @@ export function createDiscoverCourseRenderers({app,state,navigate}) {
     }
     syncCourseCompletion(state);
     app.innerHTML=discoverCompletionMarkup();
-    document.querySelector('#discover-experiment').addEventListener('click',()=>navigate('#level/experiment/start'));
     document.querySelector('#discover-wall').addEventListener('click',()=>navigate('#principles'));
   }
   function dev(){app.innerHTML=`<section class="validator-lab page-shell"><header class="validator-lab-header"><div><p class="section-label">Phase 5 開發驗收</p><h1>16題快速檢查</h1></div><button class="back-link" id="dev-back">← 返回實驗室</button></header><div class="phase5-dev-list">${discoverQuestions.map((q,i)=>`<button data-dev-index="${i}">${String(i+1).padStart(2,'0')}｜${q.principleId}<small>${q.interactionType}・${q.overlapPolicy}</small></button>`).join('')}</div><div id="phase5-dev-preview"></div></section>`;document.querySelector('#dev-back').addEventListener('click',()=>navigate('#principles'));document.querySelectorAll('[data-dev-index]').forEach((node)=>node.addEventListener('click',()=>{const q=discoverQuestions[Number(node.dataset.devIndex)];document.querySelector('#phase5-dev-preview').innerHTML=`<h2>${q.prompt}</h2>${questionCanvas(q,null)}<p><strong>${q.interactionType}</strong>・overlap ${q.overlapPolicy}</p><p>提示1：${q.hints[0]}</p><p>提示2：${q.hints[1]}</p><p>成功：${q.successFeedback}</p>`;}));document.querySelector('[data-dev-index="0"]')?.click();}
