@@ -354,25 +354,36 @@ function hueDistance(first, second) {
   return Math.min(raw, HUE_FAMILIES.length - raw);
 }
 
+function bestHarmonyHueArc(hues, maximumSpan) {
+  const validHues = hues.filter((hue) => HUE_FAMILIES.includes(hue));
+  const count = HUE_FAMILIES.length;
+  let best = { coverage: 0, start: null, end: null, span: 0, hues: [] };
+  for (let startIndex = 0; startIndex < count; startIndex += 1) {
+    for (let span = 1; span <= maximumSpan; span += 1) {
+      const arcHues = Array.from({ length: span + 1 }, (_, offset) => HUE_FAMILIES[(startIndex + offset) % count]);
+      const covered = validHues.filter((hue) => arcHues.includes(hue)).length;
+      const coverage = covered / Math.max(1, hues.length);
+      if (coverage > best.coverage || (coverage === best.coverage && span < best.span)) {
+        best = { coverage, start: arcHues[0], end: arcHues.at(-1), span, hues: arcHues };
+      }
+    }
+  }
+  return best;
+}
+
 export function validateFormalHarmony({ elements = [], spec = {} }) {
   const minimumElements = spec.minimumElements ?? 4;
   const coverage = spec.harmonyCoverage ?? 0.75;
+  const maximumHueArcSpan = spec.maximumHarmonyHueArcSpan ?? 4;
   const hues = elements.map((item) => item.hueFamily ?? item.hue);
   const hueGroups = dominantGroup(elements, (item) => item.hueFamily ?? item.hue);
   const sameHueElements = elements.filter((item) => (item.hueFamily ?? item.hue) === hueGroups.value);
   const sameHueLightness = elements.length >= minimumElements
     && hueGroups.ratio >= coverage
     && new Set(sameHueElements.map((item) => item.lightnessLevel ?? item.lightness)).size >= (spec.minimumLightnessLevels ?? 2);
-  let bestNeighborCoverage = 0;
-  let bestCenter = null;
-  for (const center of HUE_FAMILIES) {
-    const covered = hues.filter((hue) => hue === center || areNeighborHues(center, hue)).length;
-    if (covered / Math.max(1, elements.length) > bestNeighborCoverage) {
-      bestNeighborCoverage = covered / Math.max(1, elements.length);
-      bestCenter = center;
-    }
-  }
   const uniqueHues = [...new Set(hues)];
+  const bestHueArc = bestHarmonyHueArc(hues, maximumHueArcSpan);
+  const bestNeighborCoverage = bestHueArc.coverage;
   const neighborHue = elements.length >= minimumElements
     && uniqueHues.length >= 2
     && bestNeighborCoverage >= coverage
@@ -382,7 +393,7 @@ export function validateFormalHarmony({ elements = [], spec = {} }) {
   else if (sameHueLightness) methods.push('sameHueLightness');
   else if (neighborHue) methods.push('neighborHue');
   const maximumHueDistance = uniqueHues.reduce((maximum, first) => Math.max(maximum, ...uniqueHues.map((second) => hueDistance(first, second))), 0);
-  const metrics = { elementCount: elements.length, uniqueHues, hueGroups, sameHueLightness, neighborHue, bestNeighborCoverage, bestCenter, maximumHueDistance };
+  const metrics = { elementCount: elements.length, uniqueHues, hueGroups, sameHueLightness, neighborHue, bestNeighborCoverage, bestHueArc, maximumHueArcSpan, maximumHueDistance };
   if (methods.length) return response(true, 'valid', metrics, methods);
   if (uniqueHues.length === 1 && new Set(elements.map((item) => item.lightnessLevel ?? item.lightness)).size === 1) return response(false, 'NO_CLEAR_HARMONY', metrics);
   if (maximumHueDistance >= 3 && bestNeighborCoverage <= 0.5) return response(false, 'COLORS_TOO_FAR_APART', metrics);

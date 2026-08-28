@@ -247,6 +247,34 @@ test('wrong answers do not advance, correct answers wait for the next button', (
   assert.equal(state.currentIndex,0);assert.equal(state.questions[question.id].completed,true);assert.equal(advanceDiscoverCourse(state,discoverQuestions),true);assert.equal(state.currentIndex,1);
 });
 
+test('all formal discover questions progress through positions 12 13 and 14 before only the true final question completes', () => {
+  const state = createDiscoverCourseState(discoverQuestions);
+  startDiscoverCourse(state, discoverQuestions, 20260828);
+  const visited = [];
+  for (let index = 0; index < state.questionOrder.length; index += 1) {
+    const question = currentDiscoverQuestion(state, discoverQuestions);
+    visited.push(question.id);
+    setDiscoverSelection(state, question.id, question.correctAnswer);
+    assert.equal(applyDiscoverResult(state, question, validateDiscoverQuestion(question, question.correctAnswer)), true, question.id);
+    assert.equal(state.questions[question.id].completed, true, question.id);
+    assert.equal(advanceDiscoverCourse(state, discoverQuestions), true, question.id);
+    if (index < state.questionOrder.length - 1) {
+      assert.equal(state.currentIndex, index + 1);
+      assert.equal(state.completed, false);
+    }
+  }
+  assert.equal(visited.length, discoverQuestions.length);
+  assert.deepEqual(new Set(visited), new Set(discoverQuestions.map(({ id }) => id)));
+  assert.equal(state.completed, true);
+});
+
+test('discover renderer derives progress and final action from the session question order', async () => {
+  const source = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../discover-course.js', import.meta.url), 'utf8'));
+  assert.match(source, /const total=course\.questionOrder\.length/);
+  assert.match(source, /const isLast=course\.currentIndex===total-1/);
+  assert.doesNotMatch(source, /currentIndex===15/);
+  assert.doesNotMatch(source, /padStart\(2,'0'\)\} \/ 16/);
+});
 test('Q15 prerequisite is preserved by order and completion flags track Q13/Q14', () => {
   const state=createDiscoverCourseState(discoverQuestions);startDiscoverCourse(state,discoverQuestions,2026);
   for (const id of ['discover-harmony','discover-unity']) { const q=byId[id];setDiscoverSelection(state,id,q.correctAnswer);applyDiscoverResult(state,q,validateDiscoverQuestion(q,q.correctAnswer)); }

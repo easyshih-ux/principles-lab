@@ -132,11 +132,11 @@ test('accessibility and Final Phase cache markers remain scoped', () => {
   assert.doesNotMatch(indexSource, /<main[^>]*aria-live/);
   assert.match(recognizeSource, /aria-live="polite"/);
   assert.match(experimentSource, /id="experiment-feedback" aria-live="polite"/);
-  assert.ok(indexSource.includes('app.js?v=classroom-control-1'));
+  assert.ok(indexSource.includes('app.js?v=blocking-fixes-1'));
   assert.ok(indexSource.includes('classroom-control.css?v=classroom-control-1'));
   assert.ok(indexSource.includes('phase6c.css?v=final-phase-1'));
   assert.ok(appSource.includes('recognize-course.js?v=classroom-control-1'));
-  assert.ok(appSource.includes('discover-course.js?v=classroom-control-1'));
+  assert.ok(appSource.includes('discover-course.js?v=blocking-fixes-1'));
   assert.ok(appSource.includes('classroom-unlocks.js?v=classroom-control-1'));
   assert.ok(appSource.includes('experiment-course.js?v=final-phase-2'));
   assert.ok(appSource.includes("heading.setAttribute('tabindex', '-1')"));

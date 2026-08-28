@@ -126,6 +126,51 @@ test('harmony preserves cool warm wraparound and same-hue lightness teaching cas
   assert.equal(validate('harmony', makeHarmony(['blue', 'blue', 'blue', 'blue'], [1, 2, 4, 5])).passed, true);
 });
 
+test('harmony accepts continuous short hue arcs including the reported warm artwork payload', () => {
+  const payload = (hues, lightnesses = hues.map(() => 3)) => hues.map((hueFamily, index) => {
+    const color = COLOR_LIBRARY[`${hueFamily}-${lightnesses[index]}`];
+    return {
+      ...phase6cFixtures.harmony.pass.neighborHue[index % phase6cFixtures.harmony.pass.neighborHue.length],
+      id: `arc-${hueFamily}-${index}`,
+      colorId: color.colorId,
+      hue: color.hueFamily,
+      hueFamily: color.hueFamily,
+      hueIndex: color.hueIndex,
+      lightness: color.lightnessLevel,
+      lightnessLevel: color.lightnessLevel
+    };
+  });
+  const cases = [
+    ['blue', 'blue-green', 'green', 'blue-green'],
+    ['red', 'red-orange', 'orange', 'red-orange'],
+    ['red', 'red-orange', 'orange', 'yellow-orange'],
+    ['violet', 'red-violet', 'red', 'red-violet']
+  ];
+  for (const hues of cases) assert.equal(validate('harmony', payload(hues)).passed, true, hues.join('/'));
+
+  const reportedArtwork = payload(['red', 'orange', 'yellow-orange', 'yellow']);
+  const result = validate('harmony', reportedArtwork);
+  assert.equal(result.passed, true);
+  assert.deepEqual(reportedArtwork.map(({ colorId, hueFamily, hueIndex, lightnessLevel }) => ({ colorId, hueFamily, hueIndex, lightnessLevel })), [
+    { colorId: 'red-3', hueFamily: 'red', hueIndex: 0, lightnessLevel: 3 },
+    { colorId: 'orange-3', hueFamily: 'orange', hueIndex: 2, lightnessLevel: 3 },
+    { colorId: 'yellow-orange-3', hueFamily: 'yellow-orange', hueIndex: 3, lightnessLevel: 3 },
+    { colorId: 'yellow-3', hueFamily: 'yellow', hueIndex: 4, lightnessLevel: 3 }
+  ]);
+  assert.equal(result.metrics.bestHueArc.coverage, 1);
+  assert.equal(result.metrics.bestHueArc.span, 4);
+});
+
+test('harmony short-arc coverage rejects unrelated and largely jumping hue groups', () => {
+  const elements = (hues) => hues.map((hue, index) => ({
+    ...phase6cFixtures.harmony.pass.neighborHue[index % 4], id: `far-${index}`, hue
+  }));
+  for (const hues of [
+    ['red', 'blue', 'yellow', 'violet'],
+    ['red', 'yellow', 'green', 'blue-violet'],
+    ['red', 'red-orange', 'green', 'blue', 'violet']
+  ]) assert.equal(validate('harmony', elements(hues)).passed, false, hues.join('/'));
+});
 test('harmony rejects far colors isolated neighbor coincidence and complete identical color', () => {
   assert.equal(validate('harmony', phase6cFixtures.harmony.fail.far).primaryDiagnosticCode, 'COLORS_TOO_FAR_APART');
   assert.equal(validate('harmony', phase6cFixtures.harmony.fail.isolatedPair).passed, false);
