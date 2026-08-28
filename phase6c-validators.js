@@ -320,8 +320,10 @@ export function validateFormalUnity({ elements = [], spec = {} }) {
   const minimumElements = spec.minimumElements ?? 4;
   const requiredRatio = spec.requiredUnityRatio ?? 0.75;
   const color = dominantGroup(elements, (item) => item.hueFamily ?? item.hue);
+  const exactShape = dominantGroup(elements, (item) => item.shape);
   const directional = elements.filter((item) => getShapeMetadata(item.shape).directional);
   const rotation = dominantGroup(directional, (item) => item.rotation ?? 0);
+  const directionCoverage = elements.length ? rotation.count / elements.length : 0;
   const featureCounts = new Map();
   const meaningfulFeatures = new Set(['rounded', 'angular', 'pointed', 'elongated', 'equal-sides', 'radial', 'flat-edge', 'open', 'linear']);
   elements.forEach((item) => getShapeMetadata(item.shape).shapeFeature.filter((feature) => meaningfulFeatures.has(feature)).forEach((feature) => featureCounts.set(feature, (featureCounts.get(feature) ?? 0) + 1)));
@@ -330,12 +332,17 @@ export function validateFormalUnity({ elements = [], spec = {} }) {
   const lineStyle = dominantGroup(elements, (item) => item.lineStyle ?? 'solid');
   const methods = [];
   if (elements.length >= minimumElements && color.ratio >= requiredRatio) methods.push('color');
-  if (directional.length >= (spec.minimumDirectionalElements ?? 3) && rotation.ratio >= requiredRatio) methods.push('rotation');
-  if (elements.length >= minimumElements && new Set(elements.map((item) => item.shape)).size >= 2 && shapeFeature.ratio >= requiredRatio) methods.push('shapeFeature');
+  if (elements.length >= minimumElements
+    && directional.length >= (spec.minimumDirectionalElements ?? 3)
+    && rotation.ratio >= requiredRatio
+    && directionCoverage >= requiredRatio) methods.push('rotation');
+  const sharedExactShape = exactShape.ratio >= requiredRatio;
+  const sharedShapeFeature = new Set(elements.map((item) => item.shape)).size >= 2 && shapeFeature.ratio >= requiredRatio;
+  if (elements.length >= minimumElements && (sharedExactShape || sharedShapeFeature)) methods.push('shapeFeature');
   if (spec.lineStyleEnabled === true && elements.length >= minimumElements && lineStyle.ratio >= requiredRatio) methods.push('lineStyle');
-  const metrics = { elementCount: elements.length, requiredRatio, color, directionalCount: directional.length, rotation, shapeFeature, lineStyle };
+  const metrics = { elementCount: elements.length, requiredRatio, color, exactShape, directionalCount: directional.length, rotation, directionCoverage, shapeFeature, lineStyle };
   if (methods.length) return response(true, 'valid', metrics, methods.length > 1 ? ['multiple', ...methods] : methods);
-  const strongest = Math.max(color.ratio, directional.length ? rotation.ratio : 0, shapeFeature.ratio);
+  const strongest = Math.max(color.ratio, exactShape.ratio, directionCoverage, shapeFeature.ratio);
   return response(false, strongest >= 0.4 ? 'UNITY_TOO_WEAK' : 'NO_CLEAR_UNITY', metrics);
 }
 

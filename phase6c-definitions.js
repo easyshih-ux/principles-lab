@@ -117,10 +117,10 @@ export const phase6cDefinitions = Object.freeze([
     initialState: { elements: [] },
     validationSpec: { minimumElements: 4, requiredUnityRatio: 0.75, minimumDirectionalElements: 3, allowedUnityModes: ['color', 'rotation', 'shapeFeature', 'lineStyle'] },
     diagnosticHints: {
-      NO_CLEAR_UNITY: { observe: '看看整張畫面，這些造形有沒有什麼共同的地方？', think: '如果把它們看成一個團隊，它們有沒有一項特徵能把大家連在一起？', action: '選一種特徵，例如色彩、方向或造形特色，讓更多元素彼此呼應。' },
-      UNITY_TOO_WEAK: { observe: '有一些造形已經很像一家人了，但其他造形也有加入嗎？', think: '共同特徵如果只出現在少數元素上，整體感可能還不夠明顯。', action: '把你選擇的共同特徵延伸到更多元素，再檢查看看。' }
+      NO_CLEAR_UNITY: { observe: '看看整張畫面，這些造形有沒有共同的色彩、造形或方向？', think: '從共同色彩、共同造形或共同方向中選一種，哪一種最適合延伸到整張畫面？', action: '選一種共同特徵，讓更多元素彼此呼應。' },
+      UNITY_TOO_WEAK: { observe: '有一些造形已經像一家人了，但共同特徵有延伸到主要元素嗎？', think: '共同色彩、共同造形或共同方向，只要選一種方法做得更清楚。', action: '把你選擇的共同特徵延伸到更多元素，再檢查看看。' }
     },
-    successFeedback: { general: '成功！畫面已形成統一。', byMethod: { color: '成功！共同的色彩讓不同造形看起來屬於同一個整體。', rotation: '成功！相似的方向讓畫面產生了一致感。', shapeFeature: '成功！你讓不同造形保有共同特徵，形成了「統一」。', lineStyle: '成功！共同的線條特色讓畫面產生了一致感。', multiple: '成功！你用了不只一種共同特徵，讓整個畫面更有一致感。' } },
+    successFeedback: { general: '成功！畫面已形成統一。', byMethod: { color: '成功！共同的色彩讓不同造形看起來屬於同一個整體。', rotation: '成功！相似的方向讓畫面產生了一致感。', shapeFeature: '成功！共同的造形或造形特色，讓畫面形成了「統一」。', lineStyle: '成功！共同的線條特色讓畫面產生了一致感。', multiple: '成功！你用了不只一種共同特徵，讓整個畫面更有一致感。' } },
     discoveryFeedback: { general: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', color: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', rotation: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', shapeFeature: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', lineStyle: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', multiple: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。' }
   }),
   formal('harmony', {
@@ -131,7 +131,7 @@ export const phase6cDefinitions = Object.freeze([
     diagnosticHints: {
       NO_CLEAR_HARMONY: { observe: '看看這些顏色，它們彼此有沒有「靠近」的感覺？', think: '可以從同色系的深淺，或色相環上相近的顏色開始找關係。', action: '選一個主要色系，再加入它的深淺變化或相近顏色。' },
       COLORS_TOO_FAR_APART: { observe: '有些顏色彼此差得很遠，哪一些最不像同一組？', think: '如果想讓色彩更協調，可以把距離很遠的顏色換成相近色嗎？', action: '保留一個主要色系，將其中差異最大的顏色換成它附近的顏色。' },
-      HARMONY_TOO_WEAK: { observe: '已經有一些顏色開始互相呼應了，但整張畫面都有這種感覺嗎？', think: '調和不是只找到兩個相近色，而是讓主要色彩彼此能連在一起。', action: '把相近色或同色系的關係延伸到更多造形。' }
+      HARMONY_TOO_WEAK: { observe: '已經有一些顏色開始互相呼應了，但整張畫面都有這種感覺嗎？', think: '相近色或同色系明度，選一種方法讓主要色彩彼此連在一起。', action: '把選擇的色彩關係延伸到更多造形，讓畫面的色彩彼此協調。' }
     },
     successFeedback: { general: '成功！畫面已形成調和。', byMethod: { sameHueLightness: '成功！你利用同色系的深淺變化，讓色彩彼此協調。', neighborHue: '成功！你利用相近的顏色，形成了柔和、協調的色彩關係。', mixed: '成功！你同時運用了相近色與深淺變化，讓色彩產生更豐富的調和。' } },
     discoveryFeedback: { general: '調和不只是一種顏色。相近的顏色，或同色系的深淺變化，也能彼此呼應。', sameHueLightness: '調和不只是一種顏色。相近的顏色，或同色系的深淺變化，也能彼此呼應。', neighborHue: '調和不只是一種顏色。相近的顏色，或同色系的深淺變化，也能彼此呼應。', mixed: '調和不只是一種顏色。相近的顏色，或同色系的深淺變化，也能彼此呼應。' }

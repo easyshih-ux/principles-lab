@@ -34,6 +34,66 @@ test('unity supports color rotation shapeFeature and multiple without requiring 
   }
   assert.ok(new Set(phase6cFixtures.unity.pass.color.map((item) => item.shape)).size > 1);
 });
+test('unity accepts exact shared shapes with different colors at the formal minimum', () => {
+  for (const [shape, count] of [['circle', 4], ['square', 5]]) {
+    const elements = Array.from({ length: count }, (_, index) => ({
+      ...phase6cFixtures.unity.pass.color[index % phase6cFixtures.unity.pass.color.length],
+      id: `${shape}-${index}`,
+      shape,
+      hue: ['red', 'yellow', 'green', 'blue', 'violet'][index]
+    }));
+    const result = validate('unity', elements);
+    assert.equal(result.passed, true, shape);
+    assert.ok(result.detectedMethods.includes('shapeFeature'), shape);
+    assert.equal(result.metrics.exactShape.ratio, 1, shape);
+  }
+});
+
+test('unity applies minimum element and whole-composition coverage to shared direction', () => {
+  const directionalShapes = ['triangle', 'rectangle', 'semicircle', 'line'];
+  const fourAligned = directionalShapes.map((shape, index) => ({
+    ...phase6cFixtures.unity.pass.rotation[index], id: `aligned-${index}`, shape, rotation: 45
+  }));
+  const alignedResult = validate('unity', fourAligned);
+  assert.equal(alignedResult.passed, true);
+  assert.ok(alignedResult.detectedMethods.includes('rotation'));
+
+  assert.equal(validate('unity', fourAligned.slice(0, 3)).passed, false);
+
+  const plainShapes = ['circle', 'square', 'circle', 'square', 'circle'];
+  const hiddenMinority = [
+    ...plainShapes.map((shape, index) => ({
+      ...phase6cFixtures.unity.pass.color[index], id: `plain-${index}`, shape,
+      hue: ['red', 'yellow', 'green', 'blue', 'violet'][index]
+    })),
+    ...fourAligned.slice(0, 3).map((item, index) => ({
+      ...item, id: `minority-${index}`, hue: ['red-orange', 'yellow-green', 'blue-violet'][index]
+    }))
+  ];
+  const minorityResult = validate('unity', hiddenMinority);
+  assert.equal(minorityResult.passed, false);
+  assert.equal(minorityResult.metrics.directionCoverage, 3 / 8);
+});
+
+test('unity rejects too few exact shapes, dispersed directions and insufficient color coverage', () => {
+  const threeCircles = ['red', 'blue', 'green'].map((hue, index) => ({
+    ...phase6cFixtures.unity.pass.color[index], id: `three-${index}`, shape: 'circle', hue
+  }));
+  assert.equal(validate('unity', threeCircles).passed, false);
+
+  const diverseShapes = ['triangle', 'rectangle', 'semicircle', 'line'];
+  const dispersed = diverseShapes.map((shape, index) => ({
+    ...phase6cFixtures.unity.pass.rotation[index], id: `dispersed-${index}`, shape,
+    hue: ['red', 'yellow', 'green', 'blue'][index], rotation: [0, 45, 90, 135][index]
+  }));
+  assert.equal(validate('unity', dispersed).passed, false);
+
+  const unrelated = ['circle', 'square', 'triangle', 'semicircle'].map((shape, index) => ({
+    ...phase6cFixtures.unity.pass.color[index], id: `unrelated-${index}`, shape,
+    hue: ['red', 'yellow', 'green', 'blue'][index], rotation: [0, 45, 90, 135][index]
+  }));
+  assert.equal(validate('unity', unrelated).passed, false);
+});
 
 test('unity rejects local coincidence and unrelated diversity', () => {
   assert.equal(validate('unity', phase6cFixtures.unity.fail.weak).passed, false);
@@ -54,6 +114,16 @@ test('harmony supports same hue lightness neighboring hues ring wrap and mixed',
   assert.equal(areNeighborHues('red','red-violet'), true);
   assert.equal(HUE_FAMILIES.length, 12);
   assert.equal(Object.keys(COLOR_LIBRARY).length, 60);
+});
+test('harmony preserves cool warm wraparound and same-hue lightness teaching cases', () => {
+  const makeHarmony = (hues, lightnesses = hues.map(() => 3)) => hues.map((hue, index) => ({
+    ...phase6cFixtures.harmony.pass.neighborHue[index % 4],
+    id: `teaching-${hue}-${index}`, hue, lightness: lightnesses[index]
+  }));
+  assert.equal(validate('harmony', makeHarmony(['blue', 'blue-green', 'green', 'blue-green'])).passed, true);
+  assert.equal(validate('harmony', makeHarmony(['red', 'red-orange', 'orange', 'yellow-orange'])).passed, true);
+  assert.equal(validate('harmony', makeHarmony(['red', 'red-violet', 'red', 'red-violet'])).passed, true);
+  assert.equal(validate('harmony', makeHarmony(['blue', 'blue', 'blue', 'blue'], [1, 2, 4, 5])).passed, true);
 });
 
 test('harmony rejects far colors isolated neighbor coincidence and complete identical color', () => {
