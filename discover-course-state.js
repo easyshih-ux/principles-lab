@@ -1,5 +1,6 @@
 import { generateDiscoverQuestions } from './discover-generators.js';
 import { createDiscoverOrder } from './discover-randomizer.js';
+import { recordDiscoverFirstAttempt, resetMasteryCourseState } from './mastery-practice.js';
 
 const emptyQuestionState = () => ({ attempts: 0, selection: null, feedbackCode: '', feedback: '', completed: false });
 
@@ -11,13 +12,14 @@ export function createDiscoverCourseState(questions) {
   };
 }
 
-export function startDiscoverCourse(state, questions, seed = Date.now()) {
+export function startDiscoverCourse(state, questions, seed = Date.now(), masteryState = null) {
   Object.assign(state, createDiscoverCourseState(questions), {
     started: true,
     seed,
     questionOrder: createDiscoverOrder(questions, seed),
     generatedQuestions: generateDiscoverQuestions(questions, seed)
   });
+  resetMasteryCourseState(masteryState);
   return state.questionOrder;
 }
 
@@ -33,8 +35,14 @@ export function setDiscoverSelection(state, questionId, selection) {
   target.feedbackCode = '';
 }
 
-export function applyDiscoverResult(state, question, result) {
+export function applyDiscoverResult(state, question, result, masteryState = null) {
   const target = state.questions[question.id];
+  recordDiscoverFirstAttempt(masteryState, question, {
+    selection: target.selection,
+    isCorrect: result.isValid,
+    failureCode: result.code,
+    initialGeneratedInstanceId: 'discover:' + state.seed + ':' + question.id
+  });
   if (result.isValid) {
     target.completed = true;
     target.feedbackCode = 'success';

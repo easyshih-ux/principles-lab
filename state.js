@@ -27,6 +27,7 @@ function createStageState(stage) {
 import { createRecognizeCourseState } from './recognize-course-state.js';
 import { createDiscoverCourseState } from './discover-course-state.js';
 import { createLockedClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
+import { createMasteryPracticeState } from './mastery-practice.js';
 
 export function createAppState(stages, recognizeQuestions = [], discoverQuestions = []) {
   return {
@@ -50,6 +51,7 @@ export function createAppState(stages, recognizeQuestions = [], discoverQuestion
     },
     classroomUnlocks: createLockedClassroomUnlocks(),
     classroomGate: { activeCourseId: null, message: '', error: '' },
+    masteryPractice: createMasteryPracticeState(),
     recognizeCourse: createRecognizeCourseState(recognizeQuestions),
     discoverCourse: createDiscoverCourseState(discoverQuestions)
   };

@@ -70,14 +70,14 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
         <div class="recognize-intro-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       </section>`;
     document.querySelector('#begin-recognize').addEventListener('click', () => {
-      resetRecognizeCourse(courseState, recognizeQuestions);
+      resetRecognizeCourse(courseState, recognizeQuestions, undefined, {}, state.masteryPractice.recognize);
       const [firstQuestion] = getRecognizeSessionQuestions(courseState, recognizeQuestions);
       navigate(recognizeQuestionHash(firstQuestion.id));
     });
   }
 
   function renderQuestion(question) {
-    if (!courseState.started) resetRecognizeCourse(courseState, recognizeQuestions);
+    if (!courseState.started) resetRecognizeCourse(courseState, recognizeQuestions, undefined, {}, state.masteryPractice.recognize);
     const orderedQuestions = getRecognizeSessionQuestions(courseState, recognizeQuestions);
     const firstIncomplete = firstIncompleteQuestion(courseState, recognizeQuestions);
     const requestedIndex = orderedQuestions.indexOf(question);
@@ -137,7 +137,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
         validatorId: 'selected-option-equals',
         validation: { correctOptionId: question.correctAnswer }
       }, { selectedOptionId: questionState.selectedAnswer });
-      applyRecognizeValidation(courseState, question, validation);
+      applyRecognizeValidation(courseState, question, validation, state.masteryPractice.recognize);
       renderQuestion(question);
     });
     document.querySelector('#recognize-next')?.addEventListener('click', () => {

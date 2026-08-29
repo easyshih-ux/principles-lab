@@ -1,5 +1,6 @@
 import { createRecognizeSession } from './recognize-randomizer.js?v=final-qa-question-order';
 import { getRecognizeVariant } from './recognize-template-pool.js';
+import { recordRecognizeFirstAttempt, resetMasteryCourseState } from './mastery-practice.js';
 
 export function createRecognizeCourseState(questions) {
   return {
@@ -17,9 +18,10 @@ export function createRecognizeCourseState(questions) {
   };
 }
 
-export function resetRecognizeCourse(courseState, questions, random = Math.random, forcedVariants = {}) {
+export function resetRecognizeCourse(courseState, questions, random = Math.random, forcedVariants = {}, masteryState = null) {
   const session = createRecognizeSession(questions, random, forcedVariants);
   Object.assign(courseState, createRecognizeCourseState(questions), session, { started: true });
+  resetMasteryCourseState(masteryState);
 }
 
 export function getRecognizeSessionQuestion(courseState, question) {
@@ -49,8 +51,13 @@ export function selectRecognizeAnswer(courseState, questionId, answerId) {
   questionState.feedback = '';
 }
 
-export function applyRecognizeValidation(courseState, question, validation) {
+export function applyRecognizeValidation(courseState, question, validation, masteryState = null) {
   const questionState = courseState.questions[question.id];
+  recordRecognizeFirstAttempt(masteryState, question, {
+    answerId: questionState.selectedAnswer,
+    isCorrect: validation.isValid,
+    initialVariantId: courseState.variantSelections[question.id] ?? 'A'
+  });
   if (validation.isValid) {
     questionState.isCorrect = true;
     questionState.feedback = question.successFeedback;
