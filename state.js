@@ -14,6 +14,13 @@ function createStageState(stage) {
   }
 
   if (stage.stageType === 'experiment') {
+    if (stage.interactionType === 'mirror-drag') {
+      return {
+        ...common,
+        position: { ...stage.initialState.position },
+        history: []
+      };
+    }
     return {
       ...common,
       order: stage.initialState.order.slice(),

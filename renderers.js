@@ -83,6 +83,21 @@ function dot(size, index, extraClass = '') {
     ></span>`;
 }
 
+function symbolMark(symbol, index = 0) {
+  const names = { '●': '圓形', '■': '方形', '▲': '三角形', '★': '星形', '◆': '菱形' };
+  return `<span class="review-symbol symbol-${index % 3}" aria-label="${names[symbol] ?? symbol}">${symbol}</span>`;
+}
+
+function symmetryComposition(option, animated = false) {
+  return `<span class="symmetry-mini ${animated ? 'symmetry-success' : ''}">
+    <i class="symmetry-axis" aria-hidden="true"></i>
+    ${option.pairs.map(([y, leftX, rightX], index) => `
+      <span class="symmetry-pair-left pair-${index}" style="--x:${leftX}%;--y:${y}%">${symbolMark(['●', '■', '▲'][index], index)}</span>
+      ${rightX == null ? '' : `<span class="symmetry-pair-right pair-${index}" style="--x:${rightX}%;--y:${y}%">${symbolMark(['●', '■', '▲'][index], index)}</span>`}
+    `).join('')}
+  </span>`;
+}
+
 function sampleDots(principle) {
   return `
     <div class="mini-dots ${principle.id}">
@@ -210,7 +225,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
                   <h2>${principle.name}</h2>
                   <p>${principle.shortDescription}</p>
                   ${isAvailable
-                    ? `<button class="sample-enter" data-principle-id="${principle.id}">漸層示範 →</button>`
+                    ? `<button class="sample-enter" data-principle-id="${principle.id}">視覺實驗 →</button>`
                     : '<span class="sample-status">形式樣本</span>'}
                 </div>
               </article>`;
@@ -258,7 +273,11 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
             >
               <span class="choice-label">作品 ${String.fromCharCode(65 + index)}</span>
               <span class="choice-dots ${shouldAnimate ? 'sequence-glow' : ''}">
-                ${option.sizes.map((size, dotIndex) => dot(size, dotIndex)).join('')}
+                ${stage.interactionType === 'symbol-options'
+                  ? `<span class="symbol-sequence ${shouldAnimate ? 'repeat-success' : ''}">${option.symbols.map(symbolMark).join('')}</span>`
+                  : stage.interactionType === 'symmetry-options'
+                    ? symmetryComposition(option, shouldAnimate)
+                    : option.sizes.map((size, dotIndex) => dot(size, dotIndex)).join('')}
               </span>
             </button>`;
         }).join('')}
@@ -330,13 +349,27 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     const correctIndex = stage.elements.findIndex(
       (element) => element.id === stage.validation.correctElementId
     );
-    const canvas = `
+    const isSymbolDiagnose = stage.interactionType === 'symbol-diagnose';
+    const isSymmetryDiagnose = stage.interactionType === 'symmetry-diagnose';
+    const canvas = isSymmetryDiagnose ? `
+      <div class="single-artboard symmetry-board">
+        <div class="symmetry-axis" aria-hidden="true"></div>
+        ${stage.elements.map((element, index) => {
+          const rightY = stageState.isComplete && element.id === stage.validation.correctElementId
+            ? element.correctY : element.y;
+          const isSelected = stageState.selectedElementId === element.id;
+          return `<span class="mirror-fixed mirror-left" style="--x:30%;--y:${element.correctY}%">${symbolMark(element.symbol, index)}</span>
+            <button class="mirror-fixed mirror-right ${isSelected ? 'selected' : ''}" data-element-id="${element.id}" style="--x:70%;--y:${rightY}%" aria-label="右側第 ${index + 1} 個圖形">${symbolMark(element.symbol, index)}</button>`;
+        }).join('')}
+      </div>` : `
       <div class="single-artboard">
         <div class="diagnose-row ${stageState.isComplete ? 'restored' : ''}">
           ${stage.elements.map((element, index) => {
             const size = stageState.isComplete && element.id === stage.validation.correctElementId
               ? stage.validation.fixedSize
               : element.size;
+            const symbol = stageState.isComplete && element.id === stage.validation.correctElementId
+              ? stage.validation.fixedSymbol : element.symbol;
             const isSelected = stageState.selectedElementId === element.id;
             const showNeighborHint = stageState.attempts >= 2
               && Math.abs(index - correctIndex) <= 1;
@@ -344,13 +377,13 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
               <button
                 class="diagnose-dot ${isSelected ? 'selected' : ''} ${showNeighborHint ? 'neighbor-hint' : ''}"
                 data-element-id="${element.id}"
-                aria-label="第 ${index + 1} 顆圓點，直徑 ${size}"
+                aria-label="第 ${index + 1} 個${isSymbolDiagnose ? '圖形' : `圓點，直徑 ${size}`}"
               >
-                <span style="--size:${size}px;--dot-color:${dotColors[index]}"></span>
+                ${isSymbolDiagnose ? symbolMark(symbol, index) : `<span style="--size:${size}px;--dot-color:${dotColors[index]}"></span>`}
               </button>`;
           }).join('')}
         </div>
-        <div class="baseline" aria-hidden="true"></div>
+        ${isSymbolDiagnose ? '' : '<div class="baseline" aria-hidden="true"></div>'}
       </div>`;
     const controls = [
       button('提示', 'secondary-button', 'hint'),
@@ -415,20 +448,26 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
   }
 
   function renderExperimentStage(stage) {
+    if (stage.interactionType === 'mirror-drag') {
+      renderMirrorExperimentStage(stage);
+      return;
+    }
     const principle = getPrinciple(stage.principleId);
     const stageState = getStageState(state, stage.id);
     const canvas = `
       <div class="single-artboard repair-board">
         <div class="slots" role="list" aria-label="可拖曳排序的六個圓點">
-          ${stageState.order.map((size, index) => `
+          ${stageState.order.map((value, index) => `
             <button
               class="drag-dot"
               draggable="true"
               data-position="${index}"
               role="listitem"
-              aria-label="直徑 ${size} 的圓點，目前第 ${index + 1} 位。使用左右方向鍵移動。"
+              aria-label="${stage.interactionType === 'symbol-reorder' ? value + '圖形' : `直徑 ${value} 的圓點`}，目前第 ${index + 1} 位。使用左右方向鍵移動。"
             >
-              <span style="--size:${size}px;--dot-color:${dotColors[stage.initialState.order.indexOf(size)]}"></span>
+              ${stage.interactionType === 'symbol-reorder'
+                ? symbolMark(value, stage.initialState.order.indexOf(value))
+                : `<span style="--size:${value}px;--dot-color:${dotColors[stage.initialState.order.indexOf(value)]}"></span>`}
               <i>${index + 1}</i>
             </button>`).join('')}
         </div>
@@ -483,6 +522,78 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       renderExperimentStage(stage);
     });
 
+    document.querySelector('#next')?.addEventListener('click', () => {
+      markPrincipleComplete(state, stage.principleId);
+      navigate(nextHashForStage(stage, stages));
+    });
+  }
+
+  function renderMirrorExperimentStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const target = stage.validation.target;
+    const position = stageState.isComplete ? target : stageState.position;
+    const canvas = `<div class="single-artboard symmetry-board ${stageState.isComplete ? 'mirror-success' : ''}" id="mirror-board">
+      <div class="symmetry-axis" aria-hidden="true"></div>
+      ${stage.elements.map((element, index) => `<span class="mirror-fixed mirror-left" style="--x:30%;--y:${element.y}%">${symbolMark(element.symbol, index)}</span>
+        ${element.id === 'pair-middle' ? '' : `<span class="mirror-fixed mirror-right" style="--x:70%;--y:${element.y}%">${symbolMark(element.symbol, index)}</span>`}`).join('')}
+      <button class="mirror-draggable" id="mirror-piece" style="--x:${position.x}%;--y:${position.y}%" aria-label="可拖曳的右側方形，使用方向鍵微調">${symbolMark('■', 1)}</button>
+    </div>`;
+    const controls = [
+      button('復原', 'secondary-button', 'undo'),
+      button('提示', 'secondary-button', 'hint'),
+      button('完成檢測', 'primary-button compact', 'check'),
+      stageState.isComplete ? button('完成實驗', 'primary-button compact', 'next') : ''
+    ].join('');
+
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    const board = document.querySelector('#mirror-board');
+    const piece = document.querySelector('#mirror-piece');
+
+    function setPosition(x, y) {
+      const snapTolerance = stage.validation.snapTolerance;
+      const next = Math.hypot(x - target.x, y - target.y) <= snapTolerance
+        ? { ...target } : { x: Math.max(54, Math.min(92, x)), y: Math.max(12, Math.min(88, y)) };
+      updateStageState(state, stage.id, { position: next, feedback: '' });
+      clearStageCompletion(state, stage.id);
+      renderMirrorExperimentStage(stage);
+    }
+
+    piece.addEventListener('pointerdown', (event) => {
+      if (stageState.isComplete) return;
+      piece.setPointerCapture(event.pointerId);
+    });
+    piece.addEventListener('pointerup', (event) => {
+      if (stageState.isComplete) return;
+      const rect = board.getBoundingClientRect();
+      setPosition(((event.clientX - rect.left) / rect.width) * 100, ((event.clientY - rect.top) / rect.height) * 100);
+    });
+    piece.addEventListener('keydown', (event) => {
+      const delta = { ArrowLeft: [-2, 0], ArrowRight: [2, 0], ArrowUp: [0, -2], ArrowDown: [0, 2] }[event.key];
+      if (!delta || stageState.isComplete) return;
+      event.preventDefault();
+      setPosition(stageState.position.x + delta[0], stageState.position.y + delta[1]);
+    });
+    document.querySelector('#undo').addEventListener('click', () => {
+      updateStageState(state, stage.id, { position: { ...stage.initialState.position }, feedback: '' });
+      clearStageCompletion(state, stage.id);
+      renderMirrorExperimentStage(stage);
+    });
+    document.querySelector('#hint').addEventListener('click', () => {
+      updateStageState(state, stage.id, { feedback: stage.hints[0] });
+      renderMirrorExperimentStage(stage);
+    });
+    document.querySelector('#check').addEventListener('click', () => {
+      const result = validateStage(stage, { position: stageState.position });
+      if (result.isValid) {
+        markStageComplete(state, stage);
+        updateStageState(state, stage.id, { position: { ...target }, feedback: stage.successFeedback });
+      } else {
+        updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
+      }
+      renderMirrorExperimentStage(stage);
+    });
     document.querySelector('#next')?.addEventListener('click', () => {
       markPrincipleComplete(state, stage.principleId);
       navigate(nextHashForStage(stage, stages));
@@ -560,7 +671,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
 
   function renderComplete(principle) {
     const completedStage = getStagesForPrinciple(principle.id).at(-1);
-    const finalOrder = completedStage
+    const finalOrder = completedStage && Array.isArray(getStageState(state, completedStage.id).order)
       ? getStageState(state, completedStage.id).order.slice().sort((a, b) => a - b)
       : [18, 28, 38, 48, 58, 70];
     const completionDescription = principle.completionDescription
@@ -574,8 +685,12 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
           <p>${completionDescription}</p>
           ${button('回到實驗樣本牆', 'primary-button', 'back-wall')}
         </div>
-        <div class="complete-art" aria-label="六個圓點由小到大排列">
-          ${finalOrder.map((size, index) => dot(size, index)).join('')}
+        <div class="complete-art complete-art-${principle.id}" aria-label="${principle.name}完成圖">
+          ${principle.id === 'repetition'
+            ? ['●', '■', '●', '■', '●', '■'].map(symbolMark).join('')
+            : principle.id === 'symmetry'
+              ? symmetryComposition({ pairs: [[26, 28, 72], [42, 30, 70], [58, 32, 68]] }, true)
+              : finalOrder.map((size, index) => dot(size, index)).join('')}
           <i aria-hidden="true"></i>
         </div>
       </section>`;

@@ -61,8 +61,28 @@ registerValidator('strict-ascending', ({ input }) => {
   };
 });
 
+registerValidator('repeating-unit', ({ input, stage }) => {
+  const order = input.order ?? [];
+  const unit = stage.validation.unit ?? [];
+  const unitLength = stage.validation.unitLength ?? unit.length;
+  const isValid = unitLength > 0 && order.length >= unitLength * 2
+    && order.every((value, index) => value === unit[index % unitLength]);
+  return { isValid, code: isValid ? 'valid' : 'repeat-unit-unclear' };
+});
+
+registerValidator('mirror-position', ({ input, stage }) => {
+  const position = input.position ?? {};
+  const target = stage.validation.target;
+  const tolerance = stage.validation.tolerance;
+  const isValid = Number.isFinite(position.x) && Number.isFinite(position.y)
+    && Math.hypot(position.x - target.x, position.y - target.y) <= tolerance;
+  return { isValid, code: isValid ? 'valid' : 'mirror-not-aligned' };
+});
+
 export const validatorIds = Object.freeze({
   selectedOptionEquals: 'selected-option-equals',
   selectedElementEquals: 'selected-element-equals',
-  strictAscending: 'strict-ascending'
+  strictAscending: 'strict-ascending',
+  repeatingUnit: 'repeating-unit',
+  mirrorPosition: 'mirror-position'
 });
