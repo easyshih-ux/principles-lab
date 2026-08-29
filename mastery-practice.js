@@ -67,29 +67,36 @@ function recognizeBand(correct, answered = 8) {
 }
 
 function recognizeCandidates(question, snapshot) {
-  const pool = recognizeTemplatePools[question.id] ?? {};
+  const pool = recognizeTemplatePools[question.principleId] ?? {};
   return Object.keys(pool).filter((variantId) => variantId !== snapshot?.initialVariantId).map((variantId) => ({
     sourceQuestionId: question.id,
     principleId: question.principleId,
     variantId,
-    initialVariantId: snapshot?.initialVariantId ?? null
+    initialVariantId: snapshot?.initialVariantId ?? null,
+    round: 1
   }));
 }
 
 export function buildRecognizeMasteryQueue(courseMastery, questions, options = {}) {
   const snapshots = courseMastery?.firstAttempts ?? {};
-  const correct = questions.filter((q) => snapshots[q.id]?.firstAttemptCorrect).length;
-  const band = recognizeBand(correct);
-  if (band === 'mastered') return [];
+  const summary = buildRecognizeMasterySummary(courseMastery, questions);
+  if (!summary.masteryBand || summary.masteryBand === 'mastered') return [];
   const random = randomFor(options);
-  const missed = questions.filter((q) => !snapshots[q.id]?.firstAttemptCorrect);
-  if (band === 'targeted') return shuffle(missed.flatMap((q) => recognizeCandidates(q, snapshots[q.id])), random);
-  const correctQuestions = questions.filter((q) => snapshots[q.id]?.firstAttemptCorrect);
-  const primary = shuffle(missed, random).flatMap((q) => shuffle(recognizeCandidates(q, snapshots[q.id]), random));
-  const fill = shuffle(correctQuestions, random).flatMap((q) => shuffle(recognizeCandidates(q, snapshots[q.id]), random));
+  const missed = questions.filter((question) => summary.missedQuestionIds.includes(question.id));
+  const firstCandidate = (question, reason) => {
+    const [candidate] = shuffle(recognizeCandidates(question, snapshots[question.id]), random);
+    return candidate ? { ...candidate, reason } : null;
+  };
+  if (summary.masteryBand === 'targeted') {
+    return shuffle(missed, random)
+      .map((question) => firstCandidate(question, 'missed-principle'))
+      .filter(Boolean);
+  }
+  const correctQuestions = questions.filter((question) => snapshots[question.id]?.firstAttemptCorrect);
+  const primary = shuffle(missed, random).map((question) => firstCandidate(question, 'missed-principle')).filter(Boolean);
+  const fill = shuffle(correctQuestions, random).map((question) => firstCandidate(question, 'mixed-reinforcement')).filter(Boolean);
   return [...primary, ...fill].slice(0, 6);
 }
-
 export function buildRecognizeMasterySummary(courseMastery, questions) {
   const snapshots = courseMastery?.firstAttempts ?? {};
   const answered = questions.map((q) => snapshots[q.id]).filter(Boolean);
@@ -113,32 +120,60 @@ function discoverBand(correct, answered = 16) {
   return 'reinforcement';
 }
 
-function discoverDescriptor(snapshot, random) {
+function discoverDescriptor(snapshot, question, random, reason) {
   return {
     sourceQuestionId: snapshot.questionId,
     principleId: snapshot.principleId,
-    ...(snapshot.relatedPrincipleIds ? { relatedPrincipleIds: snapshot.relatedPrincipleIds.slice() } : {}),
+    ...(snapshot.principleId === 'synthesis' && Array.isArray(question?.pairingTargets)
+      ? { relatedPrincipleIds: question.pairingTargets.slice() }
+      : {}),
     conceptVariant: snapshot.conceptVariant,
     interactionType: snapshot.interactionType,
     firstFailureCode: snapshot.firstFailureCode,
     masterySeed: Math.floor(random() * 0x100000000) >>> 0,
-    excludesGeneratedInstanceId: snapshot.initialGeneratedInstanceId
+    reason,
+    round: 1
   };
+}
+
+function principleAwareOrder(items, random) {
+  const groups = new Map();
+  items.forEach((item) => {
+    if (!groups.has(item.principleId)) groups.set(item.principleId, []);
+    groups.get(item.principleId).push(item);
+  });
+  const queues = shuffle([...groups.values()], random).map((group) => shuffle(group, random));
+  const ordered = [];
+  while (queues.some((queue) => queue.length)) {
+    queues.forEach((queue) => {
+      if (queue.length) ordered.push(queue.shift());
+    });
+  }
+  return ordered;
 }
 
 export function buildDiscoverMasteryQueue(courseMastery, questions, options = {}) {
   const snapshots = courseMastery?.firstAttempts ?? {};
-  const ordered = questions.map((q) => snapshots[q.id]).filter(Boolean);
-  const correct = ordered.filter((item) => item.firstAttemptCorrect).length;
-  const band = discoverBand(correct);
-  if (band === 'mastered') return [];
+  const summary = buildDiscoverMasterySummary(courseMastery, questions);
+  if (!summary.masteryBand || summary.masteryBand === 'mastered') return [];
+  const ordered = questions.map((question) => snapshots[question.id]).filter(Boolean);
   const random = randomFor(options);
-  const missed = shuffle(ordered.filter((item) => !item.firstAttemptCorrect), random);
-  if (band === 'targeted') return missed.map((item) => discoverDescriptor(item, random));
-  const fill = shuffle(ordered.filter((item) => item.firstAttemptCorrect), random);
-  return [...missed, ...fill].slice(0, 8).map((item) => discoverDescriptor(item, random));
+  const questionsById = Object.fromEntries(questions.map((question) => [question.id, question]));
+  const missed = ordered.filter((item) => !item.firstAttemptCorrect);
+  if (summary.masteryBand === 'targeted') {
+    return shuffle(missed, random).map((item) => discoverDescriptor(
+      item, questionsById[item.questionId], random, 'missed-concept'
+    ));
+  }
+  const primary = principleAwareOrder(missed, random);
+  const fill = principleAwareOrder(ordered.filter((item) => item.firstAttemptCorrect), random);
+  return [...primary, ...fill].slice(0, 8).map((item) => discoverDescriptor(
+    item,
+    questionsById[item.questionId],
+    random,
+    item.firstAttemptCorrect ? 'mixed-reinforcement' : 'missed-concept'
+  ));
 }
-
 export function buildDiscoverMasterySummary(courseMastery, questions) {
   const snapshots = courseMastery?.firstAttempts ?? {};
   const ordered = questions.map((q) => snapshots[q.id]).filter(Boolean);
