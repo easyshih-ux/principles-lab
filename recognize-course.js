@@ -2,6 +2,7 @@ import { getShapeDimensions } from './geometry/bounds.js';
 import { getDisplayColor } from './geometry/palette.js';
 import {
   applyRecognizeValidation,
+  areRecognizeQuestionsComplete,
   completeRecognizeCourse,
   firstIncompleteQuestion,
   getRecognizeSessionQuestion,
@@ -14,6 +15,14 @@ import { getRecognizeVariant } from './recognize-template-pool.js';
 import { recognizeQuestionHash } from './router.js';
 import { validateStage } from './validators.js';
 import { syncCourseCompletion } from './state.js';
+import {
+  advanceRecognizeMasteryRound,
+  applyRecognizeMasteryResult,
+  beginRecognizeMasteryRound,
+  getCurrentRecognizeMasteryItem,
+  prepareRecognizeMasteryRound,
+  selectRecognizeMasteryAnswer
+} from './mastery-practice.js';
 
 export function recognizeCompletionMarkup() {
   return `
@@ -55,6 +64,7 @@ export function recognizeCompositionMarkup(question, ariaLabel = '形式原理�
 
 export function createRecognizeCourseRenderers({ app, state, navigate }) {
   const courseState = state.recognizeCourse;
+  const masteryState = state.masteryPractice.recognize;
   const devSelection = { questionId: recognizeQuestions[0].id, variantId: 'A' };
 
   function renderStart() {
@@ -146,22 +156,137 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
         navigate(recognizeQuestionHash(nextQuestion.id));
         return;
       }
-      if (completeRecognizeCourse(courseState, recognizeQuestions)) navigate('#level/recognize/complete');
+      if (areRecognizeQuestionsComplete(courseState, recognizeQuestions)) navigate('#level/recognize/complete');
     });
     if (questionState.isCorrect) document.querySelector('#recognize-next')?.focus();
   }
 
+  function renderMasteryTransition(summary) {
+    const targeted = summary.masteryBand === 'targeted';
+    app.innerHTML = `
+      <section class="recognize-intro page-shell mastery-transition">
+        <div>
+          <p class="section-label">觀察補強</p>
+          <h1>${targeted ? '再確認一下' : '再練一小組'}</h1>
+          <p class="recognize-intro-lead">${targeted
+            ? '有幾個形式原理還不太確定，再試幾題，把它們看得更清楚。'
+            : '再做幾題，確認你真的看懂這些形式原理。'}</p>
+          <button type="button" class="primary-button" id="mastery-begin">開始補強</button>
+        </div>
+        <div class="recognize-intro-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </section>`;
+    document.querySelector('#mastery-begin').addEventListener('click', () => {
+      beginRecognizeMasteryRound(masteryState);
+      renderComplete();
+    });
+  }
+
+  function getMasterySessionQuestion(item) {
+    const question = recognizeQuestions.find(({ id }) => id === item.sourceQuestionId);
+    const variant = getRecognizeVariant(question, item.variantId);
+    const sessionQuestion = getRecognizeSessionQuestion(courseState, question);
+    return { question, sessionQuestion: { ...sessionQuestion, ...variant, variantId: item.variantId } };
+  }
+
+  function renderMasteryQuestion() {
+    const activeRound = masteryState.activeRound;
+    const current = getCurrentRecognizeMasteryItem(masteryState);
+    if (!activeRound || !current) {
+      renderComplete();
+      return;
+    }
+    const { question, sessionQuestion } = getMasterySessionQuestion(current.item);
+    const response = current.response;
+    app.innerHTML = `
+      <section class="recognize-question-page page-shell mastery-question-page">
+        <header class="recognize-question-header">
+          <button type="button" class="back-link" id="mastery-exit">← 返回實驗室</button>
+          <h1>第一關｜再確認一下</h1>
+          <strong>${activeRound.currentIndex + 1} / ${activeRound.queue.length}</strong>
+        </header>
+        <div class="recognize-artboard">${recognizeCompositionMarkup(sessionQuestion, '形式原理補強構圖')}</div>
+        <div class="recognize-question-copy">
+          <h2>${question.prompt}</h2>
+          <div class="recognize-options" role="group" aria-label="答案選項">
+            ${sessionQuestion.options.map((option) => `
+              <button type="button" class="recognize-option ${response.selectedAnswer === option.id ? 'selected' : ''}"
+                data-mastery-answer-id="${option.id}" aria-pressed="${response.selectedAnswer === option.id}"
+                ${response.completed ? 'disabled' : ''}>${option.label}</button>`).join('')}
+          </div>
+        </div>
+        <footer class="recognize-feedback-row">
+          <div class="recognize-feedback ${response.completed ? 'success' : ''}" role="status" aria-live="polite" aria-atomic="true">
+            ${response.feedback
+              ? `<strong>${response.completed ? '✓ 看出來了！' : '再觀察一下'}</strong><span>${response.feedback}${response.completed ? ` <em>${question.shortHint}</em>` : ''}</span>`
+              : '<span>選擇你觀察到的主要原理。</span>'}
+          </div>
+          <div class="recognize-actions">
+            ${response.completed
+              ? '<button type="button" class="primary-button compact" id="mastery-next">下一題</button>'
+              : '<button type="button" class="primary-button compact" id="mastery-check">確認答案</button>'}
+          </div>
+        </footer>
+      </section>`;
+    document.querySelector('#mastery-exit').addEventListener('click', () => navigate('#principles'));
+    document.querySelectorAll('[data-mastery-answer-id]').forEach((button) => button.addEventListener('click', () => {
+      selectRecognizeMasteryAnswer(masteryState, button.dataset.masteryAnswerId);
+      renderMasteryQuestion();
+    }));
+    document.querySelector('#mastery-check')?.addEventListener('click', () => {
+      const validation = validateStage({
+        validatorId: 'selected-option-equals',
+        validation: { correctOptionId: question.correctAnswer }
+      }, { selectedOptionId: response.selectedAnswer });
+      applyRecognizeMasteryResult(masteryState, question, validation.isValid);
+      renderMasteryQuestion();
+    });
+    document.querySelector('#mastery-next')?.addEventListener('click', () => {
+      advanceRecognizeMasteryRound(masteryState);
+      renderComplete();
+    });
+    if (response.completed) document.querySelector('#mastery-next')?.focus();
+  }
+
+  function renderMasteryComplete() {
+    completeRecognizeCourse(courseState, recognizeQuestions);
+    syncCourseCompletion(state);
+    app.innerHTML = `
+      <section class="recognize-complete page-shell mastery-complete">
+        <div>
+          <p class="section-label">觀察補強完成</p>
+          <h1>補強完成！</h1>
+          <p class="recognize-complete-lead">這次看得更清楚了，可以繼續下一步。</p>
+          <button type="button" class="primary-button" id="mastery-wall-return">回到實驗室</button>
+        </div>
+        <div class="recognize-complete-pattern" aria-hidden="true">${Array.from({ length: 8 }, (_, index) => `<i style="--index:${index}"></i>`).join('')}</div>
+      </section>`;
+    document.querySelector('#mastery-wall-return').addEventListener('click', () => navigate('#principles'));
+  }
+
   function renderComplete() {
-    if (!completeRecognizeCourse(courseState, recognizeQuestions)) {
+    if (!areRecognizeQuestionsComplete(courseState, recognizeQuestions)) {
       const incomplete = firstIncompleteQuestion(courseState, recognizeQuestions);
       navigate(incomplete ? recognizeQuestionHash(incomplete.id) : '#level/recognize/start');
       return;
     }
-    syncCourseCompletion(state);
-    app.innerHTML = recognizeCompletionMarkup();
-    document.querySelector('#recognize-wall-return').addEventListener('click', () => navigate('#principles'));
+    const { summary, activeRound } = prepareRecognizeMasteryRound(masteryState, recognizeQuestions, { seed: 1 });
+    if (summary.masteryBand === 'mastered') {
+      completeRecognizeCourse(courseState, recognizeQuestions);
+      syncCourseCompletion(state);
+      app.innerHTML = recognizeCompletionMarkup();
+      document.querySelector('#recognize-wall-return').addEventListener('click', () => navigate('#principles'));
+      return;
+    }
+    if (!activeRound.started) {
+      renderMasteryTransition(summary);
+      return;
+    }
+    if (activeRound.completed) {
+      renderMasteryComplete();
+      return;
+    }
+    renderMasteryQuestion();
   }
-
   function renderDev() {
     const question = recognizeQuestions.find(({ id }) => id === devSelection.questionId) ?? recognizeQuestions[0];
     const variant = getRecognizeVariant(question, devSelection.variantId) ?? getRecognizeVariant(question, 'A');

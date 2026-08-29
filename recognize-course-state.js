@@ -77,8 +77,12 @@ export function firstIncompleteQuestion(courseState, questions) {
     .find((question) => !courseState.questions[question.id].isCorrect) ?? null;
 }
 
+export function areRecognizeQuestionsComplete(courseState, questions) {
+  return questions.every((question) => courseState.questions[question.id].isCorrect);
+}
+
 export function completeRecognizeCourse(courseState, questions) {
-  const complete = questions.every((question) => courseState.questions[question.id].isCorrect);
+  const complete = areRecognizeQuestionsComplete(courseState, questions);
   courseState.completed = complete;
   return complete;
 }

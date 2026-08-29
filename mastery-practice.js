@@ -8,7 +8,10 @@ export function createMasteryPracticeState() {
 }
 
 export function resetMasteryCourseState(courseMastery) {
-  if (courseMastery) courseMastery.firstAttempts = {};
+  if (!courseMastery) return;
+  courseMastery.firstAttempts = {};
+  delete courseMastery.summary;
+  delete courseMastery.activeRound;
 }
 
 export function recordRecognizeFirstAttempt(courseMastery, question, data) {
@@ -96,6 +99,86 @@ export function buildRecognizeMasteryQueue(courseMastery, questions, options = {
   const primary = shuffle(missed, random).map((question) => firstCandidate(question, 'missed-principle')).filter(Boolean);
   const fill = shuffle(correctQuestions, random).map((question) => firstCandidate(question, 'mixed-reinforcement')).filter(Boolean);
   return [...primary, ...fill].slice(0, 6);
+}
+function recognizeRoundResponseKey(item, index) {
+  return `${index}:${item.sourceQuestionId}:${item.variantId}`;
+}
+
+export function prepareRecognizeMasteryRound(courseMastery, questions, options = {}) {
+  if (courseMastery.summary) return { summary: courseMastery.summary, activeRound: courseMastery.activeRound ?? null };
+  const summary = buildRecognizeMasterySummary(courseMastery, questions);
+  courseMastery.summary = summary;
+  const queue = buildRecognizeMasteryQueue(courseMastery, questions, options);
+  courseMastery.activeRound = queue.length ? {
+    round: 1,
+    queue,
+    currentIndex: 0,
+    responses: Object.fromEntries(queue.map((item, index) => [recognizeRoundResponseKey(item, index), {
+      questionId: item.sourceQuestionId,
+      principleId: item.principleId,
+      variantId: item.variantId,
+      selectedAnswer: null,
+      attempts: 0,
+      feedback: '',
+      completed: false
+    }])),
+    started: false,
+    completed: false
+  } : null;
+  return { summary, activeRound: courseMastery.activeRound };
+}
+
+export function beginRecognizeMasteryRound(courseMastery) {
+  if (!courseMastery?.activeRound) return false;
+  courseMastery.activeRound.started = true;
+  return true;
+}
+
+export function getCurrentRecognizeMasteryItem(courseMastery) {
+  const activeRound = courseMastery?.activeRound;
+  if (!activeRound || activeRound.completed) return null;
+  const item = activeRound.queue[activeRound.currentIndex] ?? null;
+  if (!item) return null;
+  return {
+    item,
+    response: activeRound.responses[recognizeRoundResponseKey(item, activeRound.currentIndex)]
+  };
+}
+
+export function selectRecognizeMasteryAnswer(courseMastery, answerId) {
+  const current = getCurrentRecognizeMasteryItem(courseMastery);
+  if (!current || current.response.completed) return false;
+  current.response.selectedAnswer = answerId;
+  current.response.feedback = '';
+  return true;
+}
+
+export function applyRecognizeMasteryResult(courseMastery, question, isCorrect) {
+  const current = getCurrentRecognizeMasteryItem(courseMastery);
+  if (!current || current.response.selectedAnswer == null) return false;
+  if (isCorrect) {
+    current.response.completed = true;
+    current.response.feedback = question.successFeedback;
+    return true;
+  }
+  current.response.attempts += 1;
+  const secondFeedback = question.wrongFeedbackSecond?.[current.response.selectedAnswer];
+  current.response.feedback = (current.response.attempts >= 2 ? secondFeedback : null)
+    ?? question.wrongFeedback[current.response.selectedAnswer]
+    ?? '再找找畫面中最主要的視覺特徵。';
+  return false;
+}
+
+export function advanceRecognizeMasteryRound(courseMastery) {
+  const activeRound = courseMastery?.activeRound;
+  const current = getCurrentRecognizeMasteryItem(courseMastery);
+  if (!activeRound || !current?.response.completed) return false;
+  if (activeRound.currentIndex < activeRound.queue.length - 1) {
+    activeRound.currentIndex += 1;
+    return true;
+  }
+  activeRound.completed = true;
+  return true;
 }
 export function buildRecognizeMasterySummary(courseMastery, questions) {
   const snapshots = courseMastery?.firstAttempts ?? {};
