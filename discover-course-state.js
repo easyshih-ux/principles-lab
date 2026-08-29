@@ -59,13 +59,23 @@ export function applyDiscoverResult(state, question, result, masteryState = null
   return false;
 }
 
-export function advanceDiscoverCourse(state, questions) {
+export function areDiscoverQuestionsComplete(state, questions) {
+  return questions.every((question) => state.questions[question.id]?.completed);
+}
+
+export function completeDiscoverCourse(state, questions) {
+  const complete = areDiscoverQuestionsComplete(state, questions);
+  state.completed = complete;
+  return complete;
+}
+
+export function advanceDiscoverCourse(state, questions, { markComplete = true } = {}) {
   const question = currentDiscoverQuestion(state, questions);
   if (!question || !state.questions[question.id].completed) return false;
   if (state.currentIndex < state.questionOrder.length - 1) {
     state.currentIndex += 1;
     return true;
   }
-  state.completed = true;
+  if (markComplete) state.completed = true;
   return true;
 }

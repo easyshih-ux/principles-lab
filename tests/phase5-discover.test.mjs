@@ -270,8 +270,8 @@ test('all formal discover questions progress through positions 12 13 and 14 befo
 
 test('discover renderer derives progress and final action from the session question order', async () => {
   const source = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../discover-course.js', import.meta.url), 'utf8'));
-  assert.match(source, /const total=course\.questionOrder\.length/);
-  assert.match(source, /const isLast=course\.currentIndex===total-1/);
+  assert.match(source, /const\s+total\s*=\s*course\.questionOrder\.length/);
+  assert.match(source, /const\s+isLast\s*=\s*course\.currentIndex\s*===\s*total\s*-\s*1/);
   assert.doesNotMatch(source, /currentIndex===15/);
   assert.doesNotMatch(source, /padStart\(2,'0'\)\} \/ 16/);
 });

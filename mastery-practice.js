@@ -1,5 +1,6 @@
 import { createSeededRandom } from './discover-randomizer.js';
 import { recognizeTemplatePools } from './recognize-template-pool.js';
+import { generateDiscoverQuestions } from './discover-generators.js';
 
 const emptyCourseMastery = () => ({ firstAttempts: {} });
 
@@ -256,6 +257,98 @@ export function buildDiscoverMasteryQueue(courseMastery, questions, options = {}
     random,
     item.firstAttemptCorrect ? 'mixed-reinforcement' : 'missed-concept'
   ));
+}
+function discoverRoundResponseKey(item, index) {
+  return `${index}:${item.sourceQuestionId}:${item.masterySeed}`;
+}
+
+export function prepareDiscoverMasteryRound(courseMastery, questions, options = {}) {
+  if (courseMastery.summary) return { summary: courseMastery.summary, activeRound: courseMastery.activeRound ?? null };
+  const summary = buildDiscoverMasterySummary(courseMastery, questions);
+  courseMastery.summary = summary;
+  const queue = buildDiscoverMasteryQueue(courseMastery, questions, options);
+  const questionsById = Object.fromEntries(questions.map((question) => [question.id, question]));
+  const generatedInstances = Object.fromEntries(queue.map((item, index) => {
+    const generated = generateDiscoverQuestions([questionsById[item.sourceQuestionId]], item.masterySeed)[item.sourceQuestionId];
+    return [discoverRoundResponseKey(item, index), {
+      ...generated,
+      masteryInstanceId: `mastery:${item.masterySeed}:${item.sourceQuestionId}`
+    }];
+  }));
+  courseMastery.activeRound = queue.length ? {
+    round: 1,
+    queue,
+    generatedInstances,
+    currentIndex: 0,
+    responses: Object.fromEntries(queue.map((item, index) => [discoverRoundResponseKey(item, index), {
+      sourceQuestionId: item.sourceQuestionId,
+      principleId: item.principleId,
+      conceptVariant: item.conceptVariant,
+      masterySeed: item.masterySeed,
+      selection: null,
+      attempts: 0,
+      lastFeedbackCode: '',
+      feedback: '',
+      completed: false
+    }])),
+    started: false,
+    completed: false
+  } : null;
+  return { summary, activeRound: courseMastery.activeRound };
+}
+
+export function beginDiscoverMasteryRound(courseMastery) {
+  if (!courseMastery?.activeRound) return false;
+  courseMastery.activeRound.started = true;
+  return true;
+}
+
+export function getCurrentDiscoverMasteryItem(courseMastery) {
+  const activeRound = courseMastery?.activeRound;
+  if (!activeRound || activeRound.completed) return null;
+  const item = activeRound.queue[activeRound.currentIndex] ?? null;
+  if (!item) return null;
+  const key = discoverRoundResponseKey(item, activeRound.currentIndex);
+  return { item, question: activeRound.generatedInstances[key], response: activeRound.responses[key] };
+}
+
+export function selectDiscoverMasteryAnswer(courseMastery, selection) {
+  const current = getCurrentDiscoverMasteryItem(courseMastery);
+  if (!current || current.response.completed) return false;
+  current.response.selection = Array.isArray(selection)
+    ? selection.slice()
+    : (selection && typeof selection === 'object' ? { ...selection } : selection);
+  current.response.feedback = '';
+  current.response.lastFeedbackCode = '';
+  return true;
+}
+
+export function applyDiscoverMasteryResult(courseMastery, result) {
+  const current = getCurrentDiscoverMasteryItem(courseMastery);
+  if (!current || current.response.selection == null) return false;
+  if (result.isValid) {
+    current.response.completed = true;
+    current.response.lastFeedbackCode = 'success';
+    current.response.feedback = current.question.successFeedback;
+    return true;
+  }
+  current.response.attempts += 1;
+  current.response.lastFeedbackCode = result.code;
+  current.response.feedback = current.question.feedbackByCode?.[result.code]
+    ?? current.question.hints[Math.min(current.response.attempts - 1, current.question.hints.length - 1)];
+  return false;
+}
+
+export function advanceDiscoverMasteryRound(courseMastery) {
+  const activeRound = courseMastery?.activeRound;
+  const current = getCurrentDiscoverMasteryItem(courseMastery);
+  if (!activeRound || !current?.response.completed) return false;
+  if (activeRound.currentIndex < activeRound.queue.length - 1) {
+    activeRound.currentIndex += 1;
+    return true;
+  }
+  activeRound.completed = true;
+  return true;
 }
 export function buildDiscoverMasterySummary(courseMastery, questions) {
   const snapshots = courseMastery?.firstAttempts ?? {};

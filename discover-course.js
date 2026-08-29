@@ -1,9 +1,17 @@
 import { getShapeDimensions } from './geometry/bounds.js';
 import { getDisplayColor } from './geometry/palette.js';
 import { discoverQuestions } from './discover-questions.js';
-import { advanceDiscoverCourse, applyDiscoverResult, currentDiscoverQuestion, setDiscoverSelection, startDiscoverCourse } from './discover-course-state.js';
+import { advanceDiscoverCourse, applyDiscoverResult, areDiscoverQuestionsComplete, completeDiscoverCourse, currentDiscoverQuestion, setDiscoverSelection, startDiscoverCourse } from './discover-course-state.js';
 import { validateDiscoverQuestion } from './discover-validators.js';
 import { syncCourseCompletion } from './state.js';
+import {
+  advanceDiscoverMasteryRound,
+  applyDiscoverMasteryResult,
+  beginDiscoverMasteryRound,
+  getCurrentDiscoverMasteryItem,
+  prepareDiscoverMasteryRound,
+  selectDiscoverMasteryAnswer
+} from './mastery-practice.js';
 
 export function discoverCompletionMarkup() {
   return `<section class="recognize-complete page-shell"><div><p class="section-label">分析完成</p><h1>第二關完成</h1><p class="recognize-complete-lead">你不只看得出來，也開始知道「為什麼」。</p><p>同一項形式原理，換了造形、位置、色彩或排列方式，你仍然能找到判斷的線索。</p><button class="primary-button" id="discover-wall">返回實驗室</button></div><div class="discover-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
@@ -37,27 +45,128 @@ function questionCanvas(question, selection) {
   return `${before}<div class="discover-panels">${question.comparisonPanels.map((panel)=>panelMarkup(question,panel,selection,question.interactionType==='multi-select-composition')).join('')}</div>`;
 }
 
-export function createDiscoverCourseRenderers({app,state,navigate}) {
-  const course=state.discoverCourse;
-  function start(){app.innerHTML=`<section class="recognize-intro page-shell"><div><p class="section-label">分析・判斷</p><h1><span>第二關｜</span><span>哪裡不對勁？</span></h1><p class="recognize-intro-lead">換一張圖、換一個條件，你還判斷得出來嗎？</p><button class="primary-button" id="begin-discover">開始判斷</button></div><div class="discover-intro-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div></section>`;document.querySelector('#begin-discover').addEventListener('click',()=>{startDiscoverCourse(course,discoverQuestions,Date.now(),state.masteryPractice.discover);navigate('#level/discover/question');});}
-  function question(){if(!course.started){navigate('#level/discover/start');return;}const q=currentDiscoverQuestion(course,discoverQuestions);if(!q){navigate('#level/discover/complete');return;}const qs=course.questions[q.id];const total=course.questionOrder.length;const isLast=course.currentIndex===total-1;app.innerHTML=`<section class="recognize-question-page discover-question-page page-shell"><header class="recognize-question-header"><button class="back-link" id="discover-exit">← 返回實驗室</button><h1>第二關｜哪裡不對勁？</h1><strong>${String(course.currentIndex+1).padStart(2,'0')} / ${total}</strong></header><div class="discover-artboard">${questionCanvas(q,qs.selection)}</div><div class="recognize-question-copy"><h2>${q.prompt}</h2></div><footer class="recognize-feedback-row"><div class="recognize-feedback ${qs.completed?'success':''}" role="status" aria-live="polite">${qs.feedback?`<strong>${qs.completed?'✓ 找到線索了！':'再觀察一下'}</strong><span>${qs.feedback}${qs.completed&&q.successNote?` <em>${q.successNote}</em>`:''}</span>`:'<span>觀察構圖後完成選擇。</span>'}</div><div class="recognize-actions">${qs.completed?`<button class="primary-button compact" id="discover-next">${isLast?'完成第二關':'下一題'}</button>`:'<button class="secondary-button compact" id="discover-hint">提示</button><button class="primary-button compact" id="discover-check">確認答案</button>'}</div></footer></section>`;
-    document.querySelector('#discover-exit').addEventListener('click',()=>navigate('#principles'));
-    document.querySelectorAll('[data-selection-id]').forEach((node)=>node.addEventListener('click',()=>{const id=node.dataset.selectionId;let next=id;if(q.interactionType==='multi-select-composition'){const current=qs.selection??[];next=current.includes(id)?current.filter((value)=>value!==id):[...current,id];}setDiscoverSelection(course,q.id,next);question();}));
-    document.querySelectorAll('[data-pair-panel]').forEach((node)=>node.addEventListener('click',()=>{setDiscoverSelection(course,q.id,{...(qs.selection??{}),[node.dataset.pairPanel]:node.dataset.pairValue});question();}));
-    document.querySelector('#discover-hint')?.addEventListener('click',()=>{qs.feedback=q.hints[Math.min(qs.attempts,q.hints.length-1)];question();});
-    document.querySelector('#discover-check')?.addEventListener('click',()=>{applyDiscoverResult(course,q,validateDiscoverQuestion(q,qs.selection),state.masteryPractice.discover);question();});
-    document.querySelector('#discover-next')?.addEventListener('click',()=>{advanceDiscoverCourse(course,discoverQuestions);navigate(course.completed?'#level/discover/complete':'#level/discover/question');});
-    if(qs.completed) document.querySelector('#discover-next')?.focus();
+export function createDiscoverCourseRenderers({ app, state, navigate }) {
+  const course = state.discoverCourse;
+  const masteryState = state.masteryPractice.discover;
+
+  function start() {
+    app.innerHTML = `<section class="recognize-intro page-shell"><div><p class="section-label">分析・判斷</p><h1><span>第二關｜</span><span>哪裡不對勁？</span></h1><p class="recognize-intro-lead">換一張圖、換一個條件，你還判斷得出來嗎？</p><button class="primary-button" id="begin-discover">開始判斷</button></div><div class="discover-intro-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div></section>`;
+    document.querySelector('#begin-discover').addEventListener('click', () => {
+      startDiscoverCourse(course, discoverQuestions, Date.now(), masteryState);
+      navigate('#level/discover/question');
+    });
   }
-  function complete(){
-    if(!course.completed){
-      navigate(course.started?'#level/discover/question':'#level/discover/start');
+
+  function bindSelections(questionData, selection, select, rerender) {
+    document.querySelectorAll('[data-selection-id]').forEach((node) => node.addEventListener('click', () => {
+      const id = node.dataset.selectionId;
+      let next = id;
+      if (questionData.interactionType === 'multi-select-composition') {
+        const current = selection ?? [];
+        next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
+      }
+      select(next);
+      rerender();
+    }));
+    document.querySelectorAll('[data-pair-panel]').forEach((node) => node.addEventListener('click', () => {
+      select({ ...(selection ?? {}), [node.dataset.pairPanel]: node.dataset.pairValue });
+      rerender();
+    }));
+  }
+
+  function question() {
+    if (!course.started) { navigate('#level/discover/start'); return; }
+    const q = currentDiscoverQuestion(course, discoverQuestions);
+    if (!q) { navigate('#level/discover/complete'); return; }
+    const qs = course.questions[q.id];
+    const total = course.questionOrder.length;
+    const isLast = course.currentIndex === total - 1;
+    app.innerHTML = `<section class="recognize-question-page discover-question-page page-shell"><header class="recognize-question-header"><button class="back-link" id="discover-exit">← 返回實驗室</button><h1>第二關｜哪裡不對勁？</h1><strong>${String(course.currentIndex + 1).padStart(2, '0')} / ${total}</strong></header><div class="discover-artboard">${questionCanvas(q, qs.selection)}</div><div class="recognize-question-copy"><h2>${q.prompt}</h2></div><footer class="recognize-feedback-row"><div class="recognize-feedback ${qs.completed ? 'success' : ''}" role="status" aria-live="polite">${qs.feedback ? `<strong>${qs.completed ? '✓ 找到線索了！' : '再觀察一下'}</strong><span>${qs.feedback}${qs.completed && q.successNote ? ` <em>${q.successNote}</em>` : ''}</span>` : '<span>觀察構圖後完成選擇。</span>'}</div><div class="recognize-actions">${qs.completed ? `<button class="primary-button compact" id="discover-next">${isLast ? '完成第二關' : '下一題'}</button>` : '<button class="secondary-button compact" id="discover-hint">提示</button><button class="primary-button compact" id="discover-check">確認答案</button>'}</div></footer></section>`;
+    document.querySelector('#discover-exit').addEventListener('click', () => navigate('#principles'));
+    bindSelections(q, qs.selection, (next) => setDiscoverSelection(course, q.id, next), question);
+    document.querySelector('#discover-hint')?.addEventListener('click', () => {
+      qs.feedback = q.hints[Math.min(qs.attempts, q.hints.length - 1)];
+      question();
+    });
+    document.querySelector('#discover-check')?.addEventListener('click', () => {
+      applyDiscoverResult(course, q, validateDiscoverQuestion(q, qs.selection), masteryState);
+      question();
+    });
+    document.querySelector('#discover-next')?.addEventListener('click', () => {
+      advanceDiscoverCourse(course, discoverQuestions, { markComplete: false });
+      navigate(isLast ? '#level/discover/complete' : '#level/discover/question');
+    });
+    if (qs.completed) document.querySelector('#discover-next')?.focus();
+  }
+
+  function renderMasteryTransition(summary) {
+    const targeted = summary.masteryBand === 'targeted';
+    app.innerHTML = `<section class="recognize-intro page-shell mastery-transition"><div><p class="section-label">判斷補強</p><h1>${targeted ? '再確認一下' : '再練一小組'}</h1><p class="recognize-intro-lead">${targeted ? '有幾個判斷還不太確定，再試幾題，把線索看得更清楚。' : '再做幾題，確認你真的能找出形式原理的線索。'}</p><button type="button" class="primary-button" id="discover-mastery-begin">開始補強</button></div><div class="discover-intro-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div></section>`;
+    document.querySelector('#discover-mastery-begin').addEventListener('click', () => {
+      beginDiscoverMasteryRound(masteryState);
+      complete();
+    });
+  }
+
+  function renderMasteryQuestion() {
+    const activeRound = masteryState.activeRound;
+    const current = getCurrentDiscoverMasteryItem(masteryState);
+    if (!activeRound || !current) { complete(); return; }
+    const q = current.question;
+    const response = current.response;
+    const isLast = activeRound.currentIndex === activeRound.queue.length - 1;
+    app.innerHTML = `<section class="recognize-question-page discover-question-page page-shell mastery-question-page"><header class="recognize-question-header"><button class="back-link" id="discover-mastery-exit">← 返回實驗室</button><h1>第二關｜再確認一下</h1><strong>${String(activeRound.currentIndex + 1).padStart(2, '0')} / ${activeRound.queue.length}</strong></header><div class="discover-artboard">${questionCanvas(q, response.selection)}</div><div class="recognize-question-copy"><h2>${q.prompt}</h2></div><footer class="recognize-feedback-row"><div class="recognize-feedback ${response.completed ? 'success' : ''}" role="status" aria-live="polite">${response.feedback ? `<strong>${response.completed ? '✓ 找到線索了！' : '再觀察一下'}</strong><span>${response.feedback}${response.completed && q.successNote ? ` <em>${q.successNote}</em>` : ''}</span>` : '<span>觀察構圖後完成選擇。</span>'}</div><div class="recognize-actions">${response.completed ? `<button class="primary-button compact" id="discover-mastery-next">${isLast ? '完成補強' : '下一題'}</button>` : '<button class="secondary-button compact" id="discover-mastery-hint">提示</button><button class="primary-button compact" id="discover-mastery-check">確認答案</button>'}</div></footer></section>`;
+    document.querySelector('#discover-mastery-exit').addEventListener('click', () => navigate('#principles'));
+    bindSelections(q, response.selection, (next) => selectDiscoverMasteryAnswer(masteryState, next), renderMasteryQuestion);
+    document.querySelector('#discover-mastery-hint')?.addEventListener('click', () => {
+      response.feedback = q.hints[Math.min(response.attempts, q.hints.length - 1)];
+      renderMasteryQuestion();
+    });
+    document.querySelector('#discover-mastery-check')?.addEventListener('click', () => {
+      applyDiscoverMasteryResult(masteryState, validateDiscoverQuestion(q, response.selection));
+      renderMasteryQuestion();
+    });
+    document.querySelector('#discover-mastery-next')?.addEventListener('click', () => {
+      advanceDiscoverMasteryRound(masteryState);
+      complete();
+    });
+    if (response.completed) document.querySelector('#discover-mastery-next')?.focus();
+  }
+
+  function renderMasteryComplete() {
+    completeDiscoverCourse(course, discoverQuestions);
+    syncCourseCompletion(state);
+    app.innerHTML = `<section class="recognize-complete page-shell mastery-complete"><div><p class="section-label">判斷補強完成</p><h1>補強完成！</h1><p class="recognize-complete-lead">這次線索看得更清楚了，可以繼續下一步。</p><button class="primary-button" id="discover-mastery-wall">回到實驗室</button></div><div class="discover-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
+    document.querySelector('#discover-mastery-wall').addEventListener('click', () => navigate('#principles'));
+  }
+
+  function complete() {
+    if (!areDiscoverQuestionsComplete(course, discoverQuestions)) {
+      navigate(course.started ? '#level/discover/question' : '#level/discover/start');
       return;
     }
-    syncCourseCompletion(state);
-    app.innerHTML=discoverCompletionMarkup();
-    document.querySelector('#discover-wall').addEventListener('click',()=>navigate('#principles'));
+    const { summary, activeRound } = prepareDiscoverMasteryRound(masteryState, discoverQuestions, { seed: 1 });
+    if (summary.masteryBand === 'mastered') {
+      completeDiscoverCourse(course, discoverQuestions);
+      syncCourseCompletion(state);
+      app.innerHTML = discoverCompletionMarkup();
+      document.querySelector('#discover-wall').addEventListener('click', () => navigate('#principles'));
+      return;
+    }
+    if (!activeRound.started) { renderMasteryTransition(summary); return; }
+    if (activeRound.completed) { renderMasteryComplete(); return; }
+    renderMasteryQuestion();
   }
-  function dev(){app.innerHTML=`<section class="validator-lab page-shell"><header class="validator-lab-header"><div><p class="section-label">Phase 5 開發驗收</p><h1>16題快速檢查</h1></div><button class="back-link" id="dev-back">← 返回實驗室</button></header><div class="phase5-dev-list">${discoverQuestions.map((q,i)=>`<button data-dev-index="${i}">${String(i+1).padStart(2,'0')}｜${q.principleId}<small>${q.interactionType}・${q.overlapPolicy}</small></button>`).join('')}</div><div id="phase5-dev-preview"></div></section>`;document.querySelector('#dev-back').addEventListener('click',()=>navigate('#principles'));document.querySelectorAll('[data-dev-index]').forEach((node)=>node.addEventListener('click',()=>{const q=discoverQuestions[Number(node.dataset.devIndex)];document.querySelector('#phase5-dev-preview').innerHTML=`<h2>${q.prompt}</h2>${questionCanvas(q,null)}<p><strong>${q.interactionType}</strong>・overlap ${q.overlapPolicy}</p><p>提示1：${q.hints[0]}</p><p>提示2：${q.hints[1]}</p><p>成功：${q.successFeedback}</p>`;}));document.querySelector('[data-dev-index="0"]')?.click();}
-  return {start,question,complete,dev};
+
+  function dev() {
+    app.innerHTML = `<section class="validator-lab page-shell"><header class="validator-lab-header"><div><p class="section-label">Phase 5 開發驗收</p><h1>16題快速檢查</h1></div><button class="back-link" id="dev-back">← 返回實驗室</button></header><div class="phase5-dev-list">${discoverQuestions.map((q, i) => `<button data-dev-index="${i}">${String(i + 1).padStart(2, '0')}｜${q.principleId}<small>${q.interactionType}・${q.overlapPolicy}</small></button>`).join('')}</div><div id="phase5-dev-preview"></div></section>`;
+    document.querySelector('#dev-back').addEventListener('click', () => navigate('#principles'));
+    document.querySelectorAll('[data-dev-index]').forEach((node) => node.addEventListener('click', () => {
+      const q = discoverQuestions[Number(node.dataset.devIndex)];
+      document.querySelector('#phase5-dev-preview').innerHTML = `<h2>${q.prompt}</h2>${questionCanvas(q, null)}<p><strong>${q.interactionType}</strong>・overlap ${q.overlapPolicy}</p><p>提示1：${q.hints[0]}</p><p>提示2：${q.hints[1]}</p><p>成功：${q.successFeedback}</p>`;
+    }));
+    document.querySelector('[data-dev-index="0"]')?.click();
+  }
+
+  return { start, question, complete, dev };
 }
