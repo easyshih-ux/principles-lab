@@ -166,6 +166,11 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
             <span><i class="path-yellow"></i>找得到</span><b>→</b>
             <span><i class="path-blue"></i>做得出來</span>
           </div>
+          <aside class="home-review-entry" aria-labelledby="home-review-title">
+            <span class="home-review-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div><p>自由複習</p><h2 id="home-review-title">10 個形式原理</h2><span>還不確定？先自由探索與複習</span></div>
+            <button type="button" class="home-review-button" id="enter-free-review">開始複習 →</button>
+          </aside>
           <div class="home-course-grid" aria-label="學習關卡">
             ${classroomCourseCardsMarkup(state.classroomUnlocks, state.completion.courses, state.classroomGate, 'home')}
           </div>
@@ -174,6 +179,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
         <footer class="home-footer" aria-hidden="true"><span></span><b>FORM LAB</b><span></span></footer>
       </section>`;
     bindClassroomControls(renderHome);
+    document.querySelector('#enter-free-review').addEventListener('click', () => navigate('#principles'));
   }
   function renderPrinciples() {
     app.innerHTML = `
@@ -181,8 +187,9 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
         <header class="wall-header">
           <button class="back-link" id="home-back">← 回到入口</button>
           <div>
-            <p class="section-label">實驗樣本牆</p>
-            <h1>選擇形式原理</h1>
+            <p class="section-label">自由複習</p>
+            <h1>10 個形式原理</h1>
+            <p class="wall-review-note">自由探索形式樣本，不計分，也不影響正式三關進度。</p>
           </div>
           <div class="wall-course-entry">
             <p>三關由老師依課堂進度逐一開放。</p>
@@ -203,7 +210,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
                   <h2>${principle.name}</h2>
                   <p>${principle.shortDescription}</p>
                   ${isAvailable
-                    ? `<button class="sample-enter" data-principle-id="${principle.id}">開始實驗 →</button>`
+                    ? `<button class="sample-enter" data-principle-id="${principle.id}">漸層示範 →</button>`
                     : '<span class="sample-status">形式樣本</span>'}
                 </div>
               </article>`;

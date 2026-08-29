@@ -17,6 +17,7 @@ import { getExperimentState } from '../experiment-session.js';
 import { createAppState, syncCourseCompletion } from '../state.js';
 import { resolveRoute } from '../router.js';
 import { classroomCourseCardsMarkup } from '../renderers.js';
+import { createLockedClassroomUnlocks, isClassroomRouteAllowed } from '../classroom-unlocks.js';
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const rendererSource = source('../renderers.js');
@@ -42,6 +43,23 @@ test('FLOW A exposes three teacher-gated courses directly on the final homepage'
   assert.doesNotMatch(html, /data-course-enter/);
 });
 
+test('free review is always-open, state-neutral and exposes only the legacy gradation demonstration', () => {
+  assert.match(rendererSource, /id="enter-free-review">開始複習 →<\/button>/);
+  assert.match(rendererSource, /#enter-free-review'[\s\S]*?navigate\('#principles'\)/);
+  assert.match(rendererSource, /自由複習[\s\S]*?10 個形式原理/);
+  assert.match(rendererSource, /漸層示範 →/);
+  assert.equal(principles.length, 10);
+  assert.deepEqual(
+    principles.filter(({ status, hasContent }) => status === 'available' && hasContent).map(({ id }) => id),
+    ['gradation']
+  );
+  assert.equal(stages.filter(({ principleId }) => principleId === 'gradation').length, 3);
+  assert.equal(stages.filter(({ principleId }) => principleId !== 'gradation').length, 0);
+  const route = resolveRoute('#principles', stages, principles, recognizeQuestions);
+  assert.equal(route.name, 'principles');
+  assert.equal(isClassroomRouteAllowed(route, createLockedClassroomUnlocks()), true);
+  assert.equal(rendererSource.includes("document.querySelector('#enter-free-review').addEventListener('click', () => navigate('#principles'));"), true);
+});
 test('FLOW B first completion returns to the laboratory without opening the second course', () => {
   const html = recognizeCompletionMarkup();
   assert.match(html, /id="recognize-wall-return">返回實驗室/);
