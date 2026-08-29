@@ -59,7 +59,8 @@ function shuffle(items, random) {
   return output;
 }
 
-function recognizeBand(correct) {
+function recognizeBand(correct, answered = 8) {
+  if (answered < 8) return null;
   if (correct === 8) return 'mastered';
   if (correct >= 6) return 'targeted';
   return 'reinforcement';
@@ -89,21 +90,24 @@ export function buildRecognizeMasteryQueue(courseMastery, questions, options = {
   return [...primary, ...fill].slice(0, 6);
 }
 
-export function buildRecognizeMasterySummary(courseMastery, questions, options = {}) {
+export function buildRecognizeMasterySummary(courseMastery, questions) {
   const snapshots = courseMastery?.firstAttempts ?? {};
-  const correctCount = questions.filter((q) => snapshots[q.id]?.firstAttemptCorrect).length;
-  const missed = questions.filter((q) => !snapshots[q.id]?.firstAttemptCorrect);
+  const answered = questions.map((q) => snapshots[q.id]).filter(Boolean);
+  const correctCount = answered.filter((snapshot) => snapshot.firstAttemptCorrect).length;
+  const missed = answered.filter((snapshot) => !snapshot.firstAttemptCorrect);
   return {
     totalQuestions: questions.length,
-    correctCount,
-    band: recognizeBand(correctCount),
-    missedQuestionIds: missed.map(({ id }) => id),
-    missedPrincipleIds: [...new Set(missed.map(({ principleId }) => principleId))],
-    queue: buildRecognizeMasteryQueue(courseMastery, questions, options)
+    answeredQuestions: answered.length,
+    firstAttemptCorrectCount: correctCount,
+    firstAttemptWrongCount: answered.length - correctCount,
+    masteryBand: recognizeBand(correctCount, answered.length),
+    missedQuestionIds: missed.map(({ questionId }) => questionId),
+    missedPrincipleIds: [...new Set(missed.map(({ principleId }) => principleId))]
   };
 }
 
-function discoverBand(correct) {
+function discoverBand(correct, answered = 16) {
+  if (answered < 16) return null;
   if (correct >= 15) return 'mastered';
   if (correct >= 12) return 'targeted';
   return 'reinforcement';
@@ -135,18 +139,37 @@ export function buildDiscoverMasteryQueue(courseMastery, questions, options = {}
   return [...missed, ...fill].slice(0, 8).map((item) => discoverDescriptor(item, random));
 }
 
-export function buildDiscoverMasterySummary(courseMastery, questions, options = {}) {
+export function buildDiscoverMasterySummary(courseMastery, questions) {
   const snapshots = courseMastery?.firstAttempts ?? {};
   const ordered = questions.map((q) => snapshots[q.id]).filter(Boolean);
   const correctCount = ordered.filter((item) => item.firstAttemptCorrect).length;
   const missed = ordered.filter((item) => !item.firstAttemptCorrect);
+  const missedConceptVariants = [];
+  const seenConcepts = new Set();
+  missed.forEach(({ principleId, conceptVariant }) => {
+    const key = `${principleId}:${conceptVariant}`;
+    if (!seenConcepts.has(key)) {
+      seenConcepts.add(key);
+      missedConceptVariants.push({ principleId, conceptVariant });
+    }
+  });
+  const questionsById = Object.fromEntries(questions.map((question) => [question.id, question]));
+  const relatedPrincipleIds = [...new Set(missed.flatMap((snapshot) => {
+    const question = questionsById[snapshot.questionId];
+    return question?.principleId === 'synthesis' && Array.isArray(question.pairingTargets)
+      ? question.pairingTargets
+      : [];
+  }))];
   return {
     totalQuestions: questions.length,
-    correctCount,
-    band: discoverBand(correctCount),
+    answeredQuestions: ordered.length,
+    firstAttemptCorrectCount: correctCount,
+    firstAttemptWrongCount: ordered.length - correctCount,
+    masteryBand: discoverBand(correctCount, ordered.length),
     missedQuestionIds: missed.map(({ questionId }) => questionId),
-    missedPrincipleIds: [...new Set(missed.flatMap((item) => item.relatedPrincipleIds ?? [item.principleId]))],
-    missedConceptVariants: [...new Set(missed.map(({ conceptVariant }) => conceptVariant))],
-    queue: buildDiscoverMasteryQueue(courseMastery, questions, options)
+    missedPrincipleIds: [...new Set(missed.map(({ principleId }) => principleId))],
+    missedConceptVariants,
+    firstFailureCodes: Object.fromEntries(missed.map(({ questionId, firstFailureCode }) => [questionId, firstFailureCode])),
+    ...(relatedPrincipleIds.length ? { relatedPrincipleIds } : {})
   };
 }
