@@ -92,10 +92,25 @@ export function createDiscoverCourseRenderers({ app, state, navigate }) {
       applyDiscoverResult(course, q, validateDiscoverQuestion(q, qs.selection), masteryState);
       question();
     });
-    document.querySelector('#discover-next')?.addEventListener('click', () => {
-      advanceDiscoverCourse(course, discoverQuestions, { markComplete: false });
-      navigate(isLast ? '#level/discover/complete' : '#level/discover/question');
-    });
+   document.querySelector('#discover-next')?.addEventListener('click', (event) => {
+  const button = event.currentTarget;
+  if (button.disabled) return;
+  button.disabled = true;
+
+  const advanced = advanceDiscoverCourse(course, discoverQuestions, { markComplete: false });
+
+  if (!advanced) {
+    button.disabled = false;
+    return;
+  }
+
+  if (isLast) {
+    navigate('#level/discover/complete');
+    return;
+  }
+
+  question();
+});
     if (qs.completed) document.querySelector('#discover-next')?.focus();
   }
 
