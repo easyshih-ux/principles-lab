@@ -26,16 +26,19 @@ const experimentSource = source('../experiment-course.js');
 const appSource = source('../app.js');
 const indexSource = source('../index.html');
 
-test('FLOW A exposes home to principles and three teacher-gated course cards', () => {
-  assert.ok(rendererSource.includes("button('進入實驗室', 'primary-button', 'enter-lab')"));
-  assert.ok(rendererSource.includes("navigate('#principles')"));
+test('FLOW A exposes three teacher-gated courses directly on the final homepage', () => {
+  assert.match(rendererSource, /classroomCourseCardsMarkup\(state\.classroomUnlocks, state\.completion\.courses, state\.classroomGate, 'home'\)/);
   const html = classroomCourseCardsMarkup(
     { recognize: false, discover: false, experiment: false },
-    { courses: { recognize: false, discover: false, experiment: false } },
-    {}
+    { recognize: false, discover: false, experiment: false },
+    {},
+    'home'
   );
   assert.equal((html.match(/等待老師開放/g) ?? []).length, 3);
   assert.equal((html.match(/輸入通行碼/g) ?? []).length, 3);
+  assert.match(html, /01[\s\S]*看得出來[\s\S]*觀察與辨識/);
+  assert.match(html, /02[\s\S]*找得到[\s\S]*分析與判斷/);
+  assert.match(html, /03[\s\S]*做得出來[\s\S]*創作與實踐/);
   assert.doesNotMatch(html, /data-course-enter/);
 });
 
