@@ -11,7 +11,9 @@ import { createDiscoverCourseRenderers } from './discover-course.js?v=blocking-f
 import { createExperimentCourseRenderers } from './experiment-course.js?v=balance-asymmetry-2';
 import { createPhase6cCourseState } from './phase6c-course-state.js?v=balance-asymmetry-2';
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=balance-asymmetry-2';
-import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute } from './classroom-unlocks.js?v=classroom-control-1';
+import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
+import { classroomOptions, seatOptions } from './classroom-config.js';
+import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -24,7 +26,90 @@ const state = createAppState(stages, recognizeQuestions, discoverQuestions);
 let classroomStorage = null;
 try { classroomStorage = window.localStorage; } catch { /* storage may be unavailable */ }
 state.classroomUnlocks = loadClassroomUnlocks(classroomStorage);
+state.currentStudent = loadCurrentStudent(classroomStorage);
 state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
+let identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
+
+function renderIdentityGate() {
+  const classes = classroomOptions();
+  const seats = seatOptions(identityDraft.classId);
+  app.innerHTML = `
+    <section class="identity-gate page-shell" aria-labelledby="identity-title">
+      <div class="identity-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="identity-panel">
+        <p class="section-label">V2 · DEMO 班級資料</p>
+        <h1 id="identity-title">今天是哪位同學使用？</h1>
+        ${identityDraft.confirming ? `
+          <p class="identity-confirm-question">你是 <strong>${identityDraft.classId} 班 ${identityDraft.seatNo} 號</strong>嗎？</p>
+          <div class="identity-actions">
+            <button class="secondary-button" id="identity-reselect" type="button">重新選擇</button>
+            <button class="primary-button" id="identity-confirm" type="button">確認進入</button>
+          </div>
+        ` : `
+          <div class="identity-fields">
+            <label>選擇班級
+              <select id="identity-class">
+                <option value="">請選擇班級</option>
+                ${classes.map(({ value, label }) => `<option value="${value}" ${identityDraft.classId === value ? 'selected' : ''}>${label}</option>`).join('')}
+              </select>
+            </label>
+            <label>選擇座號
+              <select id="identity-seat" ${identityDraft.classId ? '' : 'disabled'}>
+                <option value="">請選擇座號</option>
+                ${seats.map((seat) => `<option value="${seat}" ${Number(identityDraft.seatNo) === seat ? 'selected' : ''}>${seat} 號</option>`).join('')}
+              </select>
+            </label>
+          </div>
+          <button class="primary-button identity-next" id="identity-next" type="button" ${identityDraft.classId && identityDraft.seatNo ? '' : 'disabled'}>確認身分</button>
+        `}
+      </div>
+    </section>`;
+
+  document.querySelector('#identity-class')?.addEventListener('change', (event) => {
+    identityDraft = { classId: event.target.value, seatNo: '', confirming: false, ending: false };
+    renderIdentityGate();
+  });
+  document.querySelector('#identity-seat')?.addEventListener('change', (event) => {
+    identityDraft.seatNo = event.target.value;
+    renderIdentityGate();
+  });
+  document.querySelector('#identity-next')?.addEventListener('click', () => {
+    if (!createStudentIdentity(identityDraft.classId, identityDraft.seatNo)) return;
+    identityDraft.confirming = true;
+    renderIdentityGate();
+  });
+  document.querySelector('#identity-reselect')?.addEventListener('click', () => {
+    identityDraft.confirming = false;
+    renderIdentityGate();
+  });
+  document.querySelector('#identity-confirm')?.addEventListener('click', () => {
+    state.currentStudent = saveCurrentStudent(identityDraft, classroomStorage);
+    identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
+    renderCurrentRoute();
+  });
+}
+
+function attachStudentControls() {
+  const { classId, seatNo } = state.currentStudent;
+  app.insertAdjacentHTML('beforeend', `
+    <aside class="student-identity-dock" aria-label="目前平板身分">
+      <strong>${classId}｜${seatNo}</strong>
+      ${identityDraft.ending ? `
+        <span>確定要結束 ${classId} 班 ${seatNo} 號的本次使用嗎？</span>
+        <button type="button" id="student-end-cancel">取消</button>
+        <button type="button" id="student-end-confirm">結束使用</button>
+      ` : '<button type="button" id="student-end">結束本次使用</button>'}
+    </aside>`);
+  document.querySelector('#student-end')?.addEventListener('click', () => { identityDraft.ending = true; renderCurrentRoute(); });
+  document.querySelector('#student-end-cancel')?.addEventListener('click', () => { identityDraft.ending = false; renderCurrentRoute(); });
+  document.querySelector('#student-end-confirm')?.addEventListener('click', () => {
+    state.currentStudent = clearCurrentStudent(classroomStorage);
+    state.classroomUnlocks = resetClassroomUnlocks(classroomStorage);
+    state.classroomGate = { activeCourseId: null, message: '', error: '' };
+    identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
+    renderCurrentRoute();
+  });
+}
 
 function focusRouteHeading() {
   const heading = app.querySelector('h1');
@@ -51,6 +136,12 @@ function renderCurrentRoute() {
   activePlayground?.canvas.destroy();
   activePlayground = null;
   experimentRenderers.destroy();
+  if (!state.currentStudent) {
+    renderIdentityGate();
+    window.scrollTo(0, 0);
+    focusRouteHeading();
+    return;
+  }
   let route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
   if (!isClassroomRouteAllowed(route, state.classroomUnlocks)) {
     const courseId = requiredUnlockForRoute(route);
@@ -101,6 +192,8 @@ function renderCurrentRoute() {
   } else {
     renderers[route.name]();
   }
+
+  attachStudentControls();
 
   window.scrollTo(0, 0);
   focusRouteHeading();
