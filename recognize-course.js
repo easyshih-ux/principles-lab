@@ -62,7 +62,7 @@ export function recognizeCompositionMarkup(question, ariaLabel = '形式原理�
     </div>`;
 }
 
-export function createRecognizeCourseRenderers({ app, state, navigate }) {
+export function createRecognizeCourseRenderers({ app, state, navigate, onCheckpoint = () => {} }) {
   const courseState = state.recognizeCourse;
   const masteryState = state.masteryPractice.recognize;
   const devSelection = { questionId: recognizeQuestions[0].id, variantId: 'A' };
@@ -250,6 +250,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
   function renderMasteryComplete() {
     completeRecognizeCourse(courseState, recognizeQuestions);
     syncCourseCompletion(state);
+    onCheckpoint('level1Complete');
     app.innerHTML = `
       <section class="recognize-complete page-shell mastery-complete">
         <div>
@@ -273,6 +274,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate }) {
     if (summary.masteryBand === 'mastered') {
       completeRecognizeCourse(courseState, recognizeQuestions);
       syncCourseCompletion(state);
+      onCheckpoint('level1Complete');
       app.innerHTML = recognizeCompletionMarkup();
       document.querySelector('#recognize-wall-return').addEventListener('click', () => navigate('#principles'));
       return;

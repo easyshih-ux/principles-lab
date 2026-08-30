@@ -77,7 +77,7 @@ export function experimentActionsMarkup(course, definition, feedback) {
   return `${reset}<button type="button" class="primary-button" id="experiment-check">${label}</button>`;
 }
 
-export function createExperimentCourseRenderers({ app, state, navigate }) {
+export function createExperimentCourseRenderers({ app, state, navigate, onCheckpoint = () => {} }) {
   let active = null;
 
   function destroy() {
@@ -190,6 +190,7 @@ export function createExperimentCourseRenderers({ app, state, navigate }) {
     destroy();
     state.experimentCourse.completed = state.experimentCourse.currentIndex >= state.experimentCourse.order.length;
     syncCourseCompletion(state);
+    if (state.experimentCourse.completed) onCheckpoint('level3Complete');
     app.innerHTML = finalCompletionMarkup();
     document.querySelector('#experiment-return').addEventListener('click', () => navigate('#principles'));
   }

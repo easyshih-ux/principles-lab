@@ -6,13 +6,16 @@ import {
 } from './data.js';
 import {
   clearStageCompletion,
+  areFreeReviewStagesComplete,
   getStageState,
   markPrincipleComplete,
+  isFreeReviewComplete,
+  markFreeReviewPrincipleComplete,
   markFreeReviewVisited,
   markStageComplete,
   resetPrincipleStages,
   updateStageState
-} from './state.js';
+} from './state.js?v=v2-b2-checkpoints-1';
 import { nextHashForStage, stageHash } from './router.js';
 import { validateStage } from './validators.js';
 import { attemptClassroomUnlock, CLASSROOM_COURSES } from './classroom-unlocks.js?v=classroom-control-1';
@@ -219,7 +222,13 @@ function taskFrame({ principle, stage, canvas, controls, feedback }) {
     </section>`;
 }
 
-export function createRenderers({ app, state, navigate, classroomStorage = null }) {
+export function createRenderers({ app, state, navigate, classroomStorage = null, onCheckpoint = () => {} }) {
+  function completeFreeReviewPrinciple(principleId) {
+    markPrincipleComplete(state, principleId);
+    if (!areFreeReviewStagesComplete(state, getStagesForPrinciple(principleId))) return;
+    markFreeReviewPrincipleComplete(state, principleId);
+    if (isFreeReviewComplete(state, principles.map(({ id }) => id))) onCheckpoint('freeReviewComplete');
+  }
   function bindClassroomControls(rerender) {
     document.querySelectorAll('[data-course-enter]').forEach((courseButton) => courseButton.addEventListener('click', () => {
       const course = CLASSROOM_COURSES.find(({ id }) => id === courseButton.dataset.courseEnter);
@@ -785,7 +794,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     });
 
     document.querySelector('#next')?.addEventListener('click', () => {
-      markPrincipleComplete(state, stage.principleId);
+      completeFreeReviewPrinciple(stage.principleId);
       navigate(nextHashForStage(stage, stages));
     });
   }
@@ -805,7 +814,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     document.querySelector('#undo').addEventListener('click',()=>{clearStageCompletion(state,stage.id);updateStageState(state,stage.id,{rotation:stage.initialState.rotation,feedback:''});renderUnityRotateStage(stage);});
     document.querySelector('#hint').addEventListener('click',()=>{updateStageState(state,stage.id,{feedback:stage.hints[0]});renderUnityRotateStage(stage);});
     document.querySelector('#check').addEventListener('click',()=>{const result=validateStage(stage,{rotation:stageState.rotation});if(result.isValid){markStageComplete(state,stage);updateStageState(state,stage.id,{feedback:stage.successFeedback});}else updateStageState(state,stage.id,{feedback:stage.feedbackByCode[result.code]});renderUnityRotateStage(stage);});
-    document.querySelector('#next')?.addEventListener('click',()=>{markPrincipleComplete(state,stage.principleId);navigate(nextHashForStage(stage,stages));});
+    document.querySelector('#next')?.addEventListener('click',()=>{completeFreeReviewPrinciple(stage.principleId);navigate(nextHashForStage(stage,stages));});
   }
 
   function renderHarmonyPaletteStage(stage) {
@@ -852,7 +861,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       renderHarmonyPaletteStage(stage);
     });
     document.querySelector('#next')?.addEventListener('click', () => {
-      markPrincipleComplete(state, stage.principleId);
+      completeFreeReviewPrinciple(stage.principleId);
       navigate(nextHashForStage(stage, stages));
     });
   }
@@ -889,7 +898,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
       renderContrastSizeStage(stage);
     });
-    document.querySelector('#next')?.addEventListener('click', () => { markPrincipleComplete(state, stage.principleId); navigate(nextHashForStage(stage, stages)); });
+    document.querySelector('#next')?.addEventListener('click', () => { completeFreeReviewPrinciple(stage.principleId); navigate(nextHashForStage(stage, stages)); });
   }
 
   function renderProportionSizeStage(stage) {
@@ -915,7 +924,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
       renderProportionSizeStage(stage);
     });
-    document.querySelector('#next')?.addEventListener('click', () => { markPrincipleComplete(state, stage.principleId); navigate(nextHashForStage(stage, stages)); });
+    document.querySelector('#next')?.addEventListener('click', () => { completeFreeReviewPrinciple(stage.principleId); navigate(nextHashForStage(stage, stages)); });
   }
 
   function renderSimplicityDeleteStage(stage) {
@@ -949,7 +958,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
       renderSimplicityDeleteStage(stage);
     });
-    document.querySelector('#next')?.addEventListener('click', () => { markPrincipleComplete(state, stage.principleId); navigate(nextHashForStage(stage, stages)); });
+    document.querySelector('#next')?.addEventListener('click', () => { completeFreeReviewPrinciple(stage.principleId); navigate(nextHashForStage(stage, stages)); });
   }
 
   function renderPositionExperimentStage(stage) {
@@ -1007,7 +1016,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
       renderPositionExperimentStage(stage);
     });
-    document.querySelector('#next')?.addEventListener('click', () => { markPrincipleComplete(state, stage.principleId); navigate(nextHashForStage(stage, stages)); });
+    document.querySelector('#next')?.addEventListener('click', () => { completeFreeReviewPrinciple(stage.principleId); navigate(nextHashForStage(stage, stages)); });
   }
 
   function renderMirrorExperimentStage(stage) {
@@ -1078,7 +1087,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       renderMirrorExperimentStage(stage);
     });
     document.querySelector('#next')?.addEventListener('click', () => {
-      markPrincipleComplete(state, stage.principleId);
+      completeFreeReviewPrinciple(stage.principleId);
       navigate(nextHashForStage(stage, stages));
     });
   }

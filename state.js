@@ -71,6 +71,7 @@ export function createAppState(stages, recognizeQuestions = [], discoverQuestion
     ),
     temporary: {},
     freeReviewVisited: {},
+    freeReviewCompleted: {},
     completion: {
       stages: {},
       principles: {},
@@ -91,6 +92,18 @@ export function createAppState(stages, recognizeQuestions = [], discoverQuestion
 
 export function markFreeReviewVisited(state, principleId) {
   state.freeReviewVisited[principleId] = true;
+}
+
+export function markFreeReviewPrincipleComplete(state, principleId) {
+  state.freeReviewCompleted[principleId] = true;
+}
+
+export function areFreeReviewStagesComplete(state, principleStages) {
+  return principleStages.length === 3 && principleStages.every((stage) => state.stageState[stage.id]?.isComplete === true);
+}
+
+export function isFreeReviewComplete(state, principleIds) {
+  return principleIds.length > 0 && principleIds.every((principleId) => state.freeReviewCompleted[principleId] === true);
 }
 
 export function syncCourseCompletion(state) {

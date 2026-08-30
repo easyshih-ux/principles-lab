@@ -45,7 +45,7 @@ function questionCanvas(question, selection) {
   return `${before}<div class="discover-panels">${question.comparisonPanels.map((panel)=>panelMarkup(question,panel,selection,question.interactionType==='multi-select-composition')).join('')}</div>`;
 }
 
-export function createDiscoverCourseRenderers({ app, state, navigate }) {
+export function createDiscoverCourseRenderers({ app, state, navigate, onCheckpoint = () => {} }) {
   const course = state.discoverCourse;
   const masteryState = state.masteryPractice.discover;
 
@@ -151,6 +151,7 @@ export function createDiscoverCourseRenderers({ app, state, navigate }) {
   function renderMasteryComplete() {
     completeDiscoverCourse(course, discoverQuestions);
     syncCourseCompletion(state);
+    onCheckpoint('level2Complete');
     app.innerHTML = `<section class="recognize-complete page-shell mastery-complete"><div><p class="section-label">判斷補強完成</p><h1>補強完成！</h1><p class="recognize-complete-lead">這次線索看得更清楚了，可以繼續下一步。</p><button class="primary-button" id="discover-mastery-wall">回到實驗室</button></div><div class="discover-complete-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></section>`;
     document.querySelector('#discover-mastery-wall').addEventListener('click', () => navigate('#principles'));
   }
@@ -164,6 +165,7 @@ export function createDiscoverCourseRenderers({ app, state, navigate }) {
     if (summary.masteryBand === 'mastered') {
       completeDiscoverCourse(course, discoverQuestions);
       syncCourseCompletion(state);
+      onCheckpoint('level2Complete');
       app.innerHTML = discoverCompletionMarkup();
       document.querySelector('#discover-wall').addEventListener('click', () => navigate('#principles'));
       return;

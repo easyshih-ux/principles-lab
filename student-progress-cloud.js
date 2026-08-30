@@ -2,37 +2,40 @@ import { ensureAnonymousAuth, firebaseErrorMessage, getFirebaseClient } from './
 import { createStudentIdentity } from './student-session.js';
 
 export const STUDENT_PROGRESS_COLLECTION = 'studentProgress';
+export const STUDENT_PROGRESS_CHECKPOINTS = Object.freeze([
+  'freeReviewComplete',
+  'level1Complete',
+  'level2Complete',
+  'level3Complete'
+]);
 
 export function studentProgressDocumentId(identity) {
   return createStudentIdentity(identity?.classId, identity?.seatNo)?.studentKey ?? null;
 }
 
-export function buildTestCheckpointData(identity, updatedAt) {
+export function buildCheckpointData(identity, checkpointName, updatedAt) {
   const student = createStudentIdentity(identity?.classId, identity?.seatNo);
   if (!student) throw new TypeError('Invalid student identity');
+  if (!STUDENT_PROGRESS_CHECKPOINTS.includes(checkpointName)) throw new TypeError('Invalid student progress checkpoint');
   return {
     classId: student.classId,
     seatNo: student.seatNo,
     studentKey: student.studentKey,
-    testCheckpointComplete: true,
+    [checkpointName]: true,
     updatedAt
   };
 }
 
-export function isAllowedCheckpointTransition(previous, next) {
-  if (previous?.classId !== next?.classId || previous?.seatNo !== next?.seatNo || previous?.studentKey !== next?.studentKey) return false;
-  return next?.testCheckpointComplete === true && previous?.testCheckpointComplete !== true;
-}
-
-export async function writeTestCheckpoint(identity, dependencies = {}) {
+export async function writeStudentProgressCheckpoint(identity, checkpointName, dependencies = {}) {
   try {
+    if (!STUDENT_PROGRESS_CHECKPOINTS.includes(checkpointName)) throw new TypeError('Invalid student progress checkpoint');
     const client = dependencies.client ?? await getFirebaseClient();
     const user = await ensureAnonymousAuth(client);
     const documentId = studentProgressDocumentId(identity);
     const reference = client.doc(client.db, STUDENT_PROGRESS_COLLECTION, documentId);
-    const data = buildTestCheckpointData(identity, client.serverTimestamp());
+    const data = buildCheckpointData(identity, checkpointName, client.serverTimestamp());
     await client.setDoc(reference, data, { merge: true });
-    return { ok: true, documentId, path: `${STUDENT_PROGRESS_COLLECTION}/${documentId}`, uid: user.uid };
+    return { ok: true, checkpointName, documentId, path: `${STUDENT_PROGRESS_COLLECTION}/${documentId}`, uid: user.uid };
   } catch (error) {
     return { ok: false, message: firebaseErrorMessage(error), code: error?.code ?? 'firebase/unavailable' };
   }

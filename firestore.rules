@@ -8,10 +8,31 @@ service cloud.firestore {
 
     function hasExactProgressFields() {
       return request.resource.data.keys().hasAll([
-        'classId', 'seatNo', 'studentKey', 'testCheckpointComplete', 'updatedAt'
+        'classId', 'seatNo', 'studentKey', 'updatedAt'
       ]) && request.resource.data.keys().hasOnly([
-        'classId', 'seatNo', 'studentKey', 'testCheckpointComplete', 'updatedAt'
+        'classId', 'seatNo', 'studentKey', 'freeReviewComplete',
+        'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt'
       ]);
+    }
+
+    function hasAnyCheckpoint() {
+      return request.resource.data.keys().hasAny([
+        'freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete'
+      ]);
+    }
+
+    function hasOnlyTrueCheckpoints() {
+      return request.resource.data.get('freeReviewComplete', true) == true
+        && request.resource.data.get('level1Complete', true) == true
+        && request.resource.data.get('level2Complete', true) == true
+        && request.resource.data.get('level3Complete', true) == true;
+    }
+
+    function preservesCompletedCheckpoints() {
+      return (!('freeReviewComplete' in resource.data) || 'freeReviewComplete' in request.resource.data)
+        && (!('level1Complete' in resource.data) || 'level1Complete' in request.resource.data)
+        && (!('level2Complete' in resource.data) || 'level2Complete' in request.resource.data)
+        && (!('level3Complete' in resource.data) || 'level3Complete' in request.resource.data);
     }
 
     function hasValidIdentity(studentKey) {
@@ -34,7 +55,8 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && hasExactProgressFields()
         && hasValidIdentity(studentKey)
-        && request.resource.data.testCheckpointComplete == true
+        && hasAnyCheckpoint()
+        && hasOnlyTrueCheckpoints()
         && hasServerTimestamp();
 
       allow update: if isAuthenticated()
@@ -44,10 +66,10 @@ service cloud.firestore {
         && request.resource.data.seatNo == resource.data.seatNo
         && request.resource.data.studentKey == resource.data.studentKey
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['testCheckpointComplete', 'updatedAt'])
-        && request.resource.data.testCheckpointComplete == true
-        && (resource.data.testCheckpointComplete == false
-          || resource.data.testCheckpointComplete == true)
+          .hasOnly(['freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt'])
+        && hasAnyCheckpoint()
+        && hasOnlyTrueCheckpoints()
+        && preservesCompletedCheckpoints()
         && hasServerTimestamp();
     }
 
