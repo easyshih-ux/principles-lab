@@ -138,13 +138,30 @@ function area(element) {
   return size * size * (factors[element.shape] ?? 1);
 }
 
-function isMirror(elements, axis, tolerance = 1) {
-  return elements.every((element) => elements.some((other) => (
-    other.id !== element.id
-    && Math.abs(other.x - (axis * 2 - element.x)) <= tolerance
-    && Math.abs(other.y - element.y) <= tolerance
-    && other.shape === element.shape && other.size === element.size
-  )));
+function balanceVisualWeight(element) {
+  return Math.sqrt(area(element));
+}
+
+function isMirror(left, right, axis, spec = {}) {
+  if (left.length !== right.length || !left.length) return false;
+  const positionTolerance = spec.mirrorPositionTolerance ?? 24;
+  const yTolerance = spec.mirrorYTolerance ?? 24;
+  const sizeTolerance = spec.mirrorSizeTolerance ?? 12;
+  const sizeOf = (item) => item.logicalSize ?? getLogicalSize(item.size);
+  const candidates = left.map((item) => right.map((other, index) => ({ other, index })).filter(({ other }) => (
+    item.shape === other.shape
+    && Math.abs(sizeOf(item) - sizeOf(other)) <= sizeTolerance
+    && Math.abs(item.y - other.y) <= yTolerance
+    && Math.abs(Math.abs(item.x - axis) - Math.abs(other.x - axis)) <= positionTolerance
+  )).map(({ index }) => index));
+  const match = (leftIndex, used) => leftIndex === candidates.length || candidates[leftIndex].some((rightIndex) => {
+    if (used.has(rightIndex)) return false;
+    used.add(rightIndex);
+    if (match(leftIndex + 1, used)) return true;
+    used.delete(rightIndex);
+    return false;
+  });
+  return match(0, new Set());
 }
 
 export function validateFormalBalance({ elements = [], spec = {} }) {
@@ -154,14 +171,19 @@ export function validateFormalBalance({ elements = [], spec = {} }) {
   const outside = elements.filter((item) => Math.abs(item.x - axis) > deadZone);
   const left = outside.filter((item) => item.x < axis);
   const right = outside.filter((item) => item.x > axis);
-  const leftWeight = left.reduce((sum, item) => sum + area(item) * Math.abs(item.x - axis), 0);
-  const rightWeight = right.reduce((sum, item) => sum + area(item) * Math.abs(item.x - axis), 0);
+  const visualWeight = (item) => balanceVisualWeight(item);
+  const balanceMoment = (item) => visualWeight(item) * Math.sqrt(Math.abs(item.x - axis));
+  const leftVisualWeight = left.reduce((sum, item) => sum + visualWeight(item), 0);
+  const rightVisualWeight = right.reduce((sum, item) => sum + visualWeight(item), 0);
+  const leftWeight = left.reduce((sum, item) => sum + balanceMoment(item), 0);
+  const rightWeight = right.reduce((sum, item) => sum + balanceMoment(item), 0);
   const total = leftWeight + rightWeight;
   const differenceRatio = total ? Math.abs(leftWeight - rightWeight) / total : 1;
-  const mirrored = outside.length > 1 && isMirror(outside, axis, spec.positionTolerance ?? 1);
-  const metrics = { leftWeight, rightWeight, differenceRatio, tolerance, isMirror: mirrored, outsideDeadZone: outside.length };
+  const mirrored = isMirror(left, right, axis, spec);
+  const metrics = { leftVisualWeight, rightVisualWeight, leftWeight, rightWeight, differenceRatio, tolerance, isMirror: mirrored, outsideDeadZone: outside.length };
   if (!outside.length) return response(false, 'TOO_CENTERED', metrics);
   if (!left.length || !right.length) return response(false, 'ONE_SIDE_EMPTY', metrics);
+  if (mirrored && spec.requireAsymmetry) return response(false, 'ASYMMETRY_REQUIRED', metrics);
   if (differenceRatio > tolerance) return response(false, leftWeight > rightWeight ? 'LEFT_HEAVY' : 'RIGHT_HEAVY', metrics);
   const method = mirrored ? 'symmetrical' : 'asymmetrical';
   return response(true, 'valid', metrics, [method]);
@@ -381,6 +403,7 @@ export function validateFormalHarmony({ elements = [], spec = {} }) {
   const sameHueLightness = elements.length >= minimumElements
     && hueGroups.ratio >= coverage
     && new Set(sameHueElements.map((item) => item.lightnessLevel ?? item.lightness)).size >= (spec.minimumLightnessLevels ?? 2);
+  const hasLightnessVariation = new Set(elements.map((item) => item.lightnessLevel ?? item.lightness)).size >= (spec.minimumLightnessLevels ?? 2);
   const uniqueHues = [...new Set(hues)];
   const bestHueArc = bestHarmonyHueArc(hues, maximumHueArcSpan);
   const bestNeighborCoverage = bestHueArc.coverage;
@@ -389,11 +412,11 @@ export function validateFormalHarmony({ elements = [], spec = {} }) {
     && bestNeighborCoverage >= coverage
     && uniqueHues.some((first) => uniqueHues.some((second) => areNeighborHues(first, second)));
   const methods = [];
-  if (sameHueLightness && neighborHue) methods.push('mixed');
+  if (neighborHue && hasLightnessVariation) methods.push('mixed');
   else if (sameHueLightness) methods.push('sameHueLightness');
   else if (neighborHue) methods.push('neighborHue');
   const maximumHueDistance = uniqueHues.reduce((maximum, first) => Math.max(maximum, ...uniqueHues.map((second) => hueDistance(first, second))), 0);
-  const metrics = { elementCount: elements.length, uniqueHues, hueGroups, sameHueLightness, neighborHue, bestNeighborCoverage, bestHueArc, maximumHueArcSpan, maximumHueDistance };
+  const metrics = { elementCount: elements.length, uniqueHues, hueGroups, sameHueLightness, hasLightnessVariation, neighborHue, bestNeighborCoverage, bestHueArc, maximumHueArcSpan, maximumHueDistance };
   if (methods.length) return response(true, 'valid', metrics, methods);
   if (uniqueHues.length === 1 && new Set(elements.map((item) => item.lightnessLevel ?? item.lightness)).size === 1) return response(false, 'NO_CLEAR_HARMONY', metrics);
   if (maximumHueDistance >= 3 && bestNeighborCoverage <= 0.5) return response(false, 'COLORS_TOO_FAR_APART', metrics);

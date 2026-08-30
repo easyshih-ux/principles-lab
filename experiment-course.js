@@ -8,10 +8,10 @@ import {
   canAdvancePhase6c,
   resetPhase6cExperiment,
   submitPhase6cExperiment
-} from './phase6c-course-state.js';
-import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js';
+} from './phase6c-course-state.js?v=balance-asymmetry-2';
+import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=balance-asymmetry-2';
 import { phase6cFixtures } from './phase6c-fixtures.js';
-import { validatePhase6cExperiment } from './phase6c-validators.js';
+import { validatePhase6cExperiment } from './phase6c-validators.js?v=balance-asymmetry-2';
 import { resolveDiagnosticHint } from './experiment-hints.js';
 import { principles as principleMetadata } from './data.js';
 import { syncCourseCompletion } from './state.js';

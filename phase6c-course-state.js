@@ -1,6 +1,6 @@
 import { createExperimentSessionState, getExperimentState, resetExperimentState } from './experiment-session.js';
 import { resolveDiagnosticHint } from './experiment-hints.js';
-import { validatePhase6cExperiment } from './phase6c-validators.js';
+import { validatePhase6cExperiment } from './phase6c-validators.js?v=balance-asymmetry-2';
 
 export function createPhase6cCourseState(definitions) {
   return {

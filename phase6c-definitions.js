@@ -44,15 +44,16 @@ export const phase6cDefinitions = Object.freeze([
     discoveryFeedback: { size: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', lightness: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', hue: '色相沿著色相環一步一步移動，也能形成清楚的漸變。', spacing: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', multiple: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。' }
   }),
   formal('balance', {
-    title: '挑戰｜做出「均衡」',
-    task: '運用造形的大小、數量和位置，讓整個畫面看起來穩定。左右可以不一樣，怎麼安排由你決定。',
+    title: '挑戰｜做出「不對稱的均衡」',
+    task: '調整造形的大小、數量和位置，讓整個畫面看起來穩定。左右不能一模一樣！試著用不同的大小、數量或位置取得平衡。',
     initialState: { elements: [], gridConfig: { enabled: false, visible: true, step: 20, axis: 'vertical' } },
-    validationSpec: { balanceTolerance: 0.45, allowSymmetrical: true, allowAsymmetrical: true, centerDeadZone: 45, requireAsymmetry: false },
+    validationSpec: { balanceTolerance: 0.45, allowSymmetrical: false, allowAsymmetrical: true, centerDeadZone: 45, requireAsymmetry: true, mirrorPositionTolerance: 24, mirrorYTolerance: 24, mirrorSizeTolerance: 12 },
     diagnosticHints: {
       ONE_SIDE_EMPTY: { observe: '看看整張畫面，造形是不是都集中到同一邊了？', think: '如果希望整個畫面更穩定，另一邊需要出現什麼力量呢？', action: '試著把部分造形安排到另一側，再觀察整體的感覺。' },
       LEFT_HEAVY: { observe: '先別急著改。看著整張畫面，你覺得它比較像往哪一邊倒？', think: '想想看：圖形的大小、數量和離中心的距離，哪一項可能讓某一邊看起來比較重？', action: '試著調整較重一側的大小或位置，或調整另一側，再看看畫面有沒有站得更穩。' },
       RIGHT_HEAVY: { observe: '先別急著改。看著整張畫面，你覺得它比較像往哪一邊倒？', think: '想想看：圖形的大小、數量和離中心的距離，哪一項可能讓某一邊看起來比較重？', action: '試著調整較重一側的大小或位置，或調整另一側，再看看畫面有沒有站得更穩。' },
-      TOO_CENTERED: { observe: '兩邊好像很接近，但造形是不是都擠在中間了？', think: '如果把一些造形拉開，還能不能保持穩定？', action: '試著拉開部分造形的位置，再檢查看看。' }
+      TOO_CENTERED: { observe: '兩邊好像很接近，但造形是不是都擠在中間了？', think: '如果把一些造形拉開，還能不能保持穩定？', action: '試著拉開部分造形的位置，再檢查看看。' },
+      ASYMMETRY_REQUIRED: { observe: '現在左右太像了！', think: '這一題要練習左右不一樣，但整體仍然穩定。', action: '試著改變一邊的大小、數量或位置，再讓畫面保持平衡。' }
     },
     successFeedback: { general: '成功！畫面已取得均衡。', byMethod: { symmetrical: '成功！你利用左右相似的安排，讓畫面取得了均衡。這是一種「對稱式均衡」。', asymmetrical: '成功！左右雖然不一樣，但你利用大小、數量或位置，讓畫面仍然保持穩定。' } },
     discoveryFeedback: { symmetrical: '對稱也是取得均衡的方法之一，但均衡不只有對稱。', asymmetrical: '均衡不代表左右一定相同。大小、數量和位置不同，也能讓畫面取得穩定。' }

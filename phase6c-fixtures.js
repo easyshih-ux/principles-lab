@@ -67,7 +67,6 @@ export const phase6cFixtures = Object.freeze({
   },
   balance: {
     pass: {
-      symmetrical: [element('bs-l', { x: 300 }), element('bs-r', { x: 700 })],
       asymmetrical: [
         element('ba-l', { x: 300, size: 4, hue: 'red' }),
         element('ba-r1', { shape: 'square', x: 620, y: 180, size: 2 }),
@@ -85,14 +84,57 @@ export const phase6cFixtures = Object.freeze({
         element('bb-b-right-1', { shape: 'triangle', x: 600, y: 180, size: 2 }),
         element('bb-b-right-2', { shape: 'triangle', x: 680, y: 310, size: 2 }),
         element('bb-b-right-3', { shape: 'triangle', x: 800, y: 430, size: 2 })
+      ],
+      largeAgainstMediumAndThreeSmall: [
+        element('bb-c-left', { x: 260, y: 300, size: 5, hue: 'red' }),
+        element('bb-c-right-medium', { shape: 'square', x: 610, y: 250, size: 3 }),
+        element('bb-c-right-small-1', { shape: 'circle', x: 650, y: 150, size: 1 }),
+        element('bb-c-right-small-2', { shape: 'triangle', x: 710, y: 330, size: 1 }),
+        element('bb-c-right-small-3', { shape: 'square', x: 770, y: 440, size: 1 })
+      ],
+      reportedLargeAgainstGroup: [
+        element('bb-d-left', { shape: 'square', x: 280, y: 300, size: 5 }),
+        element('bb-d-right-medium', { shape: 'triangle', x: 640, y: 360, size: 3 }),
+        element('bb-d-right-small-1', { shape: 'triangle', x: 580, y: 270, size: 1 }),
+        element('bb-d-right-small-2', { shape: 'triangle', x: 700, y: 220, size: 1 })
+      ],
+      reportedLargeAgainstGroupShifted: [
+        element('bb-e-left', { shape: 'square', x: 260, y: 300, size: 5 }),
+        element('bb-e-right-medium', { shape: 'triangle', x: 660, y: 360, size: 3 }),
+        element('bb-e-right-small-1', { shape: 'triangle', x: 600, y: 270, size: 1 }),
+        element('bb-e-right-small-2', { shape: 'triangle', x: 720, y: 220, size: 1 })
+      ],
+      equalCountDifferentSize: [
+        element('bd-s-left', { x: 350, y: 300, size: 4 }),
+        element('bd-s-right', { x: 770, y: 300, size: 3 })
+      ],
+      equalCountDifferentPositions: [
+        element('bd-p-left-1', { x: 300, y: 180, size: 3 }),
+        element('bd-p-left-2', { x: 380, y: 420, size: 3 }),
+        element('bd-p-right-1', { x: 620, y: 180, size: 3 }),
+        element('bd-p-right-2', { x: 700, y: 320, size: 3 })
       ]
     },
     fail: {
+      symmetrical: [element('bs-l', { shape: 'square', x: 300, y: 300 }), element('bs-r', { shape: 'square', x: 708, y: 312 })],
+      symmetricalPairs: [
+        element('bs2-l1', { shape: 'square', x: 300, y: 200, size: 3 }),
+        element('bs2-l2', { shape: 'circle', x: 380, y: 400, size: 2 }),
+        element('bs2-r1', { shape: 'square', x: 704, y: 212, size: 3 }),
+        element('bs2-r2', { shape: 'circle', x: 624, y: 388, size: 2 })
+      ],
       oneSide: [element('bo-1', { x: 200 }), element('bo-2', { x: 320 })],
+      oneSideRight: [element('bo-r1', { x: 680 }), element('bo-r2', { x: 800 })],
       leftHeavy: [element('bl-l', { x: 180, size: 5 }), element('bl-r', { x: 650, size: 1 })],
       rightHeavy: [element('br-l', { x: 350, size: 1 }), element('br-r', { x: 820, size: 5 })],
       extremeLeftHeavy: [element('be-l-large', { x: 140, size: 5 }), element('be-l-small', { x: 590, size: 1 })],
       extremeRightHeavy: [element('be-r-small', { x: 410, size: 1 }), element('be-r-large', { x: 860, size: 5 })],
+      severalLargeAgainstTiny: [
+        element('bx-l-1', { x: 160, y: 160, size: 5 }),
+        element('bx-l-2', { shape: 'square', x: 260, y: 320, size: 5 }),
+        element('bx-l-3', { shape: 'triangle', x: 360, y: 440, size: 5 }),
+        element('bx-r-tiny', { x: 760, y: 300, size: 1 })
+      ],
       centered: [element('bc-1', { x: 485 }), element('bc-2', { x: 515 })]
     }
   },

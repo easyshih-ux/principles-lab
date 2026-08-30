@@ -120,23 +120,38 @@ test('gradation exposes student-facing feedback for size lightness hue and multi
   }
 });
 
-test('symmetrical and asymmetrical balance both pass and classify correctly', () => {
-  assert.deepEqual(validate('balance', phase6cFixtures.balance.pass.symmetrical).detectedMethods, ['symmetrical']);
+test('formal balance rejects near mirrors and accepts asymmetric balance', () => {
+  for (const fixtureName of ['symmetrical', 'symmetricalPairs']) {
+    const result = validate('balance', phase6cFixtures.balance.fail[fixtureName]);
+    assert.equal(result.passed, false, fixtureName);
+    assert.equal(result.primaryDiagnosticCode, 'ASYMMETRY_REQUIRED', fixtureName);
+    assert.equal(result.metrics.isMirror, true, fixtureName);
+  }
   assert.deepEqual(validate('balance', phase6cFixtures.balance.pass.asymmetrical).detectedMethods, ['asymmetrical']);
 });
 
-test('moderately uneven asymmetrical balance passes within the classroom tolerance', () => {
-  for (const fixtureName of ['borderlineLargeAgainstTwoSmall', 'borderlineUnevenPositions']) {
+test('classroom balance accepts basic, asymmetric, and grouped visual weight arrangements', () => {
+  for (const fixtureName of ['borderlineLargeAgainstTwoSmall', 'borderlineUnevenPositions', 'largeAgainstMediumAndThreeSmall', 'reportedLargeAgainstGroup', 'reportedLargeAgainstGroupShifted', 'equalCountDifferentSize', 'equalCountDifferentPositions']) {
     const result = validate('balance', phase6cFixtures.balance.pass[fixtureName]);
     assert.equal(result.passed, true, fixtureName);
     assert.deepEqual(result.detectedMethods, ['asymmetrical'], fixtureName);
-    assert.ok(result.metrics.differenceRatio > 0.2, `${fixtureName} must exercise the relaxed tolerance`);
-    assert.ok(result.metrics.differenceRatio <= 0.45, `${fixtureName} must remain visibly plausible`);
+    assert.ok(result.metrics.differenceRatio <= 0.45, `${fixtureName} must remain visually plausible`);
     assert.equal(result.metrics.tolerance, 0.45);
   }
+  const reported = validate('balance', phase6cFixtures.balance.pass.reportedLargeAgainstGroup);
+  assert.ok(reported.metrics.leftVisualWeight > 0);
+  assert.ok(reported.metrics.rightVisualWeight > 0);
 });
 
-test('extreme visual moments still fail on the visibly heavier side', () => {
+test('formal balance gives a student-facing asymmetric challenge and mirror hint', () => {
+  const balance = definition('balance');
+  assert.match(balance.title, /不對稱/);
+  assert.match(balance.task, /左右不能一模一樣/);
+  assert.match(balance.diagnosticHints.ASYMMETRY_REQUIRED.action, /大小、數量或位置/);
+  assert.doesNotMatch(Object.values(balance.diagnosticHints.ASYMMETRY_REQUIRED).join(' '), /threshold|tolerance|mirror score|validator/i);
+});
+
+test('extreme balance arrangements still fail on the visibly heavier side', () => {
   const left = validate('balance', phase6cFixtures.balance.fail.extremeLeftHeavy);
   const right = validate('balance', phase6cFixtures.balance.fail.extremeRightHeavy);
   assert.equal(left.primaryDiagnosticCode, 'LEFT_HEAVY');
@@ -147,9 +162,11 @@ test('extreme visual moments still fail on the visibly heavier side', () => {
 
 test('balance rejects one-side, heavy-side and centered exploits', () => {
   assert.equal(validate('balance', phase6cFixtures.balance.fail.oneSide).primaryDiagnosticCode, 'ONE_SIDE_EMPTY');
+  assert.equal(validate('balance', phase6cFixtures.balance.fail.oneSideRight).primaryDiagnosticCode, 'ONE_SIDE_EMPTY');
   assert.equal(validate('balance', phase6cFixtures.balance.fail.leftHeavy).primaryDiagnosticCode, 'LEFT_HEAVY');
   assert.equal(validate('balance', phase6cFixtures.balance.fail.rightHeavy).primaryDiagnosticCode, 'RIGHT_HEAVY');
   assert.equal(validate('balance', phase6cFixtures.balance.fail.centered).primaryDiagnosticCode, 'TOO_CENTERED');
+  assert.equal(validate('balance', phase6cFixtures.balance.fail.severalLargeAgainstTiny).primaryDiagnosticCode, 'LEFT_HEAVY');
 });
 
 for (const fixture of ['regular', 'irregular', 'rotation', 'size', 'spacing', 'mixed', 'noRepetition', 'rhythm-irregular-wave-size-flow']) {

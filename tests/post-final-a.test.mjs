@@ -298,9 +298,9 @@ test('first-course completion returns to the gated laboratory and classroom cach
   assert.match(rendererSource, /navigate\('#principles'\)/);
   assert.doesNotMatch(rendererSource, /navigate\('#level\/discover\/start'\)/);
   assert.match(appSource, /recognize-course\.js\?v=classroom-control-1/);
-  assert.match(indexSource, /app\.js\?v=principles-wall-1/);
+  assert.match(indexSource, /app\.js\?v=balance-asymmetry-2/);
   assert.match(indexSource, /classroom-control\.css\?v=classroom-control-1/);
   assert.match(indexSource, /post-final-a\.css\?v=post-final-a-templates/);
   assert.match(appSource, /discover-course\.js\?v=blocking-fixes-1/);
-  assert.match(appSource, /experiment-course\.js\?v=final-phase-2/);
+  assert.match(appSource, /experiment-course\.js\?v=balance-asymmetry-2/);
 });

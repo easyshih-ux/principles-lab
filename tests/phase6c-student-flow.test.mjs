@@ -15,9 +15,33 @@ import {
 import { phase6cDefinitions } from '../phase6c-definitions.js';
 import { phase6cFixtures } from '../phase6c-fixtures.js';
 import { getExperimentState } from '../experiment-session.js';
+import { ConstrainedGeometryEngine } from '../geometry/constrained-engine.js';
 
 const rendererSource = readFileSync(new URL('../experiment-course.js', import.meta.url), 'utf8');
 const fixture = (definition, kind) => structuredClone(Object.values(phase6cFixtures[definition.principleId][kind])[0]);
+
+test('formal balance submit path rejects a mirrored runtime canvas composition', () => {
+  const definition = phase6cDefinitions.find((item) => item.principleId === 'balance');
+  const course = createPhase6cCourseState(phase6cDefinitions);
+  const state = getExperimentState(course, definition.id);
+  const engine = new ConstrainedGeometryEngine({
+    elements: [
+      { id: 'runtime-left', shape: 'square', x: 280, y: 360, size: 3, hue: 'blue', lightness: 3, rotation: 0, proportion: 1 },
+      { id: 'runtime-right', shape: 'square', x: 720, y: 360, size: 3, hue: 'red', lightness: 3, rotation: 0, proportion: 1 }
+    ],
+    allowedTools: definition.allowedTools
+  });
+  state.workingElements = engine.getState().elements;
+
+  const feedback = submitPhase6cExperiment(course, definition);
+
+  assert.equal(feedback.result.passed, false);
+  assert.equal(feedback.result.primaryDiagnosticCode, 'ASYMMETRY_REQUIRED');
+  assert.equal(state.completed, false);
+  assert.match(feedbackMarkup(definition, feedback), /左右太像|改變一邊的大小、數量或位置/);
+  assert.match(experimentActionsMarkup(course, definition, feedback), /id="experiment-check"/);
+  assert.doesNotMatch(experimentActionsMarkup(course, definition, feedback), /id="experiment-next"/);
+});
 
 test('all four formal student experiments initially expose one explicit review point', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);

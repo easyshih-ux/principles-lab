@@ -126,6 +126,18 @@ test('harmony preserves cool warm wraparound and same-hue lightness teaching cas
   assert.equal(validate('harmony', makeHarmony(['blue', 'blue', 'blue', 'blue'], [1, 2, 4, 5])).passed, true);
 });
 
+test('harmony accepts analogous, monochromatic, and mixed family-lightness palettes while rejecting scattered hues', () => {
+  const palette = (entries) => entries.map(([hue, lightness], index) => ({
+    ...phase6cFixtures.harmony.pass.neighborHue[index % 4], id: `family-${index}`, hue, lightness
+  }));
+  assert.equal(validate('harmony', palette([['red', 3], ['red-orange', 3], ['orange', 3], ['yellow-orange', 3]])).passed, true);
+  assert.equal(validate('harmony', palette([['red', 1], ['red', 2], ['red', 4], ['red', 5]])).passed, true);
+  const mixed = validate('harmony', palette([['red', 2], ['red-orange', 3], ['orange', 3], ['red', 5]]));
+  assert.equal(mixed.passed, true);
+  assert.deepEqual(mixed.detectedMethods, ['mixed']);
+  assert.equal(validate('harmony', palette([['red', 2], ['yellow', 3], ['green', 4], ['blue-violet', 5]])).passed, false);
+});
+
 test('harmony accepts continuous short hue arcs including the reported warm artwork payload', () => {
   const payload = (hues, lightnesses = hues.map(() => 3)) => hues.map((hueFamily, index) => {
     const color = COLOR_LIBRARY[`${hueFamily}-${lightnesses[index]}`];
