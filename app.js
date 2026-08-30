@@ -12,7 +12,7 @@ import { createExperimentCourseRenderers } from './experiment-course.js?v=balanc
 import { createPhase6cCourseState } from './phase6c-course-state.js?v=balance-asymmetry-2';
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=balance-asymmetry-2';
 import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
-import { classroomOptions, seatOptions } from './classroom-config.js';
+import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
@@ -56,7 +56,7 @@ function renderIdentityGate() {
             <label>選擇座號
               <select id="identity-seat" ${identityDraft.classId ? '' : 'disabled'}>
                 <option value="">請選擇座號</option>
-                ${seats.map((seat) => `<option value="${seat}" ${Number(identityDraft.seatNo) === seat ? 'selected' : ''}>${seat} 號</option>`).join('')}
+                ${seats.map((seat) => `<option value="${seat}" ${Number(identityDraft.seatNo) === seat ? 'selected' : ''}>${formatSeatNumber(seat)} 號</option>`).join('')}
               </select>
             </label>
           </div>

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { classroomOptions, DEMO_CLASSROOMS, seatOptions } from '../classroom-config.js';
+import { CLASSROOMS, classroomOptions, formatSeatNumber, isValidStudentIdentity, seatOptions } from '../classroom-config.js';
 import { CLASSROOM_UNLOCK_STORAGE_KEY, attemptClassroomUnlock, createLockedClassroomUnlocks, loadClassroomUnlocks, resetClassroomUnlocks } from '../classroom-unlocks.js';
 import { clearCurrentStudent, createStudentIdentity, CURRENT_STUDENT_STORAGE_KEY, loadCurrentStudent, saveCurrentStudent } from '../student-session.js';
 
@@ -13,20 +13,46 @@ class MemoryStorage {
   removeItem(key) { this.values.delete(key); }
 }
 
-test('DEMO classroom config generates the available class options', () => {
-  assert.deepEqual(DEMO_CLASSROOMS, [{ id: '701', seats: 28 }, { id: '702', seats: 27 }, { id: '703', seats: 29 }]);
-  assert.deepEqual(classroomOptions().map(({ value }) => value), ['701', '702', '703']);
+test('official config generates all 15 class options from 701 through 715', () => {
+  assert.equal(CLASSROOMS.length, 15);
+  assert.deepEqual(classroomOptions().map(({ value }) => value), Array.from({ length: 15 }, (_, index) => String(701 + index)));
 });
 
-test('each classroom generates only its configured seat range', () => {
-  assert.deepEqual([seatOptions('701').at(0), seatOptions('701').at(-1), seatOptions('701').length], [1, 28, 28]);
-  assert.deepEqual([seatOptions('702').at(0), seatOptions('702').at(-1), seatOptions('702').length], [1, 27, 27]);
-  assert.deepEqual([seatOptions('703').at(0), seatOptions('703').at(-1), seatOptions('703').length], [1, 29, 29]);
+test('each current classroom provides valid seats 01 through 30', () => {
+  CLASSROOMS.forEach(({ id }) => {
+    assert.deepEqual(seatOptions(id), Array.from({ length: 30 }, (_, index) => index + 1));
+  });
   assert.deepEqual(seatOptions('999'), []);
+});
+
+test('seat labels use two digits without changing numeric seat values', () => {
+  assert.deepEqual([formatSeatNumber(1), formatSeatNumber(2), formatSeatNumber(9), formatSeatNumber(10), formatSeatNumber(30)], ['01', '02', '09', '10', '30']);
+  assert.deepEqual(seatOptions('701').map(formatSeatNumber), Array.from({ length: 30 }, (_, index) => String(index + 1).padStart(2, '0')));
+});
+
+test('validSeatNumbers can express gaps and omitted seats never become options', () => {
+  const classrooms = [{ id: '701', validSeatNumbers: [1, 2, 4, 5] }];
+  assert.deepEqual(seatOptions('701', classrooms), [1, 2, 4, 5]);
+  assert.equal(isValidStudentIdentity('701', 3, classrooms), false);
+});
+
+test('adding class 716 requires only a config entry', () => {
+  const classrooms = [...CLASSROOMS, { id: '716', validSeatNumbers: [1, 2, 3] }];
+  assert.equal(classroomOptions(classrooms).at(-1).value, '716');
+  assert.deepEqual(seatOptions('716', classrooms), [1, 2, 3]);
+});
+
+test('adding seat 31 requires only validSeatNumbers config data', () => {
+  const classrooms = [{ id: '701', validSeatNumbers: [...seatOptions('701'), 31] }];
+  assert.equal(seatOptions('701', classrooms).at(-1), 31);
+  assert.equal(isValidStudentIdentity('701', 31, classrooms), true);
 });
 
 test('studentKey includes both class and seat', () => {
   assert.notEqual(createStudentIdentity('701', 12).studentKey, createStudentIdentity('702', 12).studentKey);
+  assert.equal(createStudentIdentity('701', 1).studentKey, '701-1');
+  assert.equal(createStudentIdentity('701', '01').studentKey, '701-1');
+  assert.deepEqual(createStudentIdentity('701', 1), createStudentIdentity('701', '01'));
 });
 
 test('drafting an identity does not create a session before confirmation', () => {
