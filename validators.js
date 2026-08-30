@@ -79,10 +79,54 @@ registerValidator('mirror-position', ({ input, stage }) => {
   return { isValid, code: isValid ? 'valid' : 'mirror-not-aligned' };
 });
 
+registerValidator('visual-balance', ({ input, stage }) => {
+  const x = input.position?.x;
+  const moment = Number.isFinite(x) ? x - 50 : Infinity;
+  const isValid = Math.abs(moment - stage.validation.targetMoment) <= stage.validation.tolerance;
+  return { isValid, code: isValid ? 'valid' : 'balance-unstable' };
+});
+
+registerValidator('visual-rhythm', ({ input, stage }) => {
+  const positions = input.positions ?? [];
+  const range = positions.length ? Math.max(...positions) - Math.min(...positions) : 0;
+  if (range < stage.validation.minRange) return { isValid: false, code: 'rhythm-flat' };
+  const deltas = positions.slice(1).map((value, index) => value - positions[index]);
+  const directedSteps = deltas.filter((delta) => Math.abs(delta) >= 5).length;
+  const tooRandom = deltas.some((delta) => Math.abs(delta) > stage.validation.maxStep);
+  const turns = deltas.slice(1).filter((delta, index) => Math.sign(delta) !== Math.sign(deltas[index])).length;
+  const isValid = !tooRandom && directedSteps >= stage.validation.minDirectedSteps && turns <= 2;
+  return { isValid, code: isValid ? 'valid' : 'rhythm-random' };
+});
+
+registerValidator('visible-height-difference', ({ input, stage }) => {
+  const positions = input.positions ?? [];
+  const range = positions.length ? Math.max(...positions) - Math.min(...positions) : 0;
+  const isValid = range >= stage.validation.minRange;
+  return { isValid, code: isValid ? 'valid' : 'height-difference-small' };
+});
+
+registerValidator('angle-near', ({ input, stage }) => {
+  const angle = Number(input.rotation);
+  const target = stage.validation.targetAngle;
+  const difference = Number.isFinite(angle) ? Math.abs(((angle - target + 180) % 360) - 180) : Infinity;
+  const isValid = difference <= stage.validation.tolerance;
+  return { isValid, code: isValid ? 'valid' : 'angle-not-aligned' };
+});
+
+registerValidator('hue-in-set', ({ input, stage }) => {
+  const isValid = stage.validation.acceptableHues.includes(input.selectedHue);
+  return { isValid, code: isValid ? 'valid' : 'hue-not-harmonious' };
+});
+
 export const validatorIds = Object.freeze({
   selectedOptionEquals: 'selected-option-equals',
   selectedElementEquals: 'selected-element-equals',
   strictAscending: 'strict-ascending',
   repeatingUnit: 'repeating-unit',
-  mirrorPosition: 'mirror-position'
+  mirrorPosition: 'mirror-position',
+  visualBalance: 'visual-balance',
+  visualRhythm: 'visual-rhythm',
+  visibleHeightDifference: 'visible-height-difference',
+  angleNear: 'angle-near',
+  hueInSet: 'hue-in-set'
 });

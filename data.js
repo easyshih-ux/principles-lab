@@ -30,8 +30,9 @@ export const principles = [
     id: 'balance',
     name: '均衡',
     shortDescription: '不同視覺重量取得穩定。',
-    status: 'coming-soon',
-    hasContent: false,
+    completionDescription: '大小、數量和位置不同，<br>也能讓畫面取得穩定。',
+    status: 'available',
+    hasContent: true,
     previewSizes: [42, 12, 12, 12, 12, 12]
   },
   {
@@ -46,8 +47,9 @@ export const principles = [
     id: 'rhythm',
     name: '律動',
     shortDescription: '反覆與方向形成視覺節奏。',
-    status: 'coming-soon',
-    hasContent: false,
+    completionDescription: '反覆加上有方向的變化，<br>讓畫面產生律動。',
+    status: 'available',
+    hasContent: true,
     previewSizes: [14, 22, 14, 22, 14, 22]
   },
   {
@@ -62,16 +64,18 @@ export const principles = [
     id: 'unity',
     name: '統一',
     shortDescription: '共同特徵讓畫面成為整體。',
-    status: 'coming-soon',
-    hasContent: false,
+    completionDescription: '元素不必完全相同，<br>只要具有共同特徵，就能形成整體。',
+    status: 'available',
+    hasContent: true,
     previewSizes: [18, 20, 18, 20, 18, 20]
   },
   {
     id: 'harmony',
     name: '調和',
     shortDescription: '元素彼此協調並形成和諧關係。',
-    status: 'coming-soon',
-    hasContent: false,
+    completionDescription: '彼此接近、能互相呼應的色彩，<br>會讓畫面更加協調。',
+    status: 'available',
+    hasContent: true,
     previewSizes: [14, 18, 22, 26, 22, 18]
   },
   {
@@ -334,6 +338,164 @@ export const stages = [
     validation: { target: { x: 70, y: 42 }, tolerance: 5, snapTolerance: 7 },
     allowedTools: ['drag', 'undo', 'hint', 'validate'],
     nextStep: { type: 'complete', principleId: 'symmetry' }
+  },
+  {
+    id: 'balance-observe', stageType: 'recognize', principleId: 'balance', interactionType: 'balance-options',
+    title: '觀察辨識', prompt: '哪一張雖然左右不同，看起來還是很穩？',
+    description: '均衡不一定左右一模一樣。', progress: { current: 1, total: 3 }, elements: [],
+    initialState: { selectedOptionId: null },
+    options: [
+      { id: 'a', kind: 'symmetric', colors: ['red', 'yellow', 'blue'] },
+      { id: 'b', kind: 'asymmetric-balanced', colors: ['red', 'blue', 'yellow'] },
+      { id: 'c', kind: 'unbalanced', colors: ['blue', 'yellow', 'black'] }
+    ],
+    hints: ['比較中央兩側的視覺重量，不只看圖形是否相同。', '作品 B 用一個大圓和三個小方形取得穩定。'],
+    feedbackByCode: { incomplete: '請先選擇一張作品，再完成檢測。' },
+    successFeedback: '找到了！左右不同，也能用大小、數量與位置取得均衡。',
+    validatorId: 'selected-option-equals', validation: { correctOptionId: 'b' },
+    allowedTools: ['select-option', 'hint', 'validate'], nextStep: { type: 'stage', stageId: 'balance-discover' }
+  },
+  {
+    id: 'balance-discover', stageType: 'discover', principleId: 'balance', interactionType: 'balance-diagnose',
+    title: '構圖診斷', prompt: '哪一個元素讓視覺重量明顯偏向右側？', description: '',
+    progress: { current: 2, total: 3 },
+    elements: [
+      { id: 'balance-large', size: 72, x: 30, y: 52, color: 'blue' },
+      { id: 'balance-small-1', size: 28, x: 68, y: 45, color: 'yellow' },
+      { id: 'balance-small-2', size: 28, x: 74, y: 52, color: 'black' },
+      { id: 'balance-wrong', size: 28, x: 90, y: 59, color: 'yellow' }
+    ],
+    initialState: { selectedElementId: null }, options: [],
+    hints: ['右側的小圖形離中央越遠，視覺重量也會更偏向那一側。', '看看最靠右的小方形。'],
+    feedbackByCode: { incomplete: '請先選出讓畫面失衡的元素。' },
+    successFeedback: '找到了！最外側的圖形讓右側視覺重量過重。',
+    validatorId: 'selected-element-equals', validation: { correctElementId: 'balance-wrong' },
+    allowedTools: ['select-element', 'hint', 'validate'], nextStep: { type: 'stage', stageId: 'balance-experiment' }
+  },
+  {
+    id: 'balance-experiment', stageType: 'experiment', principleId: 'balance', interactionType: 'balance-drag',
+    title: '拖曳修復', prompt: '左右的圖形不一樣重，試著移動右側的小方形，讓畫面重新穩定。',
+    description: '左右不需要相同；水平移動方形，改變它離中心的距離。', progress: { current: 3, total: 3 },
+    elements: [
+      { id: 'balance-large', size: 72, x: 30, y: 52, shape: 'circle', color: 'red' },
+      { id: 'balance-small-1', size: 28, x: 68, y: 45, shape: 'square', color: 'blue' },
+      { id: 'balance-small-2', size: 28, x: 72, y: 52, shape: 'square', color: 'yellow' }
+    ],
+    initialState: { position: { x: 90, y: 59 }, color: 'blue' }, options: [],
+    hints: ['把最外側的方形往中央靠近一些，觀察畫面是否穩定。', '三個小方形可以共同回應左側的大圓。'],
+    feedbackByCode: { 'balance-unstable': '右側的視覺重量還是偏重，再調整最外側方形的位置。' },
+    successFeedback: '平衡完成！大小、數量和位置不同，也能讓畫面取得穩定。',
+    validatorId: 'visual-balance', validation: { targetMoment: 24, tolerance: 5 },
+    allowedTools: ['drag', 'undo', 'hint', 'validate'], nextStep: { type: 'complete', principleId: 'balance' }
+  },
+  {
+    id: 'rhythm-observe', stageType: 'recognize', principleId: 'rhythm', interactionType: 'rhythm-options',
+    title: '觀察辨識', prompt: '哪一張不只反覆，還讓你的視線「動起來」？',
+    description: '律動是反覆加上有方向的變化。', progress: { current: 1, total: 3 }, elements: [],
+    initialState: { selectedOptionId: null },
+    options: [
+      { id: 'a', ys: [50, 50, 50, 50, 50, 50] },
+      { id: 'b', ys: [65, 48, 32, 44, 61, 75] },
+      { id: 'c', ys: [28, 72, 38, 76, 30, 55] }
+    ],
+    hints: ['觀察視線能不能順著元素的位置連續前進。', '作品 B 的位置有連續起伏，不只是同高反覆。'],
+    feedbackByCode: { incomplete: '請先選擇一張作品，再完成檢測。' },
+    successFeedback: '找到了！連續起伏讓反覆的元素產生視覺動勢。',
+    validatorId: 'selected-option-equals', validation: { correctOptionId: 'b' },
+    allowedTools: ['select-option', 'hint', 'validate'], nextStep: { type: 'stage', stageId: 'rhythm-discover' }
+  },
+  {
+    id: 'rhythm-discover', stageType: 'recognize', principleId: 'rhythm', interactionType: 'rhythm-follow',
+    title: '跟著節奏', prompt: '跟著畫面的節奏，依序點擊圓點。', description: '',
+    progress: { current: 2, total: 3 },
+    elements: [], initialState: { nextIndex: 0, demoComplete: false }, options: [],
+    positions: [68, 51, 34, 46, 63, 76],
+    hints: ['跟著節奏，從左往右試試看。'], feedbackByCode: {},
+    successFeedback: '感覺到了嗎？視線跟著圖形一個接一個動起來了！',
+    validatorId: 'sequential-clicks', validation: { count: 6 },
+    allowedTools: ['follow-rhythm', 'hint'], nextStep: { type: 'stage', stageId: 'rhythm-experiment' }
+  },
+  {
+    id: 'rhythm-experiment', stageType: 'experiment', principleId: 'rhythm', interactionType: 'rhythm-drag',
+    title: '創造律動', prompt: '上下拖曳圓點，創造一個有波動起伏的律動。',
+    description: '只要拉出肉眼看得見的高低差，就能形成律動。', progress: { current: 3, total: 3 },
+    elements: [], initialState: { positions: [50, 50, 50, 50, 50, 50] }, options: [],
+    hints: ['讓相鄰元素逐步向上或向下，形成可以追隨的方向。', '試著做出先上升、再下降的一次連續起伏。'],
+    feedbackByCode: { 'height-difference-small': '再拉開一些高低差，讓節奏更明顯。' },
+    successFeedback: '節奏出現了！反覆加上位置的高低變化，就能形成律動。',
+    validatorId: 'visible-height-difference', validation: { minRange: 12 },
+    allowedTools: ['drag', 'undo', 'hint', 'validate'], nextStep: { type: 'complete', principleId: 'rhythm' }
+  },
+  {
+    id: 'unity-observe', stageType: 'recognize', principleId: 'unity', interactionType: 'unity-options',
+    title: '看出統一', prompt: '哪一組雖然顏色不同，看起來還是像「同一家族」？', description: '共同特徵能把不同元素連成一個整體。',
+    progress: { current: 1, total: 3 }, elements: [], initialState: { selectedOptionId: null },
+    options: [
+      { id: 'a', shapes: ['circle','circle','circle','circle','circle','circle'], colors: ['red','blue','yellow','red','black','blue'] },
+      { id: 'b', shapes: ['circle','square','triangle','circle','square','triangle'], colors: ['blue','yellow','red','black','blue','yellow'] },
+      { id: 'c', shapes: ['square','triangle','circle','triangle','square','circle'], colors: ['yellow','red','blue','black','yellow','red'] }
+    ],
+    hints: ['先不看顏色，找找哪一組有清楚的共同形狀。'], feedbackByCode: { incomplete: '請先選擇一組作品。' },
+    successFeedback: '找到了！顏色不同，只要有共同特徵，也能形成統一。',
+    validatorId: 'selected-option-equals', validation: { correctOptionId: 'a' }, allowedTools: ['select-option','hint','validate'],
+    nextStep: { type: 'stage', stageId: 'unity-discover' }
+  },
+  {
+    id: 'unity-discover', stageType: 'discover', principleId: 'unity', interactionType: 'unity-direction-diagnose',
+    title: '發現共同方向', prompt: '哪一個元素讓這個家族看起來不太一樣？', description: '', progress: { current: 2, total: 3 },
+    elements: [
+      { id:'u1', x:14, y:58, rotation:45, color:'red' }, { id:'u2', x:29, y:40, rotation:45, color:'blue' },
+      { id:'u3', x:44, y:61, rotation:45, color:'yellow' }, { id:'u4', x:59, y:38, rotation:135, color:'black' },
+      { id:'u5', x:74, y:57, rotation:45, color:'red' }, { id:'u6', x:88, y:42, rotation:45, color:'blue' }
+    ],
+    initialState: { selectedElementId: null }, options: [], hints: ['再看看，它們有什麼共同的方向？'],
+    feedbackByCode: { incomplete: '請先選出方向不同的箭頭。' }, successFeedback: '發現了！共同的方向，也能讓不同元素形成統一。',
+    validatorId: 'selected-element-equals', validation: { correctElementId:'u4' }, allowedTools: ['select-element','hint','validate'],
+    nextStep: { type:'stage', stageId:'unity-experiment' }
+  },
+  {
+    id: 'unity-experiment', stageType: 'experiment', principleId: 'unity', interactionType: 'unity-rotate',
+    title: '修復統一', prompt: '轉動不一樣的箭頭，讓它重新回到這個家族。', description: '只調整方向，保留每個箭頭原本的顏色與位置。', progress: { current:3, total:3 },
+    elements: [
+      { x:14,y:42,rotation:45,color:'blue' }, { x:29,y:62,rotation:45,color:'yellow' }, { x:44,y:39,rotation:45,color:'red' },
+      { x:59,y:60,rotation:45,color:'black' }, { x:74,y:41,rotation:45,color:'yellow' }, { x:88,y:59,rotation:45,color:'blue' }
+    ],
+    targetIndex: 3, initialState: { rotation:135 }, options: [], hints: ['把不同的箭頭轉到和大家接近的方向。'],
+    feedbackByCode: { 'angle-not-aligned':'再轉一些，讓箭頭和大家朝向相近。' },
+    successFeedback: '統一完成！元素不必完全相同，只要具有共同特徵，就能形成整體。',
+    validatorId:'angle-near', validation:{ targetAngle:45, tolerance:12 }, allowedTools:['rotate','undo','hint','validate'],
+    nextStep:{ type:'complete', principleId:'unity' }
+  },
+  {
+    id:'harmony-observe', stageType:'recognize', principleId:'harmony', interactionType:'harmony-options',
+    title:'看出調和', prompt:'哪一組色彩放在一起，看起來最能互相呼應？', description:'形狀與位置相同，只比較色彩之間的關係。', progress:{current:1,total:3}, elements:[], initialState:{selectedOptionId:null},
+    options:[
+      {id:'a',colors:['red','red-orange','orange','red','orange','red-orange']},
+      {id:'b',colors:['red','blue','yellow','red','blue','yellow']},
+      {id:'c',colors:['blue','yellow','red-violet','blue','yellow','red-violet']}
+    ],
+    hints:['找找色相彼此接近、能互相呼應的一組。'], feedbackByCode:{incomplete:'請先選擇一組色彩。'},
+    successFeedback:'找到了！彼此接近、能互相呼應的色彩，會讓畫面更調和。', validatorId:'selected-option-equals', validation:{correctOptionId:'a'}, allowedTools:['select-option','hint','validate'],
+    nextStep:{type:'stage',stageId:'harmony-discover'}
+  },
+  {
+    id:'harmony-discover', stageType:'discover', principleId:'harmony', interactionType:'harmony-color-diagnose',
+    title:'找出離群色', prompt:'哪一個顏色突然跳出了原本的色彩關係？', description:'', progress:{current:2,total:3},
+    elements:[
+      {id:'h1',color:'blue',x:14},{id:'h2',color:'blue-green',x:29},{id:'h3',color:'green',x:44},
+      {id:'h4',color:'red',x:59},{id:'h5',color:'blue-green',x:74},{id:'h6',color:'blue',x:88}
+    ],
+    initialState:{selectedElementId:null}, options:[], hints:['再看看，哪一個顏色和其他色彩比較難互相呼應？'], feedbackByCode:{incomplete:'請先選出跳出色彩關係的元素。'},
+    successFeedback:'看見了！有一個顏色離開了原本互相呼應的色彩範圍。', validatorId:'selected-element-equals', validation:{correctElementId:'h4'}, allowedTools:['select-element','hint','validate'],
+    nextStep:{type:'stage',stageId:'harmony-experiment'}
+  },
+  {
+    id:'harmony-experiment', stageType:'experiment', principleId:'harmony', interactionType:'harmony-palette',
+    title:'修復調和', prompt:'幫它換一個更能和大家互相呼應的顏色。', description:'從候選色中替換離群色，不需要完整調色工具。', progress:{current:3,total:3},
+    elements:[{color:'yellow-orange'},{color:'orange'},{color:'red-orange'},{color:'blue'},{color:'orange'},{color:'yellow-orange'}], targetIndex:3,
+    initialState:{selectedHue:'blue'}, candidates:['red','red-orange','yellow-orange','blue'], options:[], hints:['選擇靠近紅、橙色家族的顏色。'],
+    feedbackByCode:{'hue-not-harmonious':'再試一個更接近紅、橙色家族的顏色。'}, successFeedback:'調和完成！彼此接近、能互相呼應的色彩，讓畫面更協調。',
+    validatorId:'hue-in-set', validation:{acceptableHues:['red','red-orange','yellow-orange']}, allowedTools:['select-color','hint','validate'], nextStep:{type:'complete',principleId:'harmony'}
   }
 ];
 

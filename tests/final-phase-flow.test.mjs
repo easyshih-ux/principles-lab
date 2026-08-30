@@ -43,7 +43,7 @@ test('FLOW A exposes three teacher-gated courses directly on the final homepage'
   assert.doesNotMatch(html, /data-course-enter/);
 });
 
-test('free review is always-open, state-neutral and exposes only the three released visual experiments', () => {
+test('free review is always-open, state-neutral and exposes only the released visual experiments', () => {
   assert.match(rendererSource, /id="enter-free-review">開始複習 →<\/button>/);
   assert.match(rendererSource, /#enter-free-review'[\s\S]*?navigate\('#principles'\)/);
   assert.match(rendererSource, /自由複習[\s\S]*?10 個形式原理/);
@@ -51,10 +51,10 @@ test('free review is always-open, state-neutral and exposes only the three relea
   assert.equal(principles.length, 10);
   assert.deepEqual(
     principles.filter(({ status, hasContent }) => status === 'available' && hasContent).map(({ id }) => id),
-    ['repetition', 'gradation', 'symmetry']
+    ['repetition', 'gradation', 'symmetry', 'balance', 'rhythm', 'unity', 'harmony']
   );
-  assert.equal(stages.filter(({ principleId }) => ['repetition', 'gradation', 'symmetry'].includes(principleId)).length, 9);
-  assert.equal(stages.filter(({ principleId }) => !['repetition', 'gradation', 'symmetry'].includes(principleId)).length, 0);
+  assert.equal(stages.filter(({ principleId }) => ['repetition', 'gradation', 'symmetry', 'balance', 'rhythm', 'unity', 'harmony'].includes(principleId)).length, 21);
+  assert.equal(stages.filter(({ principleId }) => !['repetition', 'gradation', 'symmetry', 'balance', 'rhythm', 'unity', 'harmony'].includes(principleId)).length, 0);
   const route = resolveRoute('#principles', stages, principles, recognizeQuestions);
   assert.equal(route.name, 'principles');
   assert.equal(isClassroomRouteAllowed(route, createLockedClassroomUnlocks()), true);

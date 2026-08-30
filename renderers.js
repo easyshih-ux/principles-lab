@@ -15,6 +15,7 @@ import {
 import { nextHashForStage, stageHash } from './router.js';
 import { validateStage } from './validators.js';
 import { attemptClassroomUnlock, CLASSROOM_COURSES } from './classroom-unlocks.js?v=classroom-control-1';
+import { getDisplayColor } from './geometry/palette.js';
 
 const homeCoursePresentation = Object.freeze({
   recognize: Object.freeze({ number: '01', title: '看得出來', subtitle: '觀察與辨識' }),
@@ -70,8 +71,25 @@ const dotColors = [
   'var(--red)'
 ];
 
+function visualColor(color) {
+  return ['red', 'blue', 'yellow', 'black'].includes(color)
+    ? `var(--${color})`
+    : getDisplayColor(color, 3);
+}
+
 function button(label, className = 'primary-button', id = '') {
   return `<button type="button" class="${className}" ${id ? `id="${id}"` : ''}>${label}</button>`;
+}
+
+function successActionButton(label, stage) {
+  const duration = stage.stageType === 'experiment' || stage.interactionType === 'rhythm-follow' ? 1050 : 850;
+  return `<button type="button" class="primary-button compact" id="next" disabled data-success-delay="${duration}">${label}</button>`;
+}
+
+function enableSuccessAction() {
+  const action = document.querySelector('[data-success-delay]');
+  if (!action) return;
+  window.setTimeout(() => { action.disabled = false; }, Number(action.dataset.successDelay));
 }
 
 function dot(size, index, extraClass = '') {
@@ -96,6 +114,33 @@ function symmetryComposition(option, animated = false) {
       ${rightX == null ? '' : `<span class="symmetry-pair-right pair-${index}" style="--x:${rightX}%;--y:${y}%">${symbolMark(['●', '■', '▲'][index], index)}</span>`}
     `).join('')}
   </span>`;
+}
+
+function balanceComposition(option) {
+  const kind = typeof option === 'string' ? option : option.kind;
+  const colors = typeof option === 'string' ? ['red', 'blue', 'yellow'] : option.colors;
+  const rightXs = kind === 'asymmetric-balanced' ? [66, 73, 80] : kind === 'unbalanced' ? [76, 84, 92] : [70];
+  return `<span class="balance-mini"><i class="balance-center"></i>
+    <span class="balance-shape large" style="--x:30%;--y:52%;--balance-color:var(--${colors[0]})"></span>
+    ${rightXs.map((x, index) => `<span class="balance-shape small" style="--x:${x}%;--y:${35 + index * 17}%;--balance-color:var(--${colors[1 + index % (colors.length - 1)]})"></span>`).join('')}
+    ${kind === 'symmetric' ? `<span class="balance-shape large mirror" style="--x:70%;--y:52%;--balance-color:var(--${colors[2]})"></span>` : ''}
+  </span>`;
+}
+
+function rhythmComposition(ys, animated = false) {
+  const animationClass = [
+    'rhythm-bauhaus',
+    animated ? 'rhythm-success' : ''
+  ].filter(Boolean).join(' ');
+  return `<span class="rhythm-mini ${animationClass}">${ys.map((y, index) => `<i style="--x:${12 + index * 15}%;--y:${y}%;--delay:${index * .1}s"></i>`).join('')}</span>`;
+}
+
+function unityComposition(option, animated = false) {
+  return `<span class="principle-family unity-family ${animated ? 'unity-recognize-success' : ''}">${option.shapes.map((shape, index) => `<i class="family-shape ${shape}" style="--family-color:${visualColor(option.colors[index])};--delay:${index * .08}s"></i>`).join('')}</span>`;
+}
+
+function harmonyComposition(option, animated = false) {
+  return `<span class="principle-family harmony-family ${animated ? 'harmony-recognize-success' : ''}">${option.colors.map((color, index) => `<i style="--family-color:${visualColor(color)};--delay:${index * .08}s"></i>`).join('')}</span>`;
 }
 
 function sampleDots(principle) {
@@ -254,6 +299,10 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
   }
 
   function renderRecognizeStage(stage) {
+    if (stage.interactionType === 'rhythm-follow') {
+      renderRhythmFollowStage(stage);
+      return;
+    }
     const principle = getPrinciple(stage.principleId);
     const stageState = getStageState(state, stage.id);
     const canvas = `
@@ -277,6 +326,14 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
                   ? `<span class="symbol-sequence ${shouldAnimate ? 'repeat-success' : ''}">${option.symbols.map(symbolMark).join('')}</span>`
                   : stage.interactionType === 'symmetry-options'
                     ? symmetryComposition(option, shouldAnimate)
+                    : stage.interactionType === 'balance-options'
+                      ? `<span class="${shouldAnimate ? 'balance-success balance-success-recognize' : ''}">${balanceComposition(option)}</span>`
+                      : stage.interactionType === 'rhythm-options'
+                        ? rhythmComposition(option.ys, shouldAnimate)
+                      : stage.interactionType === 'unity-options'
+                        ? unityComposition(option, shouldAnimate)
+                      : stage.interactionType === 'harmony-options'
+                        ? harmonyComposition(option, shouldAnimate)
                     : option.sizes.map((size, dotIndex) => dot(size, dotIndex)).join('')}
               </span>
             </button>`;
@@ -286,7 +343,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       button('提示', 'secondary-button', 'hint'),
       button('完成檢測', 'primary-button compact', 'check'),
       stageState.isComplete
-        ? button('下一個任務', 'primary-button compact', 'next')
+        ? successActionButton('下一個任務', stage)
         : ''
     ].join('');
 
@@ -300,6 +357,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
         : stageState.feedback
     });
     bindTaskBack();
+    enableSuccessAction();
 
     document.querySelectorAll('[data-option-id]').forEach((element) => {
       element.addEventListener('click', () => {
@@ -343,6 +401,52 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     });
   }
 
+  function renderRhythmFollowStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const canvas = `<div class="single-artboard rhythm-follow-board rhythm-bauhaus ${!stageState.demoComplete ? 'rhythm-follow-demo' : ''} ${stageState.isComplete ? 'rhythm-success' : ''}" aria-label="由左到右的六顆律動圓點">
+      ${stage.positions.map((y, index) => `<button type="button" class="rhythm-element ${index < stageState.nextIndex ? 'followed' : ''} ${stageState.pulseIndex === index ? 'rhythm-tap' : ''}" data-rhythm-follow-index="${index}" style="--x:${12 + index * 15}%;--y:${y}%;--delay:${index * .1}s" ${stageState.demoComplete && !stageState.isComplete ? '' : 'disabled'} aria-label="第 ${index + 1} 顆圓點"></button>`).join('')}
+    </div>`;
+    const controls = [button('提示', 'secondary-button', 'hint'), stageState.isComplete ? successActionButton('下一個任務', stage) : ''].join('');
+
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+
+    if (!stageState.demoComplete) {
+      window.setTimeout(() => {
+        updateStageState(state, stage.id, { demoComplete: true });
+        renderRhythmFollowStage(stage);
+      }, 1050);
+      return;
+    }
+
+    document.querySelectorAll('[data-rhythm-follow-index]').forEach((element) => {
+      element.addEventListener('click', () => {
+        if (stageState.isComplete) return;
+        const index = Number(element.dataset.rhythmFollowIndex);
+        if (index !== stageState.nextIndex) {
+          updateStageState(state, stage.id, { feedback: stage.hints[0], pulseIndex: null });
+          renderRhythmFollowStage(stage);
+          return;
+        }
+        const nextIndex = stageState.nextIndex + 1;
+        if (nextIndex === stage.positions.length) {
+          markStageComplete(state, stage);
+          updateStageState(state, stage.id, { nextIndex, pulseIndex: null, feedback: stage.successFeedback });
+        } else {
+          updateStageState(state, stage.id, { nextIndex, pulseIndex: index, feedback: '' });
+        }
+        renderRhythmFollowStage(stage);
+      });
+    });
+    document.querySelector('#hint')?.addEventListener('click', () => {
+      updateStageState(state, stage.id, { feedback: stage.hints[0] });
+      renderRhythmFollowStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => navigate(nextHashForStage(stage, stages)));
+  }
+
   function renderDiscoverStage(stage) {
     const principle = getPrinciple(stage.principleId);
     const stageState = getStageState(state, stage.id);
@@ -351,8 +455,17 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     );
     const isSymbolDiagnose = stage.interactionType === 'symbol-diagnose';
     const isSymmetryDiagnose = stage.interactionType === 'symmetry-diagnose';
-    const canvas = isSymmetryDiagnose ? `
-      <div class="single-artboard symmetry-board">
+    const isBalanceDiagnose = stage.interactionType === 'balance-diagnose';
+    const isUnityDiagnose = stage.interactionType === 'unity-direction-diagnose';
+    const isHarmonyDiagnose = stage.interactionType === 'harmony-color-diagnose';
+    const canvas = isUnityDiagnose ? `<div class="single-artboard principle-diagnose unity-diagnose ${stageState.isComplete ? 'unity-diagnose-success' : ''}">
+      ${stage.elements.map((element, index) => `<button class="direction-arrow ${element.id === stage.validation.correctElementId ? 'outlier' : ''} ${stageState.selectedElementId === element.id ? 'selected' : ''}" data-element-id="${element.id}" style="--x:${element.x}%;--y:${element.y}%;--rotation:${element.rotation}deg;--family-color:${visualColor(element.color)};--delay:${index * .08}s" aria-label="第 ${index + 1} 個箭頭">➜</button>`).join('')}
+    </div>` : isHarmonyDiagnose ? `<div class="single-artboard principle-diagnose harmony-diagnose ${stageState.isComplete ? 'harmony-diagnose-success' : ''}">
+      ${stage.elements.map((element, index) => `<button class="harmony-dot ${element.id === stage.validation.correctElementId ? 'outlier' : ''} ${stageState.selectedElementId === element.id ? 'selected' : ''}" data-element-id="${element.id}" style="--x:${element.x}%;--family-color:${visualColor(element.color)};--delay:${index * .08}s" aria-label="第 ${index + 1} 個色彩元素"></button>`).join('')}
+    </div>` : isBalanceDiagnose ? `<div class="single-artboard position-board ${stageState.isComplete ? 'balance-success balance-success-discover' : ''}"><div class="balance-center"></div>
+      ${stage.elements.map((element, index) => `<button class="position-element ${stageState.selectedElementId === element.id ? 'selected' : ''}" data-element-id="${element.id}" style="--x:${element.x}%;--y:${element.y}%;--size:${element.size}px;--balance-color:var(--${element.color})" aria-label="第 ${index + 1} 個均衡元素"></button>`).join('')}
+    </div>` : isSymmetryDiagnose ? `
+      <div class="single-artboard symmetry-board ${stageState.isComplete ? 'mirror-success' : ''}">
         <div class="symmetry-axis" aria-hidden="true"></div>
         ${stage.elements.map((element, index) => {
           const rightY = stageState.isComplete && element.id === stage.validation.correctElementId
@@ -389,7 +502,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       button('提示', 'secondary-button', 'hint'),
       button('完成檢測', 'primary-button compact', 'check'),
       stageState.isComplete
-        ? button('下一個任務', 'primary-button compact', 'next')
+        ? successActionButton('下一個任務', stage)
         : ''
     ].join('');
 
@@ -403,6 +516,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
         : stageState.feedback
     });
     bindTaskBack();
+    enableSuccessAction();
 
     document.querySelectorAll('[data-element-id]').forEach((element) => {
       element.addEventListener('click', () => {
@@ -421,9 +535,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     });
 
     document.querySelector('#check').addEventListener('click', () => {
-      const result = validateStage(stage, {
-        selectedElementId: stageState.selectedElementId
-      });
+      const result = validateStage(stage, { selectedElementId: stageState.selectedElementId });
 
       if (result.isValid) {
         markStageComplete(state, stage);
@@ -448,6 +560,18 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
   }
 
   function renderExperimentStage(stage) {
+    if (stage.interactionType === 'unity-rotate') {
+      renderUnityRotateStage(stage);
+      return;
+    }
+    if (stage.interactionType === 'harmony-palette') {
+      renderHarmonyPaletteStage(stage);
+      return;
+    }
+    if (stage.interactionType === 'balance-drag' || stage.interactionType === 'rhythm-drag') {
+      renderPositionExperimentStage(stage);
+      return;
+    }
     if (stage.interactionType === 'mirror-drag') {
       renderMirrorExperimentStage(stage);
       return;
@@ -456,7 +580,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     const stageState = getStageState(state, stage.id);
     const canvas = `
       <div class="single-artboard repair-board">
-        <div class="slots" role="list" aria-label="可拖曳排序的六個圓點">
+        <div class="slots ${stageState.isComplete ? (stage.principleId === 'repetition' ? 'repeat-success' : 'gradation-success') : ''}" role="list" aria-label="可拖曳排序的六個圓點">
           ${stageState.order.map((value, index) => `
             <button
               class="drag-dot"
@@ -478,7 +602,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       button('提示', 'secondary-button', 'hint'),
       button('完成檢測', 'primary-button compact', 'check'),
       stageState.isComplete
-        ? button('完成實驗', 'primary-button compact', 'next')
+        ? successActionButton('完成實驗', stage)
         : ''
     ].join('');
 
@@ -492,6 +616,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
         : stageState.feedback
     });
     bindTaskBack();
+    enableSuccessAction();
     bindReorder(stage, renderExperimentStage);
 
     document.querySelector('#undo').addEventListener('click', () => {
@@ -528,6 +653,95 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     });
   }
 
+  function renderUnityRotateStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const canvas = `<div class="single-artboard unity-rotate-board ${stageState.isComplete ? 'unity-rotate-success' : ''}">
+      ${stage.elements.map((element, index) => `<span class="direction-arrow ${index === stage.targetIndex ? 'target' : ''}" style="--x:${element.x}%;--y:${element.y}%;--rotation:${index === stage.targetIndex ? stageState.rotation : element.rotation}deg;--family-color:${visualColor(element.color)};--delay:${index * .08}s">➜</span>`).join('')}
+    </div>`;
+    const controls = [button('向左轉', 'secondary-button', 'rotate-left'), button('向右轉', 'secondary-button', 'rotate-right'), button('復原','secondary-button','undo'), button('提示','secondary-button','hint'), button('完成檢測','primary-button compact','check'), stageState.isComplete ? successActionButton('完成實驗',stage) : ''].join('');
+    app.innerHTML = taskFrame({principle,stage,canvas,controls,feedback:stageState.isComplete?`<strong>${stage.successFeedback}</strong>`:stageState.feedback});
+    bindTaskBack(); enableSuccessAction();
+    const rotate = (amount) => { if(stageState.isComplete)return; updateStageState(state,stage.id,{rotation:(stageState.rotation+amount+360)%360,feedback:''}); renderUnityRotateStage(stage); };
+    document.querySelector('#rotate-left').addEventListener('click',()=>rotate(-15));
+    document.querySelector('#rotate-right').addEventListener('click',()=>rotate(15));
+    document.querySelector('#undo').addEventListener('click',()=>{clearStageCompletion(state,stage.id);updateStageState(state,stage.id,{rotation:stage.initialState.rotation,feedback:''});renderUnityRotateStage(stage);});
+    document.querySelector('#hint').addEventListener('click',()=>{updateStageState(state,stage.id,{feedback:stage.hints[0]});renderUnityRotateStage(stage);});
+    document.querySelector('#check').addEventListener('click',()=>{const result=validateStage(stage,{rotation:stageState.rotation});if(result.isValid){markStageComplete(state,stage);updateStageState(state,stage.id,{feedback:stage.successFeedback});}else updateStageState(state,stage.id,{feedback:stage.feedbackByCode[result.code]});renderUnityRotateStage(stage);});
+    document.querySelector('#next')?.addEventListener('click',()=>{markPrincipleComplete(state,stage.principleId);navigate(nextHashForStage(stage,stages));});
+  }
+
+  function renderHarmonyPaletteStage(stage) {
+    const principle=getPrinciple(stage.principleId); const stageState=getStageState(state,stage.id);
+    const colors=stage.elements.map((element,index)=>index===stage.targetIndex?stageState.selectedHue:element.color);
+    const canvas=`<div class="single-artboard harmony-repair-board ${stageState.isComplete?'harmony-repair-success':''}">${colors.map((color,index)=>`<span class="harmony-repair-dot" style="--x:${14+index*15}%;--family-color:${visualColor(color)};--delay:${index*.08}s"></span>`).join('')}</div>
+      <div class="harmony-palette" aria-label="候選色">${stage.candidates.map((color)=>`<button type="button" data-harmony-color="${color}" class="${stageState.selectedHue===color?'selected':''}" style="--family-color:${visualColor(color)}" aria-label="選擇${color}色"></button>`).join('')}</div>`;
+    const controls=[button('提示','secondary-button','hint'),button('完成檢測','primary-button compact','check'),stageState.isComplete?successActionButton('完成實驗',stage):''].join('');
+    app.innerHTML=taskFrame({principle,stage,canvas,controls,feedback:stageState.isComplete?`<strong>${stage.successFeedback}</strong>`:stageState.feedback});bindTaskBack();enableSuccessAction();
+    document.querySelectorAll('[data-harmony-color]').forEach((element)=>element.addEventListener('click',()=>{if(stageState.isComplete)return;updateStageState(state,stage.id,{selectedHue:element.dataset.harmonyColor,feedback:''});renderHarmonyPaletteStage(stage);}));
+    document.querySelector('#hint').addEventListener('click',()=>{updateStageState(state,stage.id,{feedback:stage.hints[0]});renderHarmonyPaletteStage(stage);});
+    document.querySelector('#check').addEventListener('click',()=>{const result=validateStage(stage,{selectedHue:stageState.selectedHue});if(result.isValid){markStageComplete(state,stage);updateStageState(state,stage.id,{feedback:stage.successFeedback});}else updateStageState(state,stage.id,{feedback:stage.feedbackByCode[result.code]});renderHarmonyPaletteStage(stage);});
+    document.querySelector('#next')?.addEventListener('click',()=>{markPrincipleComplete(state,stage.principleId);navigate(nextHashForStage(stage,stages));});
+  }
+
+  function renderPositionExperimentStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const isBalance = stage.interactionType === 'balance-drag';
+    const canvas = isBalance ? `<div class="single-artboard position-board balance-board ${stageState.isComplete ? 'balance-success balance-success-repair' : ''}" id="position-board"><div class="balance-center"></div>
+      ${stage.elements.map((element) => `<span class="position-element fixed ${element.shape}" style="--x:${element.x}%;--y:${element.y}%;--size:${element.size}px;--balance-color:var(--${element.color})"></span>`).join('')}
+      <button class="position-element movable" data-position-index="0" style="--x:${stageState.position.x}%;--y:${stageState.position.y}%;--size:28px;--balance-color:var(--${stage.initialState.color})" aria-label="可拖曳的小方形，使用方向鍵微調"></button>
+    </div>` : `<div class="single-artboard position-board rhythm-board ${stageState.isComplete ? 'rhythm-success' : ''}" id="position-board">
+      ${stageState.positions.map((y, index) => `<button class="rhythm-element movable" data-position-index="${index}" style="--x:${12 + index * 15}%;--y:${y}%;--delay:${index * .07}s;--rhythm-color:${['var(--blue)', 'var(--red)', 'var(--yellow)'][index % 3]}" aria-label="第 ${index + 1} 個律動元素，使用上下方向鍵移動"></button>`).join('')}
+    </div>`;
+    const controls = [button('復原', 'secondary-button', 'undo'), button('提示', 'secondary-button', 'hint'), button('完成檢測', 'primary-button compact', 'check'), stageState.isComplete ? successActionButton('完成實驗', stage) : ''].join('');
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+    const board = document.querySelector('#position-board');
+
+    function move(index, x, y) {
+      clearStageCompletion(state, stage.id);
+      if (isBalance) updateStageState(state, stage.id, { position: { x: Math.max(54, Math.min(92, x)), y: stage.initialState.position.y }, feedback: '' });
+      else {
+        const positions = stageState.positions.slice();
+        positions[index] = Math.max(18, Math.min(82, y));
+        updateStageState(state, stage.id, { positions, feedback: '' });
+      }
+      renderPositionExperimentStage(stage);
+    }
+
+    document.querySelectorAll('[data-position-index]').forEach((element) => {
+      const index = Number(element.dataset.positionIndex);
+      element.addEventListener('pointerdown', (event) => element.setPointerCapture(event.pointerId));
+      element.addEventListener('pointerup', (event) => {
+        const rect = board.getBoundingClientRect();
+        move(index, ((event.clientX - rect.left) / rect.width) * 100, ((event.clientY - rect.top) / rect.height) * 100);
+      });
+      element.addEventListener('keydown', (event) => {
+        const delta = { ArrowLeft: [-2, 0], ArrowRight: [2, 0], ArrowUp: [0, -4], ArrowDown: [0, 4] }[event.key];
+        if (!delta) return;
+        event.preventDefault();
+        const current = isBalance ? stageState.position : { x: 12 + index * 15, y: stageState.positions[index] };
+        move(index, current.x + delta[0], current.y + delta[1]);
+      });
+    });
+    document.querySelector('#undo').addEventListener('click', () => {
+      if (isBalance) updateStageState(state, stage.id, { position: { ...stage.initialState.position }, feedback: '' });
+      else updateStageState(state, stage.id, { positions: stage.initialState.positions.slice(), feedback: '' });
+      clearStageCompletion(state, stage.id);
+      renderPositionExperimentStage(stage);
+    });
+    document.querySelector('#hint').addEventListener('click', () => { updateStageState(state, stage.id, { feedback: stage.hints[0] }); renderPositionExperimentStage(stage); });
+    document.querySelector('#check').addEventListener('click', () => {
+      const result = validateStage(stage, isBalance ? { position: stageState.position } : { positions: stageState.positions });
+      if (result.isValid) { markStageComplete(state, stage); updateStageState(state, stage.id, { feedback: stage.successFeedback }); }
+      else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
+      renderPositionExperimentStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => { markPrincipleComplete(state, stage.principleId); navigate(nextHashForStage(stage, stages)); });
+  }
+
   function renderMirrorExperimentStage(stage) {
     const principle = getPrinciple(stage.principleId);
     const stageState = getStageState(state, stage.id);
@@ -543,11 +757,12 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
       button('復原', 'secondary-button', 'undo'),
       button('提示', 'secondary-button', 'hint'),
       button('完成檢測', 'primary-button compact', 'check'),
-      stageState.isComplete ? button('完成實驗', 'primary-button compact', 'next') : ''
+      stageState.isComplete ? successActionButton('完成實驗', stage) : ''
     ].join('');
 
     app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
     bindTaskBack();
+    enableSuccessAction();
     const board = document.querySelector('#mirror-board');
     const piece = document.querySelector('#mirror-piece');
 
@@ -690,6 +905,10 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
             ? ['●', '■', '●', '■', '●', '■'].map(symbolMark).join('')
             : principle.id === 'symmetry'
               ? symmetryComposition({ pairs: [[26, 28, 72], [42, 30, 70], [58, 32, 68]] }, true)
+              : principle.id === 'balance'
+                ? balanceComposition('asymmetric-balanced')
+                : principle.id === 'rhythm'
+                  ? rhythmComposition([65, 48, 32, 44, 61, 75], true)
               : finalOrder.map((size, index) => dot(size, index)).join('')}
           <i aria-hidden="true"></i>
         </div>

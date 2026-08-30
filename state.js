@@ -6,6 +6,9 @@ function createStageState(stage) {
   };
 
   if (stage.stageType === 'recognize') {
+    if (stage.interactionType === 'rhythm-follow') {
+      return { ...common, nextIndex: 0, demoComplete: false, pulseIndex: null };
+    }
     return { ...common, selectedOptionId: null };
   }
 
@@ -14,12 +17,21 @@ function createStageState(stage) {
   }
 
   if (stage.stageType === 'experiment') {
-    if (stage.interactionType === 'mirror-drag') {
+    if (stage.interactionType === 'mirror-drag' || stage.interactionType === 'balance-drag') {
       return {
         ...common,
         position: { ...stage.initialState.position },
         history: []
       };
+    }
+    if (stage.interactionType === 'rhythm-drag') {
+      return { ...common, positions: stage.initialState.positions.slice(), history: [] };
+    }
+    if (stage.interactionType === 'unity-rotate') {
+      return { ...common, rotation: stage.initialState.rotation, history: [] };
+    }
+    if (stage.interactionType === 'harmony-palette') {
+      return { ...common, selectedHue: stage.initialState.selectedHue };
     }
     return {
       ...common,
