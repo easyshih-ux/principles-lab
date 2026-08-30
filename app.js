@@ -14,6 +14,7 @@ import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definition
 import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js';
+import { writeTestCheckpoint } from './student-progress-cloud.js';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -29,6 +30,7 @@ state.classroomUnlocks = loadClassroomUnlocks(classroomStorage);
 state.currentStudent = loadCurrentStudent(classroomStorage);
 state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
 let identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
+let cloudTestStatus = '';
 
 function renderIdentityGate() {
   const classes = classroomOptions();
@@ -89,8 +91,9 @@ function renderIdentityGate() {
   });
 }
 
-function attachStudentControls() {
+function attachStudentControls(route) {
   const { classId, seatNo } = state.currentStudent;
+  const isDevRoute = ['geometryPlayground', 'validatorLab', 'recognizeTemplateDev', 'discoverDev', 'experimentDev'].includes(route.name);
   app.insertAdjacentHTML('beforeend', `
     <aside class="student-identity-dock" aria-label="目前平板身分">
       <strong>${classId}｜${seatNo}</strong>
@@ -99,6 +102,7 @@ function attachStudentControls() {
         <button type="button" id="student-end-cancel">取消</button>
         <button type="button" id="student-end-confirm">結束使用</button>
       ` : '<button type="button" id="student-end">結束本次使用</button>'}
+      ${isDevRoute ? `<button type="button" id="cloud-checkpoint-test">寫入雲端測試紀錄</button><span id="cloud-checkpoint-status" role="status">${cloudTestStatus}</span>` : ''}
     </aside>`);
   document.querySelector('#student-end')?.addEventListener('click', () => { identityDraft.ending = true; renderCurrentRoute(); });
   document.querySelector('#student-end-cancel')?.addEventListener('click', () => { identityDraft.ending = false; renderCurrentRoute(); });
@@ -108,6 +112,15 @@ function attachStudentControls() {
     state.classroomGate = { activeCourseId: null, message: '', error: '' };
     identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
     renderCurrentRoute();
+  });
+  document.querySelector('#cloud-checkpoint-test')?.addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    const status = document.querySelector('#cloud-checkpoint-status');
+    status.textContent = '正在寫入雲端測試紀錄…';
+    const result = await writeTestCheckpoint(state.currentStudent);
+    cloudTestStatus = result.ok ? `已寫入 ${result.path}` : result.message;
+    status.textContent = cloudTestStatus;
+    event.currentTarget.disabled = false;
   });
 }
 
@@ -193,7 +206,7 @@ function renderCurrentRoute() {
     renderers[route.name]();
   }
 
-  attachStudentControls();
+  attachStudentControls(route);
 
   window.scrollTo(0, 0);
   focusRouteHeading();
