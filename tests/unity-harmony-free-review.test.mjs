@@ -70,16 +70,35 @@ test('harmony Q2 identifies the isolated hue with matching shapes and sizes', ()
   assert.match(stylesSource, /harmony-diagnose-success \.harmony-dot\.outlier/);
 });
 
-test('harmony Q3 uses finite candidates and accepts multiple nearby hues', () => {
+test('harmony Q3 renders six dots and exposes three visual candidates only after clicking the target', () => {
   const stage = byId('harmony-experiment');
-  assert.equal(stage.candidates.length, 4);
+  assert.equal(stage.elements.length, 6);
+  assert.equal(stage.elements[stage.targetIndex].color, 'blue');
+  assert.equal(stage.candidates.length, 3);
+  assert.equal(stage.candidates.indexOf('orange'), 1);
+  const state = createAppState(stages);
+  assert.equal(getStageState(state, stage.id).paletteOpen, false);
+  assert.match(rendererSource, /id="harmony-repair-target"/);
+  assert.match(rendererSource, /data-harmony-color/);
+  assert.match(rendererSource, /paletteOpen: true/);
+  assert.match(rendererSource, /stageState\.paletteOpen && !stageState\.isComplete/);
+  assert.doesNotMatch(rendererSource, /type="color"/);
+});
+
+test('harmony Q3 immediately validates color choices and retains retries or final color', () => {
+  const stage = byId('harmony-experiment');
   assert.equal(validateStage(stage, { selectedHue: 'red' }).isValid, true);
   assert.equal(validateStage(stage, { selectedHue: 'red-orange' }).isValid, true);
+  assert.equal(validateStage(stage, { selectedHue: 'orange' }).isValid, true);
   assert.equal(validateStage(stage, { selectedHue: 'yellow-orange' }).isValid, true);
-  assert.equal(validateStage(stage, { selectedHue: 'blue' }).isValid, false);
-  assert.match(rendererSource, /data-harmony-color/);
-  assert.doesNotMatch(rendererSource, /type="color"/);
+  assert.equal(validateStage(stage, { selectedHue: 'blue-violet' }).isValid, false);
+  assert.equal(validateStage(stage, { selectedHue: 'green' }).isValid, false);
+  assert.match(rendererSource, /const result = validateStage\(stage, \{ selectedHue \}\)/);
+  assert.match(rendererSource, /selectedHue, paletteOpen: true, feedback: stage\.feedbackByCode/);
+  assert.match(rendererSource, /selectedHue, paletteOpen: false, feedback: stage\.successFeedback/);
+  assert.match(rendererSource, /markStageComplete\(state, stage\)/);
   assert.match(stylesSource, /harmony-repair-success \.harmony-repair-dot\{animation:harmony-repair-breathe/);
+  assert.match(stylesSource, /harmony-repair-success\{animation:harmony-group-breathe/);
 });
 
 test('new free-review completion does not alter courses, Mastery, or Classroom Control', () => {

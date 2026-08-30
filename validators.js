@@ -118,6 +118,34 @@ registerValidator('hue-in-set', ({ input, stage }) => {
   return { isValid, code: isValid ? 'valid' : 'hue-not-harmonious' };
 });
 
+registerValidator('size-ratio', ({ input, stage }) => {
+  const sizes = (input.sizes ?? []).filter(Number.isFinite);
+  const ratio = sizes.length === 2 ? Math.max(...sizes) / Math.max(1, Math.min(...sizes)) : 0;
+  const isValid = ratio >= stage.validation.minRatio && Math.max(...sizes, 0) <= stage.validation.maxSize;
+  return { isValid, code: isValid ? 'valid' : 'size-difference-small' };
+});
+
+registerValidator('dominant-size', ({ input, stage }) => {
+  const ratio = Number(input.mainSize) / Number(input.supportSize);
+  const isValid = Number.isFinite(ratio) && ratio >= stage.validation.minRatio && ratio <= stage.validation.maxRatio;
+  return { isValid, code: isValid ? 'valid' : 'main-not-dominant' };
+});
+
+registerValidator('extra-selection', ({ input, stage }) => {
+  const selected = new Set(input.selectedIds ?? []);
+  if ((stage.elements ?? []).some((element) => element.core && selected.has(element.id))) return { isValid: false, code: 'core-selected' };
+  const correct = stage.validation.extraIds.filter((id) => selected.has(id)).length;
+  return { isValid: correct >= stage.validation.minCorrect, code: correct >= stage.validation.minCorrect ? 'valid' : 'extras-insufficient' };
+});
+
+registerValidator('simple-reduction', ({ input, stage }) => {
+  const remaining = new Set(input.remainingIds ?? []);
+  if (remaining.size < stage.validation.minRemaining) return { isValid: false, code: 'too-empty' };
+  if (!stage.validation.coreIds.every((id) => remaining.has(id))) return { isValid: false, code: 'core-missing' };
+  const isValid = remaining.size >= stage.validation.minRemaining && remaining.size <= stage.validation.maxRemaining;
+  return { isValid, code: isValid ? 'valid' : remaining.size > stage.validation.maxRemaining ? 'not-simple-enough' : 'too-empty' };
+});
+
 export const validatorIds = Object.freeze({
   selectedOptionEquals: 'selected-option-equals',
   selectedElementEquals: 'selected-element-equals',
@@ -128,5 +156,9 @@ export const validatorIds = Object.freeze({
   visualRhythm: 'visual-rhythm',
   visibleHeightDifference: 'visible-height-difference',
   angleNear: 'angle-near',
-  hueInSet: 'hue-in-set'
+  hueInSet: 'hue-in-set',
+  sizeRatio: 'size-ratio',
+  dominantSize: 'dominant-size',
+  extraSelection: 'extra-selection',
+  simpleReduction: 'simple-reduction'
 });

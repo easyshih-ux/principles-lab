@@ -14,10 +14,10 @@ function stage(id) {
   return stages.find((item) => item.id === id);
 }
 
-test('free-review wall opens only the seven released visual experiments', () => {
+test('free-review wall opens all ten visual experiments', () => {
   const available = principles.filter((item) => item.hasContent && item.status === 'available');
-  assert.deepEqual(available.map((item) => item.id), ['repetition', 'gradation', 'symmetry', 'balance', 'rhythm', 'unity', 'harmony']);
-  assert.equal(principles.filter((item) => !item.hasContent).length, 3);
+  assert.deepEqual(available.map((item) => item.id), ['repetition', 'gradation', 'symmetry', 'balance', 'contrast', 'rhythm', 'proportion', 'unity', 'harmony', 'simplicity']);
+  assert.equal(principles.filter((item) => !item.hasContent).length, 0);
   assert.match(rendererSource, /視覺實驗 →/);
   assert.doesNotMatch(rendererSource, /漸層示範 →/);
 });

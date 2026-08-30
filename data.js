@@ -39,8 +39,9 @@ export const principles = [
     id: 'contrast',
     name: '對比',
     shortDescription: '差異讓彼此更清楚醒目。',
-    status: 'coming-soon',
-    hasContent: false,
+    completionDescription: '差異越清楚，<br>元素彼此越容易被凸顯。',
+    status: 'available',
+    hasContent: true,
     previewSizes: [12, 38, 12, 38, 12, 38]
   },
   {
@@ -56,8 +57,9 @@ export const principles = [
     id: 'proportion',
     name: '比例',
     shortDescription: '大小關係改變整體感受。',
-    status: 'coming-soon',
-    hasContent: false,
+    completionDescription: '改變元素之間的大小關係，<br>會改變畫面的主從感受。',
+    status: 'available',
+    hasContent: true,
     previewSizes: [44, 16, 10, 26, 12, 18]
   },
   {
@@ -82,8 +84,9 @@ export const principles = [
     id: 'simplicity',
     name: '單純',
     shortDescription: '以簡潔明確的元素表現重點。',
-    status: 'coming-soon',
-    hasContent: false,
+    completionDescription: '減少不必要的元素與變化，<br>能讓重點更加清楚。',
+    status: 'available',
+    hasContent: true,
     previewSizes: [28, 28, 28]
   }
 ];
@@ -491,11 +494,49 @@ export const stages = [
   },
   {
     id:'harmony-experiment', stageType:'experiment', principleId:'harmony', interactionType:'harmony-palette',
-    title:'修復調和', prompt:'幫它換一個更能和大家互相呼應的顏色。', description:'從候選色中替換離群色，不需要完整調色工具。', progress:{current:3,total:3},
+    title:'修復調和', prompt:'幫它換一個更能和大家互相呼應的顏色。', description:'點一下藍色圓點，選一個新的顏色。', progress:{current:3,total:3},
     elements:[{color:'yellow-orange'},{color:'orange'},{color:'red-orange'},{color:'blue'},{color:'orange'},{color:'yellow-orange'}], targetIndex:3,
-    initialState:{selectedHue:'blue'}, candidates:['red','red-orange','yellow-orange','blue'], options:[], hints:['選擇靠近紅、橙色家族的顏色。'],
-    feedbackByCode:{'hue-not-harmonious':'再試一個更接近紅、橙色家族的顏色。'}, successFeedback:'調和完成！彼此接近、能互相呼應的色彩，讓畫面更協調。',
-    validatorId:'hue-in-set', validation:{acceptableHues:['red','red-orange','yellow-orange']}, allowedTools:['select-color','hint','validate'], nextStep:{type:'complete',principleId:'harmony'}
+    initialState:{selectedHue:'blue',paletteOpen:false}, candidates:['blue-violet','orange','green'], options:[], hints:['點一下藍色圓點，幫它換個顏色。'],
+    feedbackByCode:{'hue-not-harmonious':'這個顏色好像還是有點跳出來，再試一個更能和大家呼應的顏色。'}, successFeedback:'調和完成！彼此接近、能互相呼應的色彩，讓畫面更協調。',
+    validatorId:'hue-in-set', validation:{acceptableHues:['red','red-orange','orange','yellow-orange']}, allowedTools:['select-color','hint','validate'], nextStep:{type:'complete',principleId:'harmony'}
+  },
+  {
+    id:'contrast-observe',stageType:'recognize',principleId:'contrast',interactionType:'contrast-options',title:'看出對比',prompt:'哪一組元素的差異最明顯？',description:'主要比較兩個元素的大小差異。',progress:{current:1,total:3},elements:[],initialState:{selectedOptionId:null},
+    options:[{id:'a',sizes:[42,38],colors:['red','blue']},{id:'b',sizes:[64,22],colors:['blue','yellow']},{id:'c',sizes:[50,34],colors:['yellow','red']}],
+    hints:['比較每組的大元素和小元素，哪一組差距最清楚？'],feedbackByCode:{incomplete:'請先選擇一組作品。'},successFeedback:'找到了！差異越清楚，對比就越明顯。',validatorId:'selected-option-equals',validation:{correctOptionId:'b'},allowedTools:['select-option','hint','validate'],nextStep:{type:'stage',stageId:'contrast-discover'}
+  },
+  {
+    id:'contrast-discover',stageType:'recognize',principleId:'contrast',interactionType:'contrast-diagnose-options',title:'發現差異不足',prompt:'現在的差異還不明顯，你覺得問題在哪裡？',description:'兩個元素已經不同，但大小仍非常接近。',progress:{current:2,total:3},elements:[],initialState:{selectedOptionId:null},composition:{sizes:[46,42],colors:['red','blue']},
+    options:[{id:'a',label:'大小太接近'},{id:'b',label:'距離太遠'},{id:'c',label:'顏色太多'}],hints:['有不同不代表差異已經夠清楚，先比較大小。'],feedbackByCode:{incomplete:'請先選擇問題所在。'},successFeedback:'沒錯！把差異拉開，對比才會更清楚。',validatorId:'selected-option-equals',validation:{correctOptionId:'a'},allowedTools:['select-option','hint','validate'],nextStep:{type:'stage',stageId:'contrast-experiment'}
+  },
+  {
+    id:'contrast-experiment',stageType:'experiment',principleId:'contrast',interactionType:'contrast-size',title:'拉開對比',prompt:'調整大小，讓兩個元素形成更明顯的對比。',description:'只改變大小，不需要更換顏色或位置。',progress:{current:3,total:3},elements:[],initialState:{sizes:[46,42]},colors:['red','blue'],hints:['把一個放大或把另一個縮小，讓大小差異更清楚。'],feedbackByCode:{'size-difference-small':'再拉開一些大小差異，讓對比更明顯。'},successFeedback:'對比完成！差異越清楚，元素彼此越容易被凸顯。',validatorId:'size-ratio',validation:{minRatio:1.55,maxSize:76},allowedTools:['size','undo','hint','validate'],nextStep:{type:'complete',principleId:'contrast'}
+  },
+  {
+    id:'proportion-observe',stageType:'recognize',principleId:'proportion',interactionType:'proportion-options',title:'看出主角',prompt:'哪一個畫面最容易看出誰是主角？',description:'比例讓畫面建立主角與配角。',progress:{current:1,total:3},elements:[],initialState:{selectedOptionId:null},
+    options:[{id:'a',sizes:[34,32,35,33,34],colors:['red','blue','yellow','black','red']},{id:'b',sizes:[62,24,22,26,23],colors:['blue','yellow','red','black','yellow']},{id:'c',sizes:[48,43,39,46,41],colors:['yellow','red','blue','black','red']}],
+    hints:['找找哪一組只有一個清楚主角，其他元素願意當配角。'],feedbackByCode:{incomplete:'請先選擇一個畫面。'},successFeedback:'找到了！大小比例會讓畫面產生主角和配角。',validatorId:'selected-option-equals',validation:{correctOptionId:'b'},allowedTools:['select-option','hint','validate'],nextStep:{type:'stage',stageId:'proportion-discover'}
+  },
+  {
+    id:'proportion-discover',stageType:'recognize',principleId:'proportion',interactionType:'proportion-diagnose-options',title:'發現主從問題',prompt:'現在誰都很像主角，問題出在哪裡？',description:'中央與周圍元素目前大小接近。',progress:{current:2,total:3},elements:[],initialState:{selectedOptionId:null},composition:{sizes:[38,35,36,34,37],colors:['red','blue','yellow','black','blue']},
+    options:[{id:'a',label:'大小太接近'},{id:'b',label:'顏色太少'},{id:'c',label:'距離太整齊'}],hints:['如果每個元素都差不多大，誰會是主角？'],feedbackByCode:{incomplete:'請先選擇問題所在。'},successFeedback:'對了！大小太接近時，畫面的主從關係就不明顯。',validatorId:'selected-option-equals',validation:{correctOptionId:'a'},allowedTools:['select-option','hint','validate'],nextStep:{type:'stage',stageId:'proportion-experiment'}
+  },
+  {
+    id:'proportion-experiment',stageType:'experiment',principleId:'proportion',interactionType:'proportion-size',title:'讓主角出現',prompt:'調整中央元素的大小，讓它成為畫面的主角。',description:'周圍元素保持不變，只調整中央主體。',progress:{current:3,total:3},elements:[],initialState:{mainSize:34},supportSize:26,colors:['red','blue','yellow','black','blue'],hints:['讓中央元素比周圍元素大一些，但不必放到最大。'],feedbackByCode:{'main-not-dominant':'再放大中央元素一些，讓主從關係更清楚。'},successFeedback:'比例完成！改變大小關係，也會改變畫面的主從感受。',validatorId:'dominant-size',validation:{minRatio:1.45,maxRatio:2.8},allowedTools:['size','undo','hint','validate'],nextStep:{type:'complete',principleId:'proportion'}
+  },
+  {
+    id:'simplicity-observe',stageType:'recognize',principleId:'simplicity',interactionType:'simplicity-options',title:'看出單純',prompt:'哪一個畫面最簡潔，也最容易看出重點？',description:'單純不是元素最少，而是留下必要關係。',progress:{current:1,total:3},elements:[],initialState:{selectedOptionId:null},
+    options:[{id:'a',kind:'busy',colors:['red','blue','yellow','black']},{id:'b',kind:'clear',colors:['red','blue','yellow']},{id:'c',kind:'empty',colors:['red','blue']}],hints:['元素最少不一定最好；找找哪組重點清楚又仍有完整關係。'],feedbackByCode:{incomplete:'請先選擇一個畫面。'},successFeedback:'找到了！單純不是什麼都沒有，而是留下真正需要的。',validatorId:'selected-option-equals',validation:{correctOptionId:'b'},allowedTools:['select-option','hint','validate'],nextStep:{type:'stage',stageId:'simplicity-discover'}
+  },
+  {
+    id:'simplicity-discover',stageType:'discover',principleId:'simplicity',interactionType:'simplicity-multi-diagnose',title:'找出多餘元素',prompt:'哪些元素拿掉後，畫面的重點會更清楚？',description:'可以選擇多個裝飾；重要部分不會被刪除。',progress:{current:2,total:3},
+    elements:[{id:'core-1',core:true,shape:'circle',size:70,x:42,y:50,color:'red'},{id:'core-2',core:true,shape:'square',size:42,x:61,y:50,color:'blue'},{id:'support',core:true,shape:'circle',size:24,x:73,y:38,color:'yellow'},{id:'extra-1',extra:true,shape:'square',size:15,x:18,y:25,color:'black'},{id:'extra-2',extra:true,shape:'circle',size:13,x:83,y:72,color:'blue'},{id:'extra-3',extra:true,shape:'square',size:12,x:29,y:78,color:'yellow'},{id:'extra-4',extra:true,shape:'circle',size:11,x:91,y:22,color:'red'}],
+    initialState:{selectedIds:[]},options:[],hints:['小而零散、沒有支持主體的裝飾，可能是多餘元素。'],feedbackByCode:{'core-selected':'這個好像還是畫面的重要部分，再找找看其他裝飾。','extras-insufficient':'再找出一些會干擾重點的小裝飾。'},successFeedback:'少了一些干擾，畫面的重點是不是更清楚了？',validatorId:'extra-selection',validation:{extraIds:['extra-1','extra-2','extra-3','extra-4'],minCorrect:3},allowedTools:['select-element','hint','validate'],nextStep:{type:'stage',stageId:'simplicity-experiment'}
+  },
+  {
+    id:'simplicity-experiment',stageType:'experiment',principleId:'simplicity',interactionType:'simplicity-delete',title:'簡化一張作品',prompt:'試著做減法，讓這張作品的重點更清楚。',description:'點擊作品中的元素移除；保留主要骨架，再決定哪些細節值得留下。',progress:{current:3,total:3},
+    elements:[{id:'s-core-1',core:true,shape:'circle',size:96,x:39,y:50,color:'red'},{id:'s-core-2',core:true,shape:'bar',size:112,x:59,y:52,color:'blue'},{id:'s-3',shape:'square',size:38,x:67,y:37,color:'yellow'},{id:'s-4',shape:'bar-small',size:58,x:53,y:28,color:'black'},{id:'s-5',shape:'circle',size:24,x:75,y:61,color:'yellow'},{id:'s-6',shape:'square',size:25,x:48,y:68,color:'black'},{id:'s-7',shape:'circle',size:18,x:31,y:32,color:'blue'},{id:'s-8',shape:'bar-small',size:46,x:68,y:72,color:'red'},{id:'s-9',shape:'circle',size:15,x:57,y:43,color:'black'}],
+    initialState:{remainingIds:['s-core-1','s-core-2','s-3','s-4','s-5','s-6','s-7','s-8','s-9'],deletedIds:[]},options:[],hints:['先看紅色主體與藍色方向形成的骨架，再想想哪些細節拿掉後作品仍然完整。'],feedbackByCode:{'core-missing':'主要視覺骨架需要保留，請復原紅色主體或藍色方向元素。','not-simple-enough':'還可以再做一點減法，看看哪些元素其實不一定需要。','too-empty':'好像減得太多了，試著留下一些能支持主體的元素。'},successFeedback:'單純完成！減少不必要的元素與變化，能讓重點更加清楚。',validatorId:'simple-reduction',validation:{coreIds:['s-core-1','s-core-2'],minRemaining:4,maxRemaining:6,initialCount:9},allowedTools:['delete','undo','hint','validate'],nextStep:{type:'complete',principleId:'simplicity'}
   }
 ];
 

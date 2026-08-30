@@ -51,10 +51,10 @@ test('free review is always-open, state-neutral and exposes only the released vi
   assert.equal(principles.length, 10);
   assert.deepEqual(
     principles.filter(({ status, hasContent }) => status === 'available' && hasContent).map(({ id }) => id),
-    ['repetition', 'gradation', 'symmetry', 'balance', 'rhythm', 'unity', 'harmony']
+    ['repetition', 'gradation', 'symmetry', 'balance', 'contrast', 'rhythm', 'proportion', 'unity', 'harmony', 'simplicity']
   );
-  assert.equal(stages.filter(({ principleId }) => ['repetition', 'gradation', 'symmetry', 'balance', 'rhythm', 'unity', 'harmony'].includes(principleId)).length, 21);
-  assert.equal(stages.filter(({ principleId }) => !['repetition', 'gradation', 'symmetry', 'balance', 'rhythm', 'unity', 'harmony'].includes(principleId)).length, 0);
+  assert.equal(stages.filter(({ principleId }) => principles.some(({ id }) => id === principleId)).length, 30);
+  assert.equal(stages.filter(({ principleId }) => !principles.some(({ id }) => id === principleId)).length, 0);
   const route = resolveRoute('#principles', stages, principles, recognizeQuestions);
   assert.equal(route.name, 'principles');
   assert.equal(isClassroomRouteAllowed(route, createLockedClassroomUnlocks()), true);
@@ -153,7 +153,7 @@ test('accessibility and Final Phase cache markers remain scoped', () => {
   assert.doesNotMatch(indexSource, /<main[^>]*aria-live/);
   assert.match(recognizeSource, /aria-live="polite"/);
   assert.match(experimentSource, /id="experiment-feedback" aria-live="polite"/);
-  assert.ok(indexSource.includes('app.js?v=blocking-fixes-1'));
+  assert.ok(indexSource.includes('app.js?v=principles-wall-1'));
   assert.ok(indexSource.includes('classroom-control.css?v=classroom-control-1'));
   assert.ok(indexSource.includes('phase6c.css?v=final-phase-1'));
   assert.ok(appSource.includes('recognize-course.js?v=classroom-control-1'));

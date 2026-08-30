@@ -8,6 +8,7 @@ import {
   clearStageCompletion,
   getStageState,
   markPrincipleComplete,
+  markFreeReviewVisited,
   markStageComplete,
   resetPrincipleStages,
   updateStageState
@@ -81,6 +82,15 @@ function button(label, className = 'primary-button', id = '') {
   return `<button type="button" class="${className}" ${id ? `id="${id}"` : ''}>${label}</button>`;
 }
 
+export function bindSquareSizePreview(input, shape, onSize) {
+  input.addEventListener('input', () => {
+    const size = Number(input.value);
+    onSize(size);
+    shape.style.width = `${size}px`;
+    shape.style.height = `${size}px`;
+  });
+}
+
 function successActionButton(label, stage) {
   const duration = stage.stageType === 'experiment' || stage.interactionType === 'rhythm-follow' ? 1050 : 850;
   return `<button type="button" class="primary-button compact" id="next" disabled data-success-delay="${duration}">${label}</button>`;
@@ -143,11 +153,45 @@ function harmonyComposition(option, animated = false) {
   return `<span class="principle-family harmony-family ${animated ? 'harmony-recognize-success' : ''}">${option.colors.map((color, index) => `<i style="--family-color:${visualColor(color)};--delay:${index * .08}s"></i>`).join('')}</span>`;
 }
 
+function contrastComposition(option, animated = false) {
+  return `<span class="contrast-composition ${animated ? 'contrast-recognize-success' : ''}">${option.sizes.map((size, index) => `<i style="--shape-size:${size}px;--shape-color:${visualColor(option.colors[index])};--delay:${index * .08}s"></i>`).join('')}</span>`;
+}
+
+function proportionComposition(option, animated = false) {
+  return `<span class="proportion-composition ${animated ? 'proportion-recognize-success' : ''}">${option.sizes.map((size, index) => `<i class="${index === 0 ? 'main' : 'support'} shape-${index % 3}" style="--shape-size:${size}px;--shape-color:${visualColor(option.colors[index])};--delay:${index * .07}s"></i>`).join('')}</span>`;
+}
+
+function simplicityComposition(option, animated = false) {
+  const counts = { busy: 9, clear: 5, empty: 2 };
+  return `<span class="simplicity-composition ${option.kind} ${animated ? 'simplicity-recognize-success' : ''}">${Array.from({ length: counts[option.kind] }, (_, index) => `<i class="${index < 3 ? 'core' : 'extra'} shape-${index % 3}" style="--shape-color:${visualColor(option.colors[index % option.colors.length])};--delay:${index * .06}s"></i>`).join('')}</span>`;
+}
+
+function editableShape(element, extraClass = '') {
+  return `<span class="free-shape ${element.shape} ${element.core ? 'core' : ''} ${element.extra ? 'extra' : ''} ${extraClass}" style="--x:${element.x}%;--y:${element.y}%;--shape-size:${element.size}px;--shape-color:${visualColor(element.color)}"></span>`;
+}
+
 function sampleDots(principle) {
   return `
     <div class="mini-dots ${principle.id}">
       ${principle.previewSizes.map((size, index) => dot(size, index)).join('')}
     </div>`;
+}
+
+function principleCardIcon(principleId) {
+  const item = (className, extra = '') => `<i class="${className}" ${extra}></i>`;
+  const icons = {
+    repetition: `<span class="icon-row repeat-row">${['red','blue','red','blue','red'].map((color) => item(`circle ${color}`)).join('')}</span>`,
+    gradation: `<span class="icon-row gradation-row">${[10,16,23,31,41].map((size) => item('circle yellow', `style="--icon-size:${size}px"`)).join('')}</span>`,
+    symmetry: `<span class="symmetry-card-icon"><b></b>${item('square red left-outer')}${item('circle blue left-inner')}${item('circle blue right-inner')}${item('square red right-outer')}</span>`,
+    balance: `<span class="balance-card-icon">${item('circle red heavy')}${item('square blue light-one')}${item('circle yellow light-two')}${item('square black light-three')}</span>`,
+    contrast: `<span class="contrast-card-icon">${item('square black large')}${item('circle yellow small')}${item('square red accent')}</span>`,
+    rhythm: `<span class="rhythm-card-icon"><b></b>${['red','yellow','blue','red','yellow','blue'].map((color, index) => item(`circle ${color} beat-${index + 1}`)).join('')}</span>`,
+    proportion: `<span class="proportion-card-icon">${item('circle red main')}${item('square blue support-one')}${item('circle yellow support-two')}${item('square black support-three')}${item('circle blue support-four')}</span>`,
+    unity: `<span class="icon-row unity-row">${['square blue','square blue','circle blue','square blue','square blue'].map((classes) => item(classes)).join('')}</span>`,
+    harmony: `<span class="harmony-card-icon">${item('circle red')}${item('square yellow')}${item('triangle red-soft')}${item('circle yellow-soft')}${item('square black')}</span>`,
+    simplicity: `<span class="simplicity-card-icon">${item('circle red main')}${item('bar blue')}${item('square black')}${item('circle yellow')}</span>`
+  };
+  return `<span class="principle-card-icon icon-${principleId}" aria-hidden="true">${icons[principleId]}</span>`;
 }
 
 function taskFrame({ principle, stage, canvas, controls, feedback }) {
@@ -243,28 +287,24 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
   }
   function renderPrinciples() {
     app.innerHTML = `
-      <section class="wall page-shell">
-        <header class="wall-header">
-          <button class="back-link" id="home-back">← 回到入口</button>
-          <div>
+      <section class="wall principles-page page-shell">
+        <header class="wall-header principles-header">
+          <button class="principles-back" id="home-back">← 返回</button>
+          <div class="principles-heading">
             <p class="section-label">自由複習</p>
-            <h1>10 個形式原理</h1>
-            <p class="wall-review-note">自由探索形式樣本，不計分，也不影響正式三關進度。</p>
-          </div>
-          <div class="wall-course-entry">
-            <p>三關由老師依課堂進度逐一開放。</p>
-            <div class="wall-course-actions" aria-label="學習關卡">
-              ${classroomCourseCardsMarkup(state.classroomUnlocks, state.completion.courses, state.classroomGate)}
-            </div>
-            <p class="classroom-gate-message" role="status" aria-live="polite">${state.classroomGate.message}</p>
+            <h1>10 個形式原理視覺實驗</h1>
+            <p class="wall-review-note">點選任一原理，開始自由複習與練習</p>
           </div>
         </header>
-        <div class="sample-wall">
+        <div class="sample-wall principles-grid">
           ${principles.map((principle, index) => {
             const isAvailable = principle.status === 'available' && principle.hasContent;
+            const isVisited = state.freeReviewVisited[principle.id] === true;
             return `
-              <article class="sample sample-${index + 1} ${isAvailable ? 'available' : ''}">
-                <div class="sample-visual">${sampleDots(principle)}</div>
+              <article class="sample principle-card sample-${index + 1} ${isAvailable ? 'available' : ''} ${isVisited ? 'visited' : ''}" style="--card-index:'${String(index + 1).padStart(2, '0')}'">
+                <span class="card-accent" aria-hidden="true"></span>
+                ${isVisited ? '<span class="visited-mark" aria-label="已練習">✓</span>' : ''}
+                <div class="sample-visual">${principleCardIcon(principle.id)}</div>
                 <div class="sample-copy">
                   <span class="sample-no">${String(index + 1).padStart(2, '0')}</span>
                   <h2>${principle.name}</h2>
@@ -276,16 +316,17 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
               </article>`;
           }).join('')}
         </div>
+        <div class="principles-legend" aria-label="卡片狀態說明"><span><i class="visited-dot"></i>已練習過</span><span><i></i>尚未練習</span></div>
       </section>`;
 
     document.querySelector('#home-back').addEventListener('click', () => navigate('#home'));
-    bindClassroomControls(renderPrinciples);
 
     document.querySelectorAll('[data-principle-id]').forEach((element) => {
       element.addEventListener('click', () => {
         const principleId = element.dataset.principleId;
         const principleStages = getStagesForPrinciple(principleId);
         if (!principleStages.length) return;
+        markFreeReviewVisited(state, principleId);
         resetPrincipleStages(state, stages, principleId);
         navigate(stageHash(principleStages[0]));
       });
@@ -301,6 +342,10 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
   function renderRecognizeStage(stage) {
     if (stage.interactionType === 'rhythm-follow') {
       renderRhythmFollowStage(stage);
+      return;
+    }
+    if (stage.interactionType === 'contrast-diagnose-options' || stage.interactionType === 'proportion-diagnose-options') {
+      renderRelationshipDiagnoseStage(stage);
       return;
     }
     const principle = getPrinciple(stage.principleId);
@@ -334,6 +379,12 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
                         ? unityComposition(option, shouldAnimate)
                       : stage.interactionType === 'harmony-options'
                         ? harmonyComposition(option, shouldAnimate)
+                      : stage.interactionType === 'contrast-options'
+                        ? contrastComposition(option, shouldAnimate)
+                      : stage.interactionType === 'proportion-options'
+                        ? proportionComposition(option, shouldAnimate)
+                      : stage.interactionType === 'simplicity-options'
+                        ? simplicityComposition(option, shouldAnimate)
                     : option.sizes.map((size, dotIndex) => dot(size, dotIndex)).join('')}
               </span>
             </button>`;
@@ -401,6 +452,41 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     });
   }
 
+  function renderRelationshipDiagnoseStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const isContrast = stage.interactionType === 'contrast-diagnose-options';
+    const composition = isContrast
+      ? contrastComposition({ sizes: stage.composition.sizes, colors: stage.composition.colors }, stageState.isComplete)
+      : proportionComposition({ sizes: stage.composition.sizes, colors: stage.composition.colors }, stageState.isComplete);
+    const canvas = `<div class="relationship-diagnose ${isContrast ? 'contrast-diagnose' : 'proportion-diagnose'}">${composition}</div>
+      <div class="diagnose-answer-list">${stage.options.map((option) => `<button type="button" data-option-id="${option.id}" class="${stageState.selectedOptionId === option.id ? 'selected' : ''}" aria-pressed="${stageState.selectedOptionId === option.id}">${option.label}</button>`).join('')}</div>`;
+    const controls = [button('提示', 'secondary-button', 'hint'), button('完成檢測', 'primary-button compact', 'check'), stageState.isComplete ? successActionButton('下一個任務', stage) : ''].join('');
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+    document.querySelectorAll('[data-option-id]').forEach((element) => element.addEventListener('click', () => {
+      if (stageState.isComplete) return;
+      updateStageState(state, stage.id, { selectedOptionId: element.dataset.optionId, feedback: '' });
+      renderRelationshipDiagnoseStage(stage);
+    }));
+    document.querySelector('#hint').addEventListener('click', () => {
+      updateStageState(state, stage.id, { feedback: stage.hints[0] });
+      renderRelationshipDiagnoseStage(stage);
+    });
+    document.querySelector('#check').addEventListener('click', () => {
+      const result = validateStage(stage, { selectedOptionId: stageState.selectedOptionId });
+      if (result.isValid) {
+        markStageComplete(state, stage);
+        updateStageState(state, stage.id, { feedback: stage.successFeedback });
+      } else {
+        updateStageState(state, stage.id, { feedback: result.code === 'incomplete' ? stage.feedbackByCode.incomplete : stage.hints[0] });
+      }
+      renderRelationshipDiagnoseStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => navigate(nextHashForStage(stage, stages)));
+  }
+
   function renderRhythmFollowStage(stage) {
     const principle = getPrinciple(stage.principleId);
     const stageState = getStageState(state, stage.id);
@@ -448,6 +534,10 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
   }
 
   function renderDiscoverStage(stage) {
+    if (stage.interactionType === 'simplicity-multi-diagnose') {
+      renderSimplicityDiscoverStage(stage);
+      return;
+    }
     const principle = getPrinciple(stage.principleId);
     const stageState = getStageState(state, stage.id);
     const correctIndex = stage.elements.findIndex(
@@ -559,6 +649,41 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     });
   }
 
+  function renderSimplicityDiscoverStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const canvas = `<div class="single-artboard simplicity-board ${stageState.isComplete ? 'simplicity-discover-success' : ''}">${stage.elements.map((element, index) => `<button type="button" class="simplicity-select ${stageState.selectedIds.includes(element.id) ? 'selected' : ''} ${element.core ? 'core' : 'extra'}" data-simplicity-id="${element.id}" style="--x:${element.x}%;--y:${element.y}%;--shape-size:${element.size}px;--shape-color:${visualColor(element.color)};--delay:${index * .08}s" aria-pressed="${stageState.selectedIds.includes(element.id)}" aria-label="構圖元素 ${index + 1}"></button>`).join('')}</div>`;
+    const controls = [button('提示', 'secondary-button', 'hint'), button('完成檢測', 'primary-button compact', 'check'), stageState.isComplete ? successActionButton('下一個任務', stage) : ''].join('');
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+    document.querySelectorAll('[data-simplicity-id]').forEach((element) => element.addEventListener('click', () => {
+      if (stageState.isComplete) return;
+      const id = element.dataset.simplicityId;
+      const item = stage.elements.find((candidate) => candidate.id === id);
+      if (item.core) {
+        updateStageState(state, stage.id, { feedback: stage.feedbackByCode['core-selected'] });
+      } else {
+        const selectedIds = stageState.selectedIds.includes(id) ? stageState.selectedIds.filter((value) => value !== id) : [...stageState.selectedIds, id];
+        updateStageState(state, stage.id, { selectedIds, feedback: '' });
+      }
+      renderSimplicityDiscoverStage(stage);
+    }));
+    document.querySelector('#hint').addEventListener('click', () => {
+      updateStageState(state, stage.id, { feedback: stage.hints[0] });
+      renderSimplicityDiscoverStage(stage);
+    });
+    document.querySelector('#check').addEventListener('click', () => {
+      const result = validateStage(stage, { selectedIds: stageState.selectedIds });
+      if (result.isValid) {
+        markStageComplete(state, stage);
+        updateStageState(state, stage.id, { feedback: stage.successFeedback });
+      } else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
+      renderSimplicityDiscoverStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => navigate(nextHashForStage(stage, stages)));
+  }
+
   function renderExperimentStage(stage) {
     if (stage.interactionType === 'unity-rotate') {
       renderUnityRotateStage(stage);
@@ -574,6 +699,18 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
     }
     if (stage.interactionType === 'mirror-drag') {
       renderMirrorExperimentStage(stage);
+      return;
+    }
+    if (stage.interactionType === 'contrast-size') {
+      renderContrastSizeStage(stage);
+      return;
+    }
+    if (stage.interactionType === 'proportion-size') {
+      renderProportionSizeStage(stage);
+      return;
+    }
+    if (stage.interactionType === 'simplicity-delete') {
+      renderSimplicityDeleteStage(stage);
       return;
     }
     const principle = getPrinciple(stage.principleId);
@@ -672,16 +809,147 @@ export function createRenderers({ app, state, navigate, classroomStorage = null 
   }
 
   function renderHarmonyPaletteStage(stage) {
-    const principle=getPrinciple(stage.principleId); const stageState=getStageState(state,stage.id);
-    const colors=stage.elements.map((element,index)=>index===stage.targetIndex?stageState.selectedHue:element.color);
-    const canvas=`<div class="single-artboard harmony-repair-board ${stageState.isComplete?'harmony-repair-success':''}">${colors.map((color,index)=>`<span class="harmony-repair-dot" style="--x:${14+index*15}%;--family-color:${visualColor(color)};--delay:${index*.08}s"></span>`).join('')}</div>
-      <div class="harmony-palette" aria-label="候選色">${stage.candidates.map((color)=>`<button type="button" data-harmony-color="${color}" class="${stageState.selectedHue===color?'selected':''}" style="--family-color:${visualColor(color)}" aria-label="選擇${color}色"></button>`).join('')}</div>`;
-    const controls=[button('提示','secondary-button','hint'),button('完成檢測','primary-button compact','check'),stageState.isComplete?successActionButton('完成實驗',stage):''].join('');
-    app.innerHTML=taskFrame({principle,stage,canvas,controls,feedback:stageState.isComplete?`<strong>${stage.successFeedback}</strong>`:stageState.feedback});bindTaskBack();enableSuccessAction();
-    document.querySelectorAll('[data-harmony-color]').forEach((element)=>element.addEventListener('click',()=>{if(stageState.isComplete)return;updateStageState(state,stage.id,{selectedHue:element.dataset.harmonyColor,feedback:''});renderHarmonyPaletteStage(stage);}));
-    document.querySelector('#hint').addEventListener('click',()=>{updateStageState(state,stage.id,{feedback:stage.hints[0]});renderHarmonyPaletteStage(stage);});
-    document.querySelector('#check').addEventListener('click',()=>{const result=validateStage(stage,{selectedHue:stageState.selectedHue});if(result.isValid){markStageComplete(state,stage);updateStageState(state,stage.id,{feedback:stage.successFeedback});}else updateStageState(state,stage.id,{feedback:stage.feedbackByCode[result.code]});renderHarmonyPaletteStage(stage);});
-    document.querySelector('#next')?.addEventListener('click',()=>{markPrincipleComplete(state,stage.principleId);navigate(nextHashForStage(stage,stages));});
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const colors = stage.elements.map((element, index) => index === stage.targetIndex ? stageState.selectedHue : element.color);
+    const dots = colors.map((color, index) => {
+      const style = `--x:${14 + index * 15}%;--family-color:${visualColor(color)};--delay:${index * .08}s`;
+      return index === stage.targetIndex
+        ? `<button type="button" class="harmony-repair-dot harmony-repair-target" id="harmony-repair-target" style="${style}" ${stageState.isComplete ? 'disabled' : ''} aria-label="可換色的藍色圓點"></button>`
+        : `<span class="harmony-repair-dot" style="${style}"></span>`;
+    }).join('');
+    const palette = stageState.paletteOpen && !stageState.isComplete ? `<div class="harmony-palette-panel">
+      <strong>選一個更適合的顏色</strong>
+      <div class="harmony-palette" aria-label="三個候選色">${stage.candidates.map((color) => `<button type="button" data-harmony-color="${color}" class="${stageState.selectedHue === color ? 'selected' : ''}" style="--family-color:${visualColor(color)}" aria-label="候選色塊"></button>`).join('')}</div>
+    </div>` : '';
+    const canvas = `<div class="harmony-repair-interaction">
+      <div class="single-artboard harmony-repair-board ${stageState.isComplete ? 'harmony-repair-success' : ''}">${dots}</div>
+      <p class="harmony-operation-hint">點一下藍色圓點，幫它換個顏色。</p>
+      ${palette}
+    </div>`;
+    const controls = [button('提示', 'secondary-button', 'hint'), stageState.isComplete ? successActionButton('完成實驗', stage) : ''].join('');
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+
+    document.querySelector('#harmony-repair-target')?.addEventListener('click', () => {
+      updateStageState(state, stage.id, { paletteOpen: true, feedback: '' });
+      renderHarmonyPaletteStage(stage);
+    });
+    document.querySelectorAll('[data-harmony-color]').forEach((element) => element.addEventListener('click', () => {
+      const selectedHue = element.dataset.harmonyColor;
+      const result = validateStage(stage, { selectedHue });
+      if (result.isValid) {
+        markStageComplete(state, stage);
+        updateStageState(state, stage.id, { selectedHue, paletteOpen: false, feedback: stage.successFeedback });
+      } else {
+        updateStageState(state, stage.id, { selectedHue, paletteOpen: true, feedback: stage.feedbackByCode[result.code] });
+      }
+      renderHarmonyPaletteStage(stage);
+    }));
+    document.querySelector('#hint').addEventListener('click', () => {
+      updateStageState(state, stage.id, { paletteOpen: true, feedback: stage.hints[0] });
+      renderHarmonyPaletteStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => {
+      markPrincipleComplete(state, stage.principleId);
+      navigate(nextHashForStage(stage, stages));
+    });
+  }
+
+  function renderContrastSizeStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const canvas = `<div class="size-stage-layout"><div class="single-artboard contrast-work ${stageState.isComplete ? 'contrast-experiment-success' : ''}">${stageState.sizes.map((size, index) => `<i class="${size === Math.max(...stageState.sizes) ? 'larger' : 'smaller'}" data-contrast-shape="${index}" style="width:${size}px;height:${size}px;--shape-color:${visualColor(stage.colors[index])};--delay:${index * .08}s"></i>`).join('')}</div>
+      <div class="size-controls" aria-label="調整兩個元素大小">${stageState.sizes.map((size, index) => `<label>${index === 0 ? '紅色圓形' : '藍色方形'}<input type="range" min="22" max="76" value="${size}" data-contrast-size="${index}" ${stageState.isComplete ? 'disabled' : ''}></label>`).join('')}</div></div>`;
+    const controls = [button('復原', 'secondary-button', 'undo'), button('提示', 'secondary-button', 'hint'), button('完成檢測', 'primary-button compact', 'check'), stageState.isComplete ? successActionButton('完成實驗', stage) : ''].join('');
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+    document.querySelectorAll('[data-contrast-size]').forEach((input) => {
+      const index = Number(input.dataset.contrastSize);
+      const shape = document.querySelector(`[data-contrast-shape="${index}"]`);
+      bindSquareSizePreview(input, shape, (size) => {
+        const sizes = stageState.sizes.slice();
+        sizes[index] = size;
+        updateStageState(state, stage.id, { sizes, feedback: '' });
+        clearStageCompletion(state, stage.id);
+        document.querySelector('.feedback').textContent = '';
+      });
+    });
+    document.querySelector('#undo').addEventListener('click', () => {
+      updateStageState(state, stage.id, { sizes: stage.initialState.sizes.slice(), feedback: '' });
+      clearStageCompletion(state, stage.id);
+      renderContrastSizeStage(stage);
+    });
+    document.querySelector('#hint').addEventListener('click', () => { updateStageState(state, stage.id, { feedback: stage.hints[0] }); renderContrastSizeStage(stage); });
+    document.querySelector('#check').addEventListener('click', () => {
+      const result = validateStage(stage, { sizes: stageState.sizes });
+      if (result.isValid) { markStageComplete(state, stage); updateStageState(state, stage.id, { feedback: stage.successFeedback }); }
+      else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
+      renderContrastSizeStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => { markPrincipleComplete(state, stage.principleId); navigate(nextHashForStage(stage, stages)); });
+  }
+
+  function renderProportionSizeStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const sizes = [stageState.mainSize, stage.supportSize, stage.supportSize - 3, stage.supportSize + 1, stage.supportSize - 2];
+    const canvas = `<div class="size-stage-layout"><div class="single-artboard proportion-work ${stageState.isComplete ? 'proportion-experiment-success' : ''}">${proportionComposition({ sizes, colors: stage.colors })}</div>
+      <div class="size-controls single"><label>主角大小<input type="range" min="28" max="72" value="${stageState.mainSize}" id="proportion-size" ${stageState.isComplete ? 'disabled' : ''}></label></div></div>`;
+    const controls = [button('復原', 'secondary-button', 'undo'), button('提示', 'secondary-button', 'hint'), button('完成檢測', 'primary-button compact', 'check'), stageState.isComplete ? successActionButton('完成實驗', stage) : ''].join('');
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+    bindSquareSizePreview(document.querySelector('#proportion-size'), document.querySelector('.proportion-work .main'), (mainSize) => {
+      updateStageState(state, stage.id, { mainSize, feedback: '' });
+      clearStageCompletion(state, stage.id);
+      document.querySelector('.feedback').textContent = '';
+    });
+    document.querySelector('#undo').addEventListener('click', () => { updateStageState(state, stage.id, { mainSize: stage.initialState.mainSize, feedback: '' }); clearStageCompletion(state, stage.id); renderProportionSizeStage(stage); });
+    document.querySelector('#hint').addEventListener('click', () => { updateStageState(state, stage.id, { feedback: stage.hints[0] }); renderProportionSizeStage(stage); });
+    document.querySelector('#check').addEventListener('click', () => {
+      const result = validateStage(stage, { mainSize: stageState.mainSize, supportSize: stage.supportSize });
+      if (result.isValid) { markStageComplete(state, stage); updateStageState(state, stage.id, { feedback: stage.successFeedback }); }
+      else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
+      renderProportionSizeStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => { markPrincipleComplete(state, stage.principleId); navigate(nextHashForStage(stage, stages)); });
+  }
+
+  function renderSimplicityDeleteStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    const remaining = stage.elements.filter((element) => stageState.remainingIds.includes(element.id));
+    const ghosts = stageState.isComplete ? stage.elements.filter((element) => stageState.deletedIds.includes(element.id)).map((element) => editableShape(element, 'deleted-ghost')).join('') : '';
+    const canvas = `<div class="single-artboard simplicity-board simplicity-delete-board poster-composition ${stageState.isComplete ? 'simplicity-delete-success' : ''}"><span class="poster-frame" aria-hidden="true"></span>${remaining.map((element, index) => `<button type="button" class="simplicity-delete ${element.shape} ${element.core ? 'core' : 'support'}" data-delete-id="${element.id}" style="--x:${element.x}%;--y:${element.y}%;--shape-size:${element.size}px;--shape-color:${visualColor(element.color)};--delay:${index * .07}s" ${stageState.isComplete ? 'disabled' : ''} aria-label="移除作品元素 ${index + 1}"></button>`).join('')}${ghosts}</div>`;
+    const controls = [button('復原上一步', 'secondary-button', 'undo'), button('提示', 'secondary-button', 'hint'), button('完成檢測', 'primary-button compact', 'check'), stageState.isComplete ? successActionButton('完成實驗', stage) : ''].join('');
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+    document.querySelectorAll('[data-delete-id]').forEach((element) => element.addEventListener('click', () => {
+      if (stageState.isComplete) return;
+      const id = element.dataset.deleteId;
+      const remainingIds = stageState.remainingIds.filter((value) => value !== id);
+      updateStageState(state, stage.id, { remainingIds, deletedIds: [...stageState.deletedIds, id], feedback: '' });
+      renderSimplicityDeleteStage(stage);
+    }));
+    document.querySelector('#undo').addEventListener('click', () => {
+      const restored = stageState.deletedIds.at(-1);
+      if (!restored) return;
+      updateStageState(state, stage.id, { remainingIds: [...stageState.remainingIds, restored], deletedIds: stageState.deletedIds.slice(0, -1), feedback: '' });
+      clearStageCompletion(state, stage.id);
+      renderSimplicityDeleteStage(stage);
+    });
+    document.querySelector('#hint').addEventListener('click', () => { updateStageState(state, stage.id, { feedback: stage.hints[0] }); renderSimplicityDeleteStage(stage); });
+    document.querySelector('#check').addEventListener('click', () => {
+      const result = validateStage(stage, { remainingIds: stageState.remainingIds });
+      if (result.isValid) { markStageComplete(state, stage); updateStageState(state, stage.id, { feedback: stage.successFeedback }); }
+      else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
+      renderSimplicityDeleteStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => { markPrincipleComplete(state, stage.principleId); navigate(nextHashForStage(stage, stages)); });
   }
 
   function renderPositionExperimentStage(stage) {

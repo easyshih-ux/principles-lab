@@ -1,5 +1,5 @@
 import { principles, stages } from './data.js';
-import { createRenderers } from './renderers.js?v=classroom-control-1';
+import { createRenderers } from './renderers.js?v=principles-wall-1';
 import { resolveRoute } from './router.js';
 import { createAppState, setCurrentRoute } from './state.js';
 import { renderGeometryPlayground } from './geometry/playground.js';

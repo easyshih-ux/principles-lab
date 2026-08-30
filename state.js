@@ -13,6 +13,9 @@ function createStageState(stage) {
   }
 
   if (stage.stageType === 'discover') {
+    if (stage.interactionType === 'simplicity-multi-diagnose') {
+      return { ...common, selectedIds: stage.initialState.selectedIds.slice() };
+    }
     return { ...common, selectedElementId: null };
   }
 
@@ -31,7 +34,16 @@ function createStageState(stage) {
       return { ...common, rotation: stage.initialState.rotation, history: [] };
     }
     if (stage.interactionType === 'harmony-palette') {
-      return { ...common, selectedHue: stage.initialState.selectedHue };
+      return { ...common, selectedHue: stage.initialState.selectedHue, paletteOpen: stage.initialState.paletteOpen };
+    }
+    if (stage.interactionType === 'contrast-size') {
+      return { ...common, sizes: stage.initialState.sizes.slice() };
+    }
+    if (stage.interactionType === 'proportion-size') {
+      return { ...common, mainSize: stage.initialState.mainSize };
+    }
+    if (stage.interactionType === 'simplicity-delete') {
+      return { ...common, remainingIds: stage.initialState.remainingIds.slice(), deletedIds: [], history: [] };
     }
     return {
       ...common,
@@ -58,6 +70,7 @@ export function createAppState(stages, recognizeQuestions = [], discoverQuestion
       stages.map((stage) => [stage.id, createStageState(stage)])
     ),
     temporary: {},
+    freeReviewVisited: {},
     completion: {
       stages: {},
       principles: {},
@@ -74,6 +87,10 @@ export function createAppState(stages, recognizeQuestions = [], discoverQuestion
     recognizeCourse: createRecognizeCourseState(recognizeQuestions),
     discoverCourse: createDiscoverCourseState(discoverQuestions)
   };
+}
+
+export function markFreeReviewVisited(state, principleId) {
+  state.freeReviewVisited[principleId] = true;
 }
 
 export function syncCourseCompletion(state) {
