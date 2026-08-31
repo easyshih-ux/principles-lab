@@ -27,6 +27,10 @@ export function resolveRoute(hash, stages, principles, recognizeQuestions = []) 
     return { name: 'home', hash: '#home' };
   }
 
+  if (normalizedHash === '#teacher') {
+    return { name: 'teacher', hash: '#teacher' };
+  }
+
   if (normalizedHash === '#principles') {
     return { name: 'principles', hash: '#principles' };
   }

@@ -1,6 +1,6 @@
 import { principles, stages } from './data.js';
-import { createRenderers } from './renderers.js?v=v2-b2-checkpoints-1';
-import { resolveRoute } from './router.js';
+import { createRenderers } from './renderers.js?v=v2-c1-a-1';
+import { resolveRoute } from './router.js?v=v2-c1-a-1';
 import { createAppState, setCurrentRoute } from './state.js?v=v2-b2-checkpoints-1';
 import { renderGeometryPlayground } from './geometry/playground.js';
 import { renderValidatorLab } from './validator-lab.js';
@@ -15,6 +15,7 @@ import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, 
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
+import { renderTeacherPage } from './teacher-page.js?v=v2-c1-a-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -138,18 +139,27 @@ const recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate
 const discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate, onCheckpoint: saveCloudCheckpoint });
 const experimentRenderers = createExperimentCourseRenderers({ app, state, navigate, onCheckpoint: saveCloudCheckpoint });
 let activePlayground = null;
+let activeTeacherPage = null;
 
 function renderCurrentRoute() {
   activePlayground?.canvas.destroy();
   activePlayground = null;
+  activeTeacherPage?.destroy();
+  activeTeacherPage = null;
   experimentRenderers.destroy();
+  let route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
+  if (route.name === 'teacher') {
+    activeTeacherPage = renderTeacherPage({ app, navigate });
+    window.scrollTo(0, 0);
+    focusRouteHeading();
+    return;
+  }
   if (!state.currentStudent) {
     renderIdentityGate();
     window.scrollTo(0, 0);
     focusRouteHeading();
     return;
   }
-  let route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
   if (!isClassroomRouteAllowed(route, state.classroomUnlocks)) {
     const courseId = requiredUnlockForRoute(route);
     state.classroomGate.activeCourseId = courseId;

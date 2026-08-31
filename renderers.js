@@ -289,10 +289,12 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
           </div>
           <p class="classroom-gate-message home-gate-message" role="status" aria-live="polite">${state.classroomGate.message}</p>
         </div>
+        <button class="home-teacher-entry" id="enter-teacher" type="button">教師進度 →</button>
         <footer class="home-footer" aria-hidden="true"><span></span><b>FORM LAB</b><span></span></footer>
       </section>`;
     bindClassroomControls(renderHome);
     document.querySelector('#enter-free-review').addEventListener('click', () => navigate('#principles'));
+    document.querySelector('#enter-teacher').addEventListener('click', () => navigate('#teacher'));
   }
   function renderPrinciples() {
     app.innerHTML = `
