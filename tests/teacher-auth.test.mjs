@@ -7,7 +7,8 @@ import {
   createTeacherFirebaseClient,
   signInTeacherWithGoogle,
   signOutTeacher,
-  TEACHER_FIREBASE_APP_NAME
+  TEACHER_FIREBASE_APP_NAME,
+  verifyTeacherAuthorization
 } from '../teacher-auth.js';
 import { teacherPageMarkup } from '../teacher-page.js';
 
@@ -35,14 +36,24 @@ test('teacher Firebase client uses a separate named app and in-memory persistenc
     signOut() {},
     onAuthStateChanged() {}
   };
+  const teacherDb = { app: teacherApp };
+  const firestoreSdk = {
+    getFirestore: (app) => { calls.push(['getFirestore', app.name]); return teacherDb; },
+    collection() {},
+    query() {},
+    limit() {},
+    getCountFromServer() {}
+  };
 
-  const client = await createTeacherFirebaseClient(appSdk, authSdk);
+  const client = await createTeacherFirebaseClient(appSdk, authSdk, firestoreSdk);
   assert.equal(client.firebaseApp, teacherApp);
   assert.equal(client.auth, teacherAuth);
+  assert.equal(client.db, teacherDb);
   assert.deepEqual(calls[0], ['initializeApp', 'principles-lab', 'teacher']);
   assert.deepEqual(calls[1], ['getAuth', 'teacher']);
-  assert.deepEqual(calls[2], ['setPersistence', teacherAuth, authSdk.inMemoryPersistence]);
-  assert.deepEqual(calls[3], ['providerParameters', { prompt: 'select_account' }]);
+  assert.deepEqual(calls[2], ['getFirestore', 'teacher']);
+  assert.deepEqual(calls[3], ['setPersistence', teacherAuth, authSdk.inMemoryPersistence]);
+  assert.deepEqual(calls[4], ['providerParameters', { prompt: 'select_account' }]);
 });
 
 test('teacher sign-in and sign-out operate only on the teacher Auth instance', async () => {
@@ -78,23 +89,65 @@ test('#teacher resolves before student identity and renders the signed-out entra
 });
 
 test('signed-in test view exposes UID but clearly remains unauthorized', () => {
-  const markup = teacherPageMarkup({ user: { uid: 'firebase-teacher-uid', displayName: '教師', email: 'teacher@example.test' } });
+  const markup = teacherPageMarkup({ user: { uid: 'firebase-teacher-uid', displayName: '教師', email: 'teacher@example.test' }, authorization: 'unauthorized' });
   assert.match(markup, /firebase-teacher-uid/);
-  assert.match(markup, /教師身分尚未授權/);
+  assert.match(markup, /此 Google 帳號未取得教師權限/);
   assert.match(markup, /登出並返回學生首頁/);
 });
 
-test('teacher authentication module contains no Firestore progress access', () => {
-  const authSource = source('../teacher-auth.js');
-  const pageSource = source('../teacher-page.js');
-  for (const value of [authSource, pageSource]) {
-    assert.doesNotMatch(value, /getFirestore|studentProgress|collection\(|getDocs|getDoc|query\(/);
-  }
+test('teacher authorization probe uses the teacher Firestore count query and returns no documents', async () => {
+  const calls = [];
+  const client = {
+    db: { app: { name: 'teacher' } },
+    collection: (db, name) => { calls.push(['collection', db.app.name, name]); return { name }; },
+    limit: (value) => { calls.push(['limit', value]); return { value }; },
+    query: (collectionRef, constraint) => { calls.push(['query', collectionRef.name, constraint.value]); return { collectionRef, constraint }; },
+    getCountFromServer: async (probe) => { calls.push(['count', probe.collectionRef.name, probe.constraint.value]); return { data: () => ({ count: 1 }) }; }
+  };
+  assert.equal(await verifyTeacherAuthorization(client), true);
+  assert.deepEqual(calls, [
+    ['collection', 'teacher', 'studentProgress'],
+    ['limit', 1],
+    ['query', 'studentProgress', 1],
+    ['count', 'studentProgress', 1]
+  ]);
+  assert.doesNotMatch(source('../teacher-auth.js'), /getDocs|getDoc\(/);
+  assert.doesNotMatch(source('../teacher-page.js'), /studentProgress|count/);
+});
+
+test('permission-denied authorization probe maps to unauthorized and other failures remain errors', async () => {
+  const client = {
+    db: {},
+    collection: () => ({}),
+    limit: () => ({}),
+    query: () => ({}),
+    getCountFromServer: async () => { throw Object.assign(new Error('denied'), { code: 'permission-denied' }); }
+  };
+  assert.equal(await verifyTeacherAuthorization(client), false);
+  client.getCountFromServer = async () => { throw Object.assign(new Error('offline'), { code: 'unavailable' }); };
+  await assert.rejects(() => verifyTeacherAuthorization(client), /offline/);
+});
+
+test('authorized teacher markup reports authorization without adding a dashboard', () => {
+  const markup = teacherPageMarkup({ user: { uid: 'teacher-uid' }, authorization: 'authorized' });
+  assert.match(markup, /教師身分已授權/);
+  assert.doesNotMatch(markup, /班學習進度|自由練習 \d|第一關|第二關|第三關|學生名單/);
   assert.doesNotMatch(source('../app.js'), /signOut\(.*student|signOut.*Anonymous/i);
 });
 
-test('Firestore rules remain read-deny and are not teacher-aware in C1-A', () => {
+test('Firestore rules authorize only active teacher documents while teachers stays client-deny', () => {
   const rules = source('../firestore.rules');
-  assert.match(rules, /allow get, list, delete: if false/);
-  assert.doesNotMatch(rules, /teachers|isTeacher/);
+  assert.match(rules, /function isTeacher\(\)[\s\S]*request\.auth != null[\s\S]*get\([\s\S]*\/databases\/\$\(database\)\/documents\/teachers\/\$\(request\.auth\.uid\)[\s\S]*\)\.data\.active == true/);
+  assert.match(rules, /match \/teachers\/\{uid\}[\s\S]*allow read, write: if false/);
+  assert.match(rules, /match \/studentProgress\/\{studentKey\}[\s\S]*allow get, list: if isTeacher\(\)/);
+  assert.match(rules, /allow delete: if false/);
+  assert.doesNotMatch(rules, /teacherUid|teacher@example|google\.com.*isTeacher/);
+});
+
+test('student writes require the official anonymous sign-in provider claim', () => {
+  const rules = source('../firestore.rules');
+  assert.match(rules, /request\.auth\.token\.firebase\.sign_in_provider == 'anonymous'/);
+  assert.match(rules, /allow create: if isAnonymousStudent\(\)/);
+  assert.match(rules, /allow update: if isAnonymousStudent\(\)/);
+  assert.doesNotMatch(rules, /allow (create|update): if isAuthenticated\(\)/);
 });

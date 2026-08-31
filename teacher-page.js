@@ -2,8 +2,9 @@ import {
   getTeacherFirebaseClient,
   signInTeacherWithGoogle,
   signOutTeacher,
-  teacherAuthErrorMessage
-} from './teacher-auth.js';
+  teacherAuthErrorMessage,
+  verifyTeacherAuthorization
+} from './teacher-auth.js?v=v2-c1-b-1';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -14,7 +15,7 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-export function teacherPageMarkup({ user = null, ready = true, busy = false, error = '' } = {}) {
+export function teacherPageMarkup({ user = null, authorization = 'idle', ready = true, busy = false, error = '' } = {}) {
   return `
     <section class="teacher-auth-page" aria-labelledby="teacher-title">
       <div class="teacher-auth-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -28,7 +29,15 @@ export function teacherPageMarkup({ user = null, ready = true, busy = false, err
             ${user.email ? `<div><dt>Email</dt><dd>${escapeHtml(user.email)}</dd></div>` : ''}
             <div><dt>Firebase UID</dt><dd class="teacher-auth-uid">${escapeHtml(user.uid)}</dd></div>
           </dl>
-          <p class="teacher-auth-notice">教師身分尚未授權</p>
+          <p class="teacher-auth-notice ${authorization === 'authorized' ? 'is-authorized' : ''}" role="status">${authorization === 'checking'
+            ? '正在確認教師權限…'
+            : authorization === 'authorized'
+              ? '教師身分已授權'
+              : authorization === 'unauthorized'
+                ? '此 Google 帳號未取得教師權限'
+                : authorization === 'error'
+                  ? '暫時無法確認教師權限'
+                  : '尚未確認教師權限'}</p>
           <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回學生首頁</button>
         ` : `
           <p class="teacher-auth-lead">請使用授權的教師 Google 帳號登入</p>
@@ -44,7 +53,27 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
   let client = null;
   let unsubscribe = null;
   let disposed = false;
-  const pageState = { user: null, ready: false, busy: false, error: '' };
+  const pageState = { user: null, authorization: 'idle', ready: false, busy: false, error: '' };
+  let authorizationGeneration = 0;
+
+  async function applyTeacherUser(user) {
+    const generation = ++authorizationGeneration;
+    pageState.user = user;
+    pageState.error = '';
+    pageState.authorization = user ? 'checking' : 'idle';
+    render();
+    if (!user) return;
+    try {
+      const isAuthorized = await verifyTeacherAuthorization(client);
+      if (disposed || generation !== authorizationGeneration) return;
+      pageState.authorization = isAuthorized ? 'authorized' : 'unauthorized';
+    } catch (error) {
+      if (disposed || generation !== authorizationGeneration) return;
+      pageState.authorization = 'error';
+      pageState.error = '無法確認教師權限，請檢查網路後重新整理頁面。';
+    }
+    render();
+  }
 
   function render() {
     if (disposed) return;
@@ -55,8 +84,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
       pageState.error = '';
       render();
       try {
-        const credential = await signInTeacherWithGoogle(client);
-        pageState.user = credential.user;
+        await signInTeacherWithGoogle(client);
       } catch (error) {
         pageState.error = teacherAuthErrorMessage(error);
       } finally {
@@ -70,7 +98,9 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
       render();
       try {
         await signOutTeacher(client);
+        authorizationGeneration += 1;
         pageState.user = null;
+        pageState.authorization = 'idle';
         navigate('#home');
       } catch (error) {
         pageState.busy = false;
@@ -86,9 +116,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
     client = teacherClient;
     pageState.ready = true;
     unsubscribe = client.onAuthStateChanged(client.auth, (user) => {
-      pageState.user = user;
-      pageState.error = '';
-      render();
+      void applyTeacherUser(user);
     });
   }).catch((error) => {
     pageState.error = teacherAuthErrorMessage(error);

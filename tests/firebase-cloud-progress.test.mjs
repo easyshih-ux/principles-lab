@@ -108,10 +108,12 @@ test('ending local session cannot delete cloud progress', () => {
   assert.doesNotMatch(source('../student-progress-cloud.js'), /deleteDoc|deleteStudent/);
 });
 
-test('Firestore rules allow optional true-only checkpoints and preserve existing completion', () => {
+test('Firestore rules preserve progress validation while separating anonymous writes and teacher reads', () => {
   const rules = source('../firestore.rules');
-  assert.match(rules, /allow get, list, delete: if false/);
+  assert.match(rules, /allow get, list: if isTeacher\(\)/);
+  assert.match(rules, /allow delete: if false/);
   assert.match(rules, /request\.auth != null/);
+  assert.match(rules, /sign_in_provider == 'anonymous'/);
   assert.doesNotMatch(rules, /testCheckpointComplete/);
   for (const checkpoint of STUDENT_PROGRESS_CHECKPOINTS) assert.match(rules, new RegExp(checkpoint));
   assert.match(rules, /keys\(\)\.hasOnly/);

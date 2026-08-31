@@ -9,19 +9,25 @@ function firebaseModule(service) {
   return `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-${service}.js`;
 }
 
-export async function createTeacherFirebaseClient(appSdk, authSdk) {
+export async function createTeacherFirebaseClient(appSdk, authSdk, firestoreSdk) {
   const firebaseApp = appSdk.initializeApp(firebaseConfig, TEACHER_FIREBASE_APP_NAME);
   const auth = authSdk.getAuth(firebaseApp);
+  const db = firestoreSdk.getFirestore(firebaseApp);
   await authSdk.setPersistence(auth, authSdk.inMemoryPersistence);
   const googleProvider = new authSdk.GoogleAuthProvider();
   googleProvider.setCustomParameters({ prompt: 'select_account' });
   return {
     firebaseApp,
     auth,
+    db,
     googleProvider,
     signInWithPopup: authSdk.signInWithPopup,
     signOut: authSdk.signOut,
-    onAuthStateChanged: authSdk.onAuthStateChanged
+    onAuthStateChanged: authSdk.onAuthStateChanged,
+    collection: firestoreSdk.collection,
+    query: firestoreSdk.query,
+    limit: firestoreSdk.limit,
+    getCountFromServer: firestoreSdk.getCountFromServer
   };
 }
 
@@ -32,8 +38,9 @@ export async function getTeacherFirebaseClient() {
   if (!teacherClientPromise) {
     teacherClientPromise = Promise.all([
       import(firebaseModule('app')),
-      import(firebaseModule('auth'))
-    ]).then(([appSdk, authSdk]) => createTeacherFirebaseClient(appSdk, authSdk))
+      import(firebaseModule('auth')),
+      import(firebaseModule('firestore'))
+    ]).then(([appSdk, authSdk, firestoreSdk]) => createTeacherFirebaseClient(appSdk, authSdk, firestoreSdk))
       .catch((error) => {
         teacherClientPromise = null;
         throw error;
@@ -48,6 +55,18 @@ export function signInTeacherWithGoogle(client) {
 
 export function signOutTeacher(client) {
   return client.signOut(client.auth);
+}
+
+export async function verifyTeacherAuthorization(client) {
+  const progress = client.collection(client.db, 'studentProgress');
+  const probe = client.query(progress, client.limit(1));
+  try {
+    await client.getCountFromServer(probe);
+    return true;
+  } catch (error) {
+    if (error?.code === 'permission-denied') return false;
+    throw error;
+  }
 }
 
 export function teacherAuthErrorMessage(error) {

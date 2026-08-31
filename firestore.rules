@@ -2,8 +2,16 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAuthenticated() {
-      return request.auth != null;
+    function isAnonymousStudent() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function isTeacher() {
+      return request.auth != null
+        && get(
+          /databases/$(database)/documents/teachers/$(request.auth.uid)
+        ).data.active == true;
     }
 
     function hasExactProgressFields() {
@@ -50,16 +58,17 @@ service cloud.firestore {
     }
 
     match /studentProgress/{studentKey} {
-      allow get, list, delete: if false;
+      allow get, list: if isTeacher();
+      allow delete: if false;
 
-      allow create: if isAuthenticated()
+      allow create: if isAnonymousStudent()
         && hasExactProgressFields()
         && hasValidIdentity(studentKey)
         && hasAnyCheckpoint()
         && hasOnlyTrueCheckpoints()
         && hasServerTimestamp();
 
-      allow update: if isAuthenticated()
+      allow update: if isAnonymousStudent()
         && hasExactProgressFields()
         && hasValidIdentity(studentKey)
         && request.resource.data.classId == resource.data.classId
@@ -71,6 +80,10 @@ service cloud.firestore {
         && hasOnlyTrueCheckpoints()
         && preservesCompletedCheckpoints()
         && hasServerTimestamp();
+    }
+
+    match /teachers/{uid} {
+      allow read, write: if false;
     }
 
     match /{document=**} {
