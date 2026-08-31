@@ -247,6 +247,36 @@ test('wrong answers do not advance, correct answers wait for the next button', (
   assert.equal(state.currentIndex,0);assert.equal(state.questions[question.id].completed,true);assert.equal(advanceDiscoverCourse(state,discoverQuestions),true);assert.equal(state.currentIndex,1);
 });
 
+test('repetition advances after three wrong answers, a correct answer, and next', () => {
+  const state = createDiscoverCourseState(discoverQuestions);
+  const repetition = byId['discover-repetition-single'];
+  const following = byId['discover-symmetry-shape'];
+  startDiscoverCourse(state, discoverQuestions, 7);
+  state.questionOrder = [repetition.id, following.id];
+  state.generatedQuestions = {};
+
+  for (const wrongAnswer of ['r1-1', 'r1-2', 'r1-3']) {
+    setDiscoverSelection(state, repetition.id, wrongAnswer);
+    assert.equal(
+      applyDiscoverResult(state, repetition, validateDiscoverQuestion(repetition, wrongAnswer)),
+      false
+    );
+  }
+
+  assert.equal(state.questions[repetition.id].attempts, 3);
+  assert.equal(state.questions[repetition.id].completed, false);
+
+  setDiscoverSelection(state, repetition.id, repetition.correctAnswer);
+  assert.equal(
+    applyDiscoverResult(state, repetition, validateDiscoverQuestion(repetition, repetition.correctAnswer)),
+    true
+  );
+  assert.equal(state.questions[repetition.id].completed, true);
+  assert.equal(advanceDiscoverCourse(state, discoverQuestions, { markComplete: false }), true);
+  assert.equal(state.currentIndex, 1);
+  assert.equal(currentDiscoverQuestion(state, discoverQuestions).id, following.id);
+});
+
 test('all formal discover questions progress through positions 12 13 and 14 before only the true final question completes', () => {
   const state = createDiscoverCourseState(discoverQuestions);
   startDiscoverCourse(state, discoverQuestions, 20260828);
@@ -274,6 +304,8 @@ test('discover renderer derives progress and final action from the session quest
   assert.match(source, /const\s+isLast\s*=\s*course\.currentIndex\s*===\s*total\s*-\s*1/);
   assert.doesNotMatch(source, /currentIndex===15/);
   assert.doesNotMatch(source, /padStart\(2,'0'\)\} \/ 16/);
+  assert.match(source, /if \(isLast\)[\s\S]*?navigate\('#level\/discover\/complete'\)[\s\S]*?question\(\);/);
+  assert.doesNotMatch(source, /navigate\(isLast \? '#level\/discover\/complete' : '#level\/discover\/question'\)/);
 });
 test('Q15 prerequisite is preserved by order and completion flags track Q13/Q14', () => {
   const state=createDiscoverCourseState(discoverQuestions);startDiscoverCourse(state,discoverQuestions,2026);
