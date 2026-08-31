@@ -5,6 +5,10 @@ import {
   teacherAuthErrorMessage,
   verifyTeacherAuthorization
 } from './teacher-auth.js?v=v2-c1-b-1';
+import {
+  createTeacherDashboardController,
+  TEACHER_PROGRESS_ITEMS
+} from './teacher-progress-dashboard.js?v=v2-c2-a-1';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -15,12 +19,42 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-export function teacherPageMarkup({ user = null, authorization = 'idle', ready = true, busy = false, error = '' } = {}) {
+function teacherDashboardMarkup(dashboard) {
+  const summary = dashboard.summary;
+  const validCount = summary?.validCount ?? 0;
+  return `
+    <section class="teacher-dashboard" aria-labelledby="teacher-dashboard-title">
+      <div class="teacher-dashboard-heading">
+        <h2 id="teacher-dashboard-title">班級學習進度</h2>
+        <label>選擇班級
+          <select id="teacher-class-select" ${dashboard.status === 'loading' ? 'disabled' : ''}>
+            ${dashboard.classrooms.map(({ id }) => `<option value="${escapeHtml(id)}" ${id === dashboard.selectedClassId ? 'selected' : ''}>${escapeHtml(id)} 班</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <p class="teacher-dashboard-state" role="status">${dashboard.status === 'loading'
+        ? '正在讀取班級進度…'
+        : dashboard.status === 'permission-denied' || dashboard.status === 'error'
+          ? escapeHtml(dashboard.error)
+          : `${escapeHtml(dashboard.selectedClassId)} 班學習進度`}</p>
+      ${dashboard.status === 'permission-denied' ? '' : `
+        <div class="teacher-progress-grid">
+          ${TEACHER_PROGRESS_ITEMS.map(({ key, label }, index) => `
+            <article class="teacher-progress-card teacher-progress-card-${index + 1}">
+              <h3>${label}</h3>
+              <p><strong>${summary?.counts?.[key] ?? 0}</strong><span>/ ${validCount}</span></p>
+            </article>`).join('')}
+        </div>`}
+      <button class="teacher-refresh-button" id="teacher-dashboard-refresh" type="button" ${dashboard.status === 'loading' ? 'disabled' : ''}>更新進度</button>
+    </section>`;
+}
+
+export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, ready = true, busy = false, error = '' } = {}) {
   return `
     <section class="teacher-auth-page" aria-labelledby="teacher-title">
       <div class="teacher-auth-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="teacher-auth-panel">
-        <p class="section-label">TEACHER · C1-A</p>
+        <p class="section-label">TEACHER · C2-A</p>
         <h1 id="teacher-title">教師進度</h1>
         ${user ? `
           <p class="teacher-auth-status">Google 登入成功</p>
@@ -38,6 +72,7 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', ready =
                 : authorization === 'error'
                   ? '暫時無法確認教師權限'
                   : '尚未確認教師權限'}</p>
+          ${authorization === 'authorized' && dashboard ? teacherDashboardMarkup(dashboard) : ''}
           <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回學生首頁</button>
         ` : `
           <p class="teacher-auth-lead">請使用授權的教師 Google 帳號登入</p>
@@ -53,12 +88,16 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
   let client = null;
   let unsubscribe = null;
   let disposed = false;
-  const pageState = { user: null, authorization: 'idle', ready: false, busy: false, error: '' };
+  const pageState = { user: null, authorization: 'idle', dashboard: null, ready: false, busy: false, error: '' };
   let authorizationGeneration = 0;
+  let dashboardController = null;
 
   async function applyTeacherUser(user) {
     const generation = ++authorizationGeneration;
     pageState.user = user;
+    dashboardController?.destroy();
+    dashboardController = null;
+    pageState.dashboard = null;
     pageState.error = '';
     pageState.authorization = user ? 'checking' : 'idle';
     render();
@@ -67,6 +106,17 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
       const isAuthorized = await verifyTeacherAuthorization(client);
       if (disposed || generation !== authorizationGeneration) return;
       pageState.authorization = isAuthorized ? 'authorized' : 'unauthorized';
+      if (isAuthorized) {
+        dashboardController = createTeacherDashboardController({
+          client,
+          onChange: (dashboard) => {
+            pageState.dashboard = dashboard;
+            render();
+          }
+        });
+        pageState.dashboard = dashboardController.getState();
+        void dashboardController.refresh();
+      }
     } catch (error) {
       if (disposed || generation !== authorizationGeneration) return;
       pageState.authorization = 'error';
@@ -101,12 +151,21 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
         authorizationGeneration += 1;
         pageState.user = null;
         pageState.authorization = 'idle';
+        dashboardController?.destroy();
+        dashboardController = null;
+        pageState.dashboard = null;
         navigate('#home');
       } catch (error) {
         pageState.busy = false;
         pageState.error = teacherAuthErrorMessage(error);
         render();
       }
+    });
+    app.querySelector('#teacher-class-select')?.addEventListener('change', (event) => {
+      void dashboardController?.selectClass(event.currentTarget.value);
+    });
+    app.querySelector('#teacher-dashboard-refresh')?.addEventListener('click', () => {
+      void dashboardController?.refresh();
     });
   }
 
@@ -126,6 +185,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
   return {
     destroy() {
       disposed = true;
+      dashboardController?.destroy();
       unsubscribe?.();
     }
   };

@@ -111,8 +111,13 @@ test('teacher authorization probe uses the teacher Firestore count query and ret
     ['query', 'studentProgress', 1],
     ['count', 'studentProgress', 1]
   ]);
-  assert.doesNotMatch(source('../teacher-auth.js'), /getDocs|getDoc\(/);
-  assert.doesNotMatch(source('../teacher-page.js'), /studentProgress|count/);
+  const authSource = source('../teacher-auth.js');
+  const authorizationProbeSource = authSource.slice(
+    authSource.indexOf('export async function verifyTeacherAuthorization'),
+    authSource.indexOf('export function teacherAuthErrorMessage')
+  );
+  assert.doesNotMatch(authorizationProbeSource, /getDocs|getDoc\(/);
+  assert.doesNotMatch(source('../teacher-page.js'), /collection\(|getDocs\(|studentProgress/);
 });
 
 test('permission-denied authorization probe maps to unauthorized and other failures remain errors', async () => {
@@ -128,10 +133,10 @@ test('permission-denied authorization probe maps to unauthorized and other failu
   await assert.rejects(() => verifyTeacherAuthorization(client), /offline/);
 });
 
-test('authorized teacher markup reports authorization without adding a dashboard', () => {
+test('authorized teacher markup waits for Dashboard state after reporting authorization', () => {
   const markup = teacherPageMarkup({ user: { uid: 'teacher-uid' }, authorization: 'authorized' });
   assert.match(markup, /教師身分已授權/);
-  assert.doesNotMatch(markup, /班學習進度|自由練習 \d|第一關|第二關|第三關|學生名單/);
+  assert.doesNotMatch(markup, /學生名單|排名|百分比/);
   assert.doesNotMatch(source('../app.js'), /signOut\(.*student|signOut.*Anonymous/i);
 });
 

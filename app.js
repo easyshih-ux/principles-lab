@@ -15,7 +15,7 @@ import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, 
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
-import { renderTeacherPage } from './teacher-page.js?v=v2-c1-b-1';
+import { renderTeacherPage } from './teacher-page.js?v=v2-c2-a-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {

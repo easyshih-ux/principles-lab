@@ -26,6 +26,8 @@ export async function createTeacherFirebaseClient(appSdk, authSdk, firestoreSdk)
     onAuthStateChanged: authSdk.onAuthStateChanged,
     collection: firestoreSdk.collection,
     query: firestoreSdk.query,
+    where: firestoreSdk.where,
+    getDocs: firestoreSdk.getDocs,
     limit: firestoreSdk.limit,
     getCountFromServer: firestoreSdk.getCountFromServer
   };
