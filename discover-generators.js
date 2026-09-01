@@ -100,7 +100,7 @@ function generateGradationLightness(random) {
     throw new Error('Invalid lightness gradation fixture.');
   }
   const shape = pick(['square', 'circle', 'triangle'], random);
-  const hue = pick(['red', 'green', 'blue', 'purple'], random);
+  const hue = pick(['red', 'green', 'blue', 'violet'], random);
   const elements = actual.map((lightness, index) => element(
     index === correctIndex ? 'gl-wrong' : `gl-${index + 1}`,
     shape,
