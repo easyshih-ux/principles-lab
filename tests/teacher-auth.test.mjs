@@ -10,7 +10,7 @@ import {
   TEACHER_FIREBASE_APP_NAME,
   verifyTeacherAuthorization
 } from '../teacher-auth.js';
-import { teacherPageMarkup } from '../teacher-page.js';
+import { copyTeacherUid, teacherPageMarkup } from '../teacher-page.js';
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
@@ -86,13 +86,29 @@ test('#teacher resolves before student identity and renders the signed-out entra
   assert.match(markup, /請使用授權的教師 Google 帳號登入/);
   assert.match(markup, /使用 Google 帳號登入/);
   assert.match(markup, /返回網站入口/);
+  assert.doesNotMatch(markup, /教師 UID|teacher-copy-uid/);
 });
 
-test('signed-in test view exposes UID but clearly remains unauthorized', () => {
+test('signed-in unauthorized view exposes the current UID and copy control', () => {
   const markup = teacherPageMarkup({ user: { uid: 'firebase-teacher-uid', displayName: '教師', email: 'teacher@example.test' }, authorization: 'unauthorized' });
   assert.match(markup, /firebase-teacher-uid/);
   assert.match(markup, /此 Google 帳號未取得教師權限/);
+  assert.match(markup, /教師 UID/);
+  assert.match(markup, /id="teacher-copy-uid"[^>]*>複製 UID/);
   assert.match(markup, /登出並返回網站入口/);
+});
+
+test('authorized teacher view does not expose the unauthorized UID block', () => {
+  const markup = teacherPageMarkup({ user: { uid: 'authorized-teacher-uid' }, authorization: 'authorized' });
+  assert.doesNotMatch(markup, /authorized-teacher-uid|教師 UID|teacher-copy-uid/);
+});
+
+test('copyTeacherUid copies the current teacher UID and isolates clipboard failures', async () => {
+  const writes = [];
+  assert.equal(await copyTeacherUid('current-teacher-uid', { writeText: async (value) => writes.push(value) }), true);
+  assert.deepEqual(writes, ['current-teacher-uid']);
+  assert.equal(await copyTeacherUid('current-teacher-uid', { writeText: async () => { throw new Error('blocked'); } }), false);
+  assert.equal(await copyTeacherUid('current-teacher-uid', null), false);
 });
 
 test('teacher authorization probe uses the teacher Firestore count query and returns no documents', async () => {
@@ -136,6 +152,7 @@ test('permission-denied authorization probe maps to unauthorized and other failu
 test('authorized teacher markup waits for Dashboard state after reporting authorization', () => {
   const markup = teacherPageMarkup({ user: { uid: 'teacher-uid' }, authorization: 'authorized' });
   assert.match(markup, /教師身分已授權/);
+  assert.doesNotMatch(markup, /教師 UID|teacher-copy-uid/);
   assert.doesNotMatch(markup, /學生名單|排名|百分比/);
   assert.doesNotMatch(source('../app.js'), /signOut\(.*student|signOut.*Anonymous/i);
 });

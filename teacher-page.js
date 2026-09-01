@@ -49,7 +49,17 @@ function teacherDashboardMarkup(dashboard) {
     </section>`;
 }
 
-export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, ready = true, busy = false, error = '' } = {}) {
+export async function copyTeacherUid(uid, clipboard = globalThis.navigator?.clipboard) {
+  if (!uid || !clipboard?.writeText) return false;
+  try {
+    await clipboard.writeText(uid);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, ready = true, busy = false, error = '', copyStatus = '' } = {}) {
   return `
     <section class="teacher-auth-page" aria-labelledby="teacher-title">
       <div class="teacher-auth-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -61,7 +71,6 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
           <dl class="teacher-auth-identity">
             ${user.displayName ? `<div><dt>名稱</dt><dd>${escapeHtml(user.displayName)}</dd></div>` : ''}
             ${user.email ? `<div><dt>Email</dt><dd>${escapeHtml(user.email)}</dd></div>` : ''}
-            <div><dt>Firebase UID</dt><dd class="teacher-auth-uid">${escapeHtml(user.uid)}</dd></div>
           </dl>
           <p class="teacher-auth-notice ${authorization === 'authorized' ? 'is-authorized' : ''}" role="status">${authorization === 'checking'
             ? '正在確認教師權限…'
@@ -72,6 +81,13 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
                 : authorization === 'error'
                   ? '暫時無法確認教師權限'
                   : '尚未確認教師權限'}</p>
+          ${authorization === 'unauthorized' ? `
+            <section class="teacher-uid-copy" aria-labelledby="teacher-uid-label">
+              <h2 id="teacher-uid-label">教師 UID</h2>
+              <code>${escapeHtml(user.uid)}</code>
+              <button class="secondary-button" id="teacher-copy-uid" type="button">複製 UID</button>
+              <p id="teacher-copy-status" role="status">${escapeHtml(copyStatus)}</p>
+            </section>` : ''}
           ${authorization === 'authorized' && dashboard ? teacherDashboardMarkup(dashboard) : ''}
           <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回網站入口</button>
         ` : `
@@ -88,7 +104,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
   let client = null;
   let unsubscribe = null;
   let disposed = false;
-  const pageState = { user: null, authorization: 'idle', dashboard: null, ready: false, busy: false, error: '' };
+  const pageState = { user: null, authorization: 'idle', dashboard: null, ready: false, busy: false, error: '', copyStatus: '' };
   let authorizationGeneration = 0;
   let dashboardController = null;
 
@@ -99,6 +115,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
     dashboardController = null;
     pageState.dashboard = null;
     pageState.error = '';
+    pageState.copyStatus = '';
     pageState.authorization = user ? 'checking' : 'idle';
     render();
     if (!user) return;
@@ -160,6 +177,12 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
         pageState.error = teacherAuthErrorMessage(error);
         render();
       }
+    });
+    app.querySelector('#teacher-copy-uid')?.addEventListener('click', async () => {
+      const copied = await copyTeacherUid(pageState.user?.uid);
+      if (disposed || pageState.authorization !== 'unauthorized') return;
+      pageState.copyStatus = copied ? '已複製 UID' : '無法複製，請手動選取 UID';
+      render();
     });
     app.querySelector('#teacher-class-select')?.addEventListener('change', (event) => {
       void dashboardController?.selectClass(event.currentTarget.value);
