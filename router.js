@@ -21,7 +21,15 @@ export function recognizeQuestionHash(questionId) {
 }
 
 export function resolveRoute(hash, stages, principles, recognizeQuestions = []) {
-  const normalizedHash = hash || '#home';
+  const normalizedHash = hash || '#entry';
+
+  if (normalizedHash === '#entry') {
+    return { name: 'entry', hash: '#entry' };
+  }
+
+  if (normalizedHash === '#student') {
+    return { name: 'studentEntry', hash: '#student' };
+  }
 
   if (normalizedHash === '#home') {
     return { name: 'home', hash: '#home' };

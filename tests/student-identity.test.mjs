@@ -87,3 +87,14 @@ test('app identity gate creates storage only from explicit confirmation and rese
   assert.doesNotMatch(appSource, /#identity-next[\s\S]{0,240}saveCurrentStudent/);
   assert.match(appSource, /#student-end-confirm[\s\S]*clearCurrentStudent[\s\S]*resetClassroomUnlocks/);
 });
+
+test('identity gate can return to entry without creating or changing student identity', () => {
+  const appSource = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(appSource, /id="identity-entry-back"[^>]*>← 返回入口<\/button>/);
+  assert.match(appSource, /#identity-entry-back[\s\S]{0,160}navigate\('#entry'\)/);
+  const backHandler = appSource.slice(
+    appSource.indexOf("document.querySelector('#identity-entry-back')"),
+    appSource.indexOf("document.querySelector('#identity-class')")
+  );
+  assert.doesNotMatch(backHandler, /saveCurrentStudent|clearCurrentStudent|createStudentIdentity|identityDraft\s*=/);
+});

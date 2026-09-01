@@ -85,14 +85,14 @@ test('#teacher resolves before student identity and renders the signed-out entra
   assert.match(markup, /教師進度/);
   assert.match(markup, /請使用授權的教師 Google 帳號登入/);
   assert.match(markup, /使用 Google 帳號登入/);
-  assert.match(markup, /返回學生首頁/);
+  assert.match(markup, /返回網站入口/);
 });
 
 test('signed-in test view exposes UID but clearly remains unauthorized', () => {
   const markup = teacherPageMarkup({ user: { uid: 'firebase-teacher-uid', displayName: '教師', email: 'teacher@example.test' }, authorization: 'unauthorized' });
   assert.match(markup, /firebase-teacher-uid/);
   assert.match(markup, /此 Google 帳號未取得教師權限/);
-  assert.match(markup, /登出並返回學生首頁/);
+  assert.match(markup, /登出並返回網站入口/);
 });
 
 test('teacher authorization probe uses the teacher Firestore count query and returns no documents', async () => {

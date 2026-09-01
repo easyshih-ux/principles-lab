@@ -1,6 +1,6 @@
 import { principles, stages } from './data.js';
 import { createRenderers } from './renderers.js?v=v2-c1-a-1';
-import { resolveRoute } from './router.js?v=v2-c1-a-1';
+import { resolveRoute } from './router.js?v=v2-entry-1';
 import { createAppState, setCurrentRoute } from './state.js?v=v2-b2-checkpoints-1';
 import { renderGeometryPlayground } from './geometry/playground.js';
 import { renderValidatorLab } from './validator-lab.js';
@@ -16,6 +16,7 @@ import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-con
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
 import { renderTeacherPage } from './teacher-page.js?v=v2-c2-a-1';
+import { renderSiteEntry } from './site-entry.js?v=v2-entry-2';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
@@ -43,6 +44,7 @@ function renderIdentityGate() {
   const seats = seatOptions(identityDraft.classId);
   app.innerHTML = `
     <section class="identity-gate page-shell" aria-labelledby="identity-title">
+      <button class="identity-entry-back" id="identity-entry-back" type="button">← 返回入口</button>
       <div class="identity-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="identity-panel">
         <p class="section-label">V2 · DEMO 班級資料</p>
@@ -73,6 +75,7 @@ function renderIdentityGate() {
       </div>
     </section>`;
 
+  document.querySelector('#identity-entry-back')?.addEventListener('click', () => navigate('#entry'));
   document.querySelector('#identity-class')?.addEventListener('change', (event) => {
     identityDraft = { classId: event.target.value, seatNo: '', confirming: false, ending: false };
     renderIdentityGate();
@@ -148,6 +151,12 @@ function renderCurrentRoute() {
   activeTeacherPage = null;
   experimentRenderers.destroy();
   let route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
+  if (route.name === 'entry') {
+    renderSiteEntry({ app, navigate });
+    window.scrollTo(0, 0);
+    focusRouteHeading();
+    return;
+  }
   if (route.name === 'teacher') {
     activeTeacherPage = renderTeacherPage({ app, navigate });
     window.scrollTo(0, 0);
@@ -155,10 +164,15 @@ function renderCurrentRoute() {
     return;
   }
   if (!state.currentStudent) {
-    renderIdentityGate();
+    if (route.name === 'studentEntry') renderIdentityGate();
+    else renderSiteEntry({ app, navigate });
     window.scrollTo(0, 0);
     focusRouteHeading();
     return;
+  }
+  if (route.name === 'studentEntry') {
+    history.replaceState(null, '', '#home');
+    route = resolveRoute('#home', stages, principles, recognizeQuestions);
   }
   if (!isClassroomRouteAllowed(route, state.classroomUnlocks)) {
     const courseId = requiredUnlockForRoute(route);

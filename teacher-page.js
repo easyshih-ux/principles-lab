@@ -73,11 +73,11 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
                   ? '暫時無法確認教師權限'
                   : '尚未確認教師權限'}</p>
           ${authorization === 'authorized' && dashboard ? teacherDashboardMarkup(dashboard) : ''}
-          <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回學生首頁</button>
+          <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回網站入口</button>
         ` : `
           <p class="teacher-auth-lead">請使用授權的教師 Google 帳號登入</p>
           <button class="primary-button" id="teacher-google-sign-in" type="button" ${busy || !ready ? 'disabled' : ''}>${busy ? '正在開啟登入…' : !ready ? '正在準備登入…' : '使用 Google 帳號登入'}</button>
-          <button class="teacher-home-link" id="teacher-home" type="button">返回學生首頁</button>
+          <button class="teacher-home-link" id="teacher-home" type="button">返回網站入口</button>
         `}
         <p class="teacher-auth-error" role="alert">${escapeHtml(error)}</p>
       </div>
@@ -128,7 +128,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
   function render() {
     if (disposed) return;
     app.innerHTML = teacherPageMarkup(pageState);
-    app.querySelector('#teacher-home')?.addEventListener('click', () => navigate('#home'));
+    app.querySelector('#teacher-home')?.addEventListener('click', () => navigate('#entry'));
     app.querySelector('#teacher-google-sign-in')?.addEventListener('click', async () => {
       pageState.busy = true;
       pageState.error = '';
@@ -154,7 +154,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
         dashboardController?.destroy();
         dashboardController = null;
         pageState.dashboard = null;
-        navigate('#home');
+        navigate('#entry');
       } catch (error) {
         pageState.busy = false;
         pageState.error = teacherAuthErrorMessage(error);
