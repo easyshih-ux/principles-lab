@@ -194,6 +194,8 @@ test('seat detail toggles only rerender local UI and never refresh Firestore', (
 
 test('Dashboard uses compact horizontal rows with full-width details and a narrow-screen stack', () => {
   const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
   assert.match(css, /teacher-progress-grid\{[^}]*grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css, /teacher-progress-card\{[^}]*display:grid[^}]*grid-template-columns:minmax\(125px,1fr\) auto minmax\(175px,auto\)/);
   assert.match(css, /teacher-progress-card::before\{[^}]*width:7px[^}]*height:100%/);
@@ -201,6 +203,9 @@ test('Dashboard uses compact horizontal rows with full-width details and a narro
   assert.match(css, /teacher-seat-chips\{[^}]*flex-wrap:wrap[^}]*min-width:0/);
   assert.match(css, /@media\(max-width:620px\)[\s\S]*teacher-progress-card\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/);
   assert.doesNotMatch(css, /teacher-progress-grid\{[^}]*repeat\(2/);
+  assert.match(index, /styles\.css\?v=v2-c2-layout-1/);
+  assert.match(index, /app\.js\?v=v2-c2-layout-1/);
+  assert.match(app, /teacher-page\.js\?v=v2-c2-layout-1/);
 });
 
 test('permission-denied Dashboard hides progress cards and reports insufficient permission', () => {
