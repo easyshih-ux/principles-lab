@@ -16,15 +16,16 @@ export function emptyTeacherProgressSummary(classroom) {
   return {
     classId: classroom.id,
     validCount: classroom.validSeatNumbers.length,
-    counts: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, 0]))
+    counts: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, 0])),
+    completedSeats: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, []]))
   };
 }
 
 export function summarizeTeacherProgress(classroom, records = []) {
   const summary = emptyTeacherProgressSummary(classroom);
   const validSeats = new Set(classroom.validSeatNumbers.map(Number));
-  const completedStudentKeys = Object.fromEntries(
-    STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, new Set()])
+  const completedStudents = Object.fromEntries(
+    STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, new Map()])
   );
 
   for (const record of records) {
@@ -33,11 +34,15 @@ export function summarizeTeacherProgress(classroom, records = []) {
     const studentKey = String(record?.studentKey ?? '');
     if (classId !== classroom.id || !validSeats.has(seatNo) || !studentKey) continue;
     for (const checkpoint of STUDENT_PROGRESS_CHECKPOINTS) {
-      if (record[checkpoint] === true) completedStudentKeys[checkpoint].add(studentKey);
+      if (record[checkpoint] === true && !completedStudents[checkpoint].has(studentKey)) {
+        completedStudents[checkpoint].set(studentKey, seatNo);
+      }
     }
   }
   for (const checkpoint of STUDENT_PROGRESS_CHECKPOINTS) {
-    summary.counts[checkpoint] = completedStudentKeys[checkpoint].size;
+    summary.completedSeats[checkpoint] = [...completedStudents[checkpoint].values()]
+      .sort((left, right) => left - right);
+    summary.counts[checkpoint] = summary.completedSeats[checkpoint].length;
   }
   return summary;
 }

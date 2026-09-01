@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   activeTeacherClassrooms,
@@ -39,11 +40,18 @@ test('summary counts only valid seats, true checkpoints, and each studentKey onc
     level2Complete: 1,
     level3Complete: 2
   });
+  assert.deepEqual(summary.completedSeats, {
+    freeReviewComplete: [1, 2],
+    level1Complete: [1, 2],
+    level2Complete: [2],
+    level3Complete: [2, 5]
+  });
 });
 
 test('empty classroom keeps zero counts with the configured valid denominator', () => {
   const summary = summarizeTeacherProgress(classrooms[0], []);
   assert.deepEqual(Object.values(summary.counts), [0, 0, 0, 0]);
+  assert.deepEqual(Object.values(summary.completedSeats), [[], [], [], []]);
   assert.equal(summary.validCount, 4);
 });
 
@@ -63,6 +71,7 @@ test('Firestore loader queries studentProgress by classId and retains only progr
   };
   const summary = await loadTeacherClassProgress(client, classrooms[0]);
   assert.equal(summary.counts.level1Complete, 1);
+  assert.deepEqual(summary.completedSeats.level1Complete, [1]);
   assert.deepEqual(calls, [
     ['collection', 'teacher', 'studentProgress'],
     ['where', 'classId', '==', '701'],
@@ -85,6 +94,29 @@ test('switching class and refreshing each issue a new query for the current clas
   await controller.refresh();
   assert.deepEqual(calls, ['701', '702', '702']);
   assert.equal(controller.getState().selectedClassId, '702');
+});
+
+test('refresh replaces completion counts and completed seats from the same result', async () => {
+  let loadCount = 0;
+  const controller = createTeacherDashboardController({
+    client: {}, classrooms,
+    loadProgress: async (_client, classroom) => {
+      loadCount += 1;
+      return summarizeTeacherProgress(classroom, loadCount === 1
+        ? [{ classId: '701', seatNo: 1, studentKey: '701-1', level1Complete: true }]
+        : [
+            { classId: '701', seatNo: 1, studentKey: '701-1', level1Complete: true },
+            { classId: '701', seatNo: 5, studentKey: '701-5', level1Complete: true }
+          ]);
+    }
+  });
+  await controller.refresh();
+  assert.equal(controller.getState().summary.counts.level1Complete, 1);
+  assert.deepEqual(controller.getState().summary.completedSeats.level1Complete, [1]);
+  await controller.refresh();
+  assert.equal(controller.getState().summary.counts.level1Complete, 2);
+  assert.deepEqual(controller.getState().summary.completedSeats.level1Complete, [1, 5]);
+  assert.equal(loadCount, 2);
 });
 
 test('controller exposes permission-denied and network error states for retry', async () => {
@@ -119,7 +151,45 @@ test('authorized Dashboard markup shows counts without percentages or student de
   assert.match(markup, /701 班學習進度/);
   assert.match(markup, /自由練習[\s\S]*<strong>1<\/strong><span>\/ 4<\/span>/);
   assert.match(markup, /更新進度/);
+  assert.equal((markup.match(/查看已完成座號 ▾/g) ?? []).length, 4);
+  assert.doesNotMatch(markup, /teacher-seat-chips/);
   assert.doesNotMatch(markup, /%|學生名單|排名|成績/);
+});
+
+test('expanded checkpoint shows sorted two-digit completed seats and empty state independently', () => {
+  const dashboard = {
+    classrooms: activeTeacherClassrooms(classrooms), selectedClassId: '701', status: 'success',
+    summary: summarizeTeacherProgress(classrooms[0], [
+      { classId: '701', seatNo: 5, studentKey: '701-5', level1Complete: true },
+      { classId: '701', seatNo: 1, studentKey: '701-1', level1Complete: true },
+      { classId: '701', seatNo: 2, studentKey: '701-2', level1Complete: false }
+    ]), error: ''
+  };
+  const level1 = teacherPageMarkup({
+    user: { uid: 'teacher' }, authorization: 'authorized', dashboard,
+    expandedCheckpoints: new Set(['level1Complete'])
+  });
+  assert.match(level1, /data-completed-seats-toggle="level1Complete"[^>]*aria-expanded="true"/);
+  assert.match(level1, /teacher-seat-chips[\s\S]*>01<[\s\S]*>05</);
+  assert.match(level1, /共 2 人/);
+  assert.doesNotMatch(level1, />02</);
+
+  const level2 = teacherPageMarkup({
+    user: { uid: 'teacher' }, authorization: 'authorized', dashboard,
+    expandedCheckpoints: new Set(['level2Complete'])
+  });
+  assert.match(level2, /已完成座號[\s\S]*尚無完成紀錄/);
+  assert.doesNotMatch(level2, /未完成座號/);
+});
+
+test('seat detail toggles only rerender local UI and never refresh Firestore', () => {
+  const source = readFileSync(new URL('../teacher-page.js', import.meta.url), 'utf8');
+  const toggleHandler = source.slice(
+    source.indexOf("app.querySelectorAll('[data-completed-seats-toggle]')"),
+    source.indexOf("  }\n\n  render();")
+  );
+  assert.match(toggleHandler, /expandedCheckpoints[\s\S]*render\(\)/);
+  assert.doesNotMatch(toggleHandler, /dashboardController|refresh\(|loadTeacherClassProgress|getDocs/);
 });
 
 test('permission-denied Dashboard hides progress cards and reports insufficient permission', () => {

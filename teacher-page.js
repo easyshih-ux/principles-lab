@@ -9,6 +9,7 @@ import {
   createTeacherDashboardController,
   TEACHER_PROGRESS_ITEMS
 } from './teacher-progress-dashboard.js?v=v2-c2-a-1';
+import { formatSeatNumber } from './classroom-config.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -19,7 +20,7 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function teacherDashboardMarkup(dashboard) {
+function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
   const summary = dashboard.summary;
   const validCount = summary?.validCount ?? 0;
   return `
@@ -39,11 +40,22 @@ function teacherDashboardMarkup(dashboard) {
           : `${escapeHtml(dashboard.selectedClassId)} 班學習進度`}</p>
       ${dashboard.status === 'permission-denied' ? '' : `
         <div class="teacher-progress-grid">
-          ${TEACHER_PROGRESS_ITEMS.map(({ key, label }, index) => `
+          ${TEACHER_PROGRESS_ITEMS.map(({ key, label }, index) => {
+            const expanded = expandedCheckpoints.has(key);
+            const completedSeats = summary?.completedSeats?.[key] ?? [];
+            return `
             <article class="teacher-progress-card teacher-progress-card-${index + 1}">
               <h3>${label}</h3>
               <p><strong>${summary?.counts?.[key] ?? 0}</strong><span>/ ${validCount}</span></p>
-            </article>`).join('')}
+              <button class="teacher-seats-toggle" type="button" data-completed-seats-toggle="${key}" aria-expanded="${expanded}">查看已完成座號 ${expanded ? '▴' : '▾'}</button>
+              ${expanded ? `<div class="teacher-completed-seats">
+                <h4>已完成座號</h4>
+                ${completedSeats.length
+                  ? `<div class="teacher-seat-chips">${completedSeats.map((seatNo) => `<span>${formatSeatNumber(seatNo)}</span>`).join('')}</div><p>共 ${completedSeats.length} 人</p>`
+                  : '<p>尚無完成紀錄</p>'}
+              </div>` : ''}
+            </article>`;
+          }).join('')}
         </div>`}
       <button class="teacher-refresh-button" id="teacher-dashboard-refresh" type="button" ${dashboard.status === 'loading' ? 'disabled' : ''}>更新進度</button>
     </section>`;
@@ -59,7 +71,7 @@ export async function copyTeacherUid(uid, clipboard = globalThis.navigator?.clip
   }
 }
 
-export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, ready = true, busy = false, error = '', copyStatus = '' } = {}) {
+export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, ready = true, busy = false, error = '', copyStatus = '', expandedCheckpoints = new Set() } = {}) {
   return `
     <section class="teacher-auth-page" aria-labelledby="teacher-title">
       <div class="teacher-auth-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -88,7 +100,7 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
               <button class="secondary-button" id="teacher-copy-uid" type="button">複製 UID</button>
               <p id="teacher-copy-status" role="status">${escapeHtml(copyStatus)}</p>
             </section>` : ''}
-          ${authorization === 'authorized' && dashboard ? teacherDashboardMarkup(dashboard) : ''}
+          ${authorization === 'authorized' && dashboard ? teacherDashboardMarkup(dashboard, expandedCheckpoints) : ''}
           <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回網站入口</button>
         ` : `
           <p class="teacher-auth-lead">請使用授權的教師 Google 帳號登入</p>
@@ -107,6 +119,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
   const pageState = { user: null, authorization: 'idle', dashboard: null, ready: false, busy: false, error: '', copyStatus: '' };
   let authorizationGeneration = 0;
   let dashboardController = null;
+  const expandedCheckpoints = new Set();
 
   async function applyTeacherUser(user) {
     const generation = ++authorizationGeneration;
@@ -144,7 +157,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
 
   function render() {
     if (disposed) return;
-    app.innerHTML = teacherPageMarkup(pageState);
+    app.innerHTML = teacherPageMarkup({ ...pageState, expandedCheckpoints });
     app.querySelector('#teacher-home')?.addEventListener('click', () => navigate('#entry'));
     app.querySelector('#teacher-google-sign-in')?.addEventListener('click', async () => {
       pageState.busy = true;
@@ -189,6 +202,14 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
     });
     app.querySelector('#teacher-dashboard-refresh')?.addEventListener('click', () => {
       void dashboardController?.refresh();
+    });
+    app.querySelectorAll('[data-completed-seats-toggle]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const checkpoint = button.dataset.completedSeatsToggle;
+        if (expandedCheckpoints.has(checkpoint)) expandedCheckpoints.delete(checkpoint);
+        else expandedCheckpoints.add(checkpoint);
+        render();
+      });
     });
   }
 
