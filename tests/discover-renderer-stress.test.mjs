@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { createDiscoverCourseRenderers } from '../discover-course.js';
 import { discoverQuestions } from '../discover-questions.js';
 import { setDiscoverSelection, startDiscoverCourse } from '../discover-course-state.js';
+import { GEOMETRY_SHAPES, HUE_IDS, LIGHTNESS_LEVELS, SIZE_LEVELS } from '../geometry/config.js';
 import { createAppState } from '../state.js';
 
 class FakeNode {
@@ -149,4 +150,74 @@ test('discover renderer advances every question across repeated stressful classr
   } finally {
     globalThis.document = originalDocument;
   }
+});
+
+test('all generated questions stay renderer-compatible across 1000 complete seeded runs', () => {
+  const originalDocument = globalThis.document;
+  let renderedQuestions = 0;
+  let simplicityAtQuestion13 = 0;
+  const successorsAfterSimplicity13 = new Set();
+  try {
+    for (let seed = 0; seed < 1000; seed += 1) {
+      const document = new FakeDocument();
+      globalThis.document = document;
+      const state = createAppState([], [], discoverQuestions);
+      const navigations = [];
+      const renderers = createDiscoverCourseRenderers({
+        app: document,
+        state,
+        navigate: (hash) => navigations.push(hash)
+      });
+      startDiscoverCourse(state.discoverCourse, discoverQuestions, seed, state.masteryPractice.discover);
+
+      if (state.discoverCourse.questionOrder[12] === 'discover-simplicity') {
+        simplicityAtQuestion13 += 1;
+        successorsAfterSimplicity13.add(state.discoverCourse.questionOrder[13]);
+      }
+
+      while (state.discoverCourse.currentIndex < state.discoverCourse.questionOrder.length) {
+        renderers.question();
+        const index = state.discoverCourse.currentIndex;
+        const id = state.discoverCourse.questionOrder[index];
+        const question = state.discoverCourse.generatedQuestions[id]
+          ?? discoverQuestions.find((candidate) => candidate.id === id);
+        const elements = [
+          ...(question.elements ?? []),
+          ...(question.beforeState ?? []),
+          ...(question.comparisonPanels ?? []).flatMap((panel) => panel.elements)
+        ];
+
+        for (const element of elements) {
+          assert.ok(GEOMETRY_SHAPES.includes(element.shape), `${seed}:${id}: shape ${element.shape}`);
+          assert.ok(HUE_IDS.includes(element.hue), `${seed}:${id}: hue ${element.hue}`);
+          assert.ok(SIZE_LEVELS.includes(element.size), `${seed}:${id}: size ${element.size}`);
+          assert.ok(LIGHTNESS_LEVELS.includes(element.lightness), `${seed}:${id}: lightness ${element.lightness}`);
+          assert.ok(Number.isFinite(element.x) && element.x >= 0 && element.x <= 1000, `${seed}:${id}: x ${element.x}`);
+          assert.ok(Number.isFinite(element.y) && element.y >= 0 && element.y <= 600, `${seed}:${id}: y ${element.y}`);
+          assert.ok(Number.isFinite(element.rotation), `${seed}:${id}: rotation ${element.rotation}`);
+          assert.ok(element.displaySize == null || (Number.isFinite(element.displaySize) && element.displaySize > 0), `${seed}:${id}: displaySize ${element.displaySize}`);
+        }
+
+        setDiscoverSelection(state.discoverCourse, id, question.correctAnswer);
+        document.querySelector('#discover-check').click();
+        const next = document.querySelector('#discover-next');
+        assert.ok(next, `${seed}:${id}: next rendered after correct answer`);
+        next.click();
+        renderedQuestions += 1;
+
+        if (index === state.discoverCourse.questionOrder.length - 1) {
+          assert.equal(navigations.at(-1), '#level/discover/complete', `${seed}:${id}: completion route`);
+          break;
+        }
+        assert.equal(state.discoverCourse.currentIndex, index + 1, `${seed}:${id}: index advanced`);
+        assert.ok(document.querySelector('#discover-check'), `${seed}:${id}: successor rendered after next`);
+      }
+    }
+  } finally {
+    globalThis.document = originalDocument;
+  }
+
+  assert.equal(renderedQuestions, 16000);
+  assert.ok(simplicityAtQuestion13 > 0, 'the classroom 13/16 simplicity position is covered');
+  assert.ok(successorsAfterSimplicity13.size > 1, 'randomized successors after 13/16 simplicity are covered');
 });
