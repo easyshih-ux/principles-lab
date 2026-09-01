@@ -192,7 +192,7 @@ export function createExperimentCourseRenderers({ app, state, navigate, onCheckp
     syncCourseCompletion(state);
     if (state.experimentCourse.completed) onCheckpoint('level3Complete');
     app.innerHTML = finalCompletionMarkup();
-    document.querySelector('#experiment-return').addEventListener('click', () => navigate('#principles'));
+    document.querySelector('#experiment-return').addEventListener('click', () => navigate('#home'));
   }
 
   function dev() {

@@ -30,9 +30,9 @@ test('unlocked course entry handler navigates to the selected guarded route', ()
   assert.match(rendererSource, /navigate\(course\.route\)/);
 });
 
-test('discover completion preserves the wall exit without bypassing the experiment gate', () => {
+test('discover completion returns to the student home without bypassing the experiment gate', () => {
   assert.match(discoverCourseSource, /id="discover-wall">返回實驗室<\/button>/);
-  assert.match(discoverCourseSource, /#discover-wall'[\s\S]*?navigate\('#principles'\)/);
+  assert.match(discoverCourseSource, /#discover-wall'[\s\S]*?navigate\('#home'\)/);
   assert.doesNotMatch(discoverCourseSource, /discover-experiment|前往第三關/);
 });
 

@@ -261,7 +261,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate, onCheckpo
         </div>
         <div class="recognize-complete-pattern" aria-hidden="true">${Array.from({ length: 8 }, (_, index) => `<i style="--index:${index}"></i>`).join('')}</div>
       </section>`;
-    document.querySelector('#mastery-wall-return').addEventListener('click', () => navigate('#principles'));
+    document.querySelector('#mastery-wall-return').addEventListener('click', () => navigate('#home'));
   }
 
   function renderComplete() {
@@ -276,7 +276,7 @@ export function createRecognizeCourseRenderers({ app, state, navigate, onCheckpo
       syncCourseCompletion(state);
       onCheckpoint('level1Complete');
       app.innerHTML = recognizeCompletionMarkup();
-      document.querySelector('#recognize-wall-return').addEventListener('click', () => navigate('#principles'));
+      document.querySelector('#recognize-wall-return').addEventListener('click', () => navigate('#home'));
       return;
     }
     if (!activeRound.started) {

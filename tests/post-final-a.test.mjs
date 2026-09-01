@@ -291,11 +291,11 @@ test('development preview resolves separately and is absent from formal student 
   assert.equal(rendererSource.includes("navigate('#dev/recognize-templates')"), false);
 });
 
-test('first-course completion returns to the gated laboratory and classroom cache markers are current', () => {
+test('first-course completion returns to student home and classroom cache markers are current', () => {
   const rendererSource = source('../recognize-course.js');
   const appSource = source('../app.js');
   const indexSource = source('../index.html');
-  assert.match(rendererSource, /navigate\('#principles'\)/);
+  assert.match(rendererSource, /#recognize-wall-return'[\s\S]*navigate\('#home'\)/);
   assert.doesNotMatch(rendererSource, /navigate\('#level\/discover\/start'\)/);
   assert.match(appSource, /recognize-course\.js\?v=v2-b2-checkpoints-1/);
   assert.match(indexSource, /app\.js\?v=v2-entry-2/);

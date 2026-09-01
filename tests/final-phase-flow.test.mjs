@@ -65,6 +65,8 @@ test('FLOW B first completion returns to the laboratory without opening the seco
   assert.match(html, /id="recognize-wall-return">返回實驗室/);
   assert.doesNotMatch(html, /recognize-discover|前往第二關/);
   assert.equal(recognizeSource.includes("document.querySelector('#recognize-discover')"), false);
+  assert.match(recognizeSource, /#recognize-wall-return'[\s\S]*?navigate\('#home'\)/);
+  assert.match(recognizeSource, /#mastery-wall-return'[\s\S]*?navigate\('#home'\)/);
   assert.equal(recognizeSource.includes('setTimeout'), false);
 });
 
@@ -73,6 +75,8 @@ test('FLOW C second completion returns to the laboratory without opening the thi
   assert.match(html, /id="discover-wall">返回實驗室/);
   assert.doesNotMatch(html, /discover-experiment|前往第三關/);
   assert.equal(discoverSource.includes("document.querySelector('#discover-experiment')"), false);
+  assert.match(discoverSource, /#discover-wall'[\s\S]*?navigate\('#home'\)/);
+  assert.match(discoverSource, /#discover-mastery-wall'[\s\S]*?navigate\('#home'\)/);
   assert.equal(discoverSource.includes('setTimeout'), false);
 });
 
@@ -117,6 +121,7 @@ test('Final Completion uses principle metadata and presents the full learning cl
   assert.equal((html.match(/<li>/g) ?? []).length, principles.length);
   assert.match(html, /id="experiment-return">回到形式原理實驗室/);
   assert.ok(experimentSource.includes("document.querySelector('#experiment-return')"));
+  assert.match(experimentSource, /#experiment-return'[\s\S]*?navigate\('#home'\)/);
 });
 
 test('completion state distinguishes three courses and the whole course', () => {
