@@ -192,6 +192,17 @@ test('seat detail toggles only rerender local UI and never refresh Firestore', (
   assert.doesNotMatch(toggleHandler, /dashboardController|refresh\(|loadTeacherClassProgress|getDocs/);
 });
 
+test('Dashboard uses compact horizontal rows with full-width details and a narrow-screen stack', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /teacher-progress-grid\{[^}]*grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(css, /teacher-progress-card\{[^}]*display:grid[^}]*grid-template-columns:minmax\(125px,1fr\) auto minmax\(175px,auto\)/);
+  assert.match(css, /teacher-progress-card::before\{[^}]*width:7px[^}]*height:100%/);
+  assert.match(css, /teacher-completed-seats\{[^}]*grid-column:1\/-1/);
+  assert.match(css, /teacher-seat-chips\{[^}]*flex-wrap:wrap[^}]*min-width:0/);
+  assert.match(css, /@media\(max-width:620px\)[\s\S]*teacher-progress-card\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/);
+  assert.doesNotMatch(css, /teacher-progress-grid\{[^}]*repeat\(2/);
+});
+
 test('permission-denied Dashboard hides progress cards and reports insufficient permission', () => {
   const dashboard = {
     classrooms: activeTeacherClassrooms(classrooms), selectedClassId: '701',

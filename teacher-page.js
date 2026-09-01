@@ -46,12 +46,12 @@ function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
             return `
             <article class="teacher-progress-card teacher-progress-card-${index + 1}">
               <h3>${label}</h3>
-              <p><strong>${summary?.counts?.[key] ?? 0}</strong><span>/ ${validCount}</span></p>
-              <button class="teacher-seats-toggle" type="button" data-completed-seats-toggle="${key}" aria-expanded="${expanded}">查看已完成座號 ${expanded ? '▴' : '▾'}</button>
+              <p class="teacher-progress-count"><strong>${summary?.counts?.[key] ?? 0}</strong><span>/ ${validCount}</span></p>
+              <button class="teacher-seats-toggle" type="button" data-completed-seats-toggle="${key}" aria-expanded="${expanded}">${expanded ? '收起已完成座號 ▴' : '查看已完成座號 ▾'}</button>
               ${expanded ? `<div class="teacher-completed-seats">
                 <h4>已完成座號</h4>
                 ${completedSeats.length
-                  ? `<div class="teacher-seat-chips">${completedSeats.map((seatNo) => `<span>${formatSeatNumber(seatNo)}</span>`).join('')}</div><p>共 ${completedSeats.length} 人</p>`
+                  ? `<div class="teacher-completed-seats-row"><div class="teacher-seat-chips">${completedSeats.map((seatNo) => `<span>${formatSeatNumber(seatNo)}</span>`).join('')}</div><p>共 ${completedSeats.length} 人</p></div>`
                   : '<p>尚無完成紀錄</p>'}
               </div>` : ''}
             </article>`;
