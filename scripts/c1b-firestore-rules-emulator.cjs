@@ -27,8 +27,9 @@ function context(env, uid, provider) {
   }).firestore();
 }
 
-async function checkpointCreate(db, studentKey = '701-12') {
+async function checkpointCreate(db, studentKey = '115-701-12', academicYear = '115') {
   return setDoc(doc(db, 'studentProgress', studentKey), {
+    academicYear,
     classId: '701',
     seatNo: 12,
     studentKey,
@@ -44,8 +45,8 @@ async function checkpointCreate(db, studentKey = '701-12') {
       const db = bypass.firestore();
       await setDoc(doc(db, 'teachers', 'teacher-active'), { active: true });
       await setDoc(doc(db, 'teachers', 'teacher-disabled'), { active: false });
-      await setDoc(doc(db, 'studentProgress', '701-1'), {
-        classId: '701', seatNo: 1, studentKey: '701-1', level1Complete: true, updatedAt: new Date()
+      await setDoc(doc(db, 'studentProgress', '115-701-1'), {
+        academicYear: '115', classId: '701', seatNo: 1, studentKey: '115-701-1', level1Complete: true, updatedAt: new Date()
       });
     });
 
@@ -55,13 +56,13 @@ async function checkpointCreate(db, studentKey = '701-12') {
     const disabled = context(env, 'teacher-disabled', 'google.com');
     const unauthenticated = env.unauthenticatedContext().firestore();
 
-    await assertFails(getDoc(doc(anonymous, 'studentProgress', '701-1')));
+    await assertFails(getDoc(doc(anonymous, 'studentProgress', '115-701-1')));
     await assertFails(getDocs(query(collection(anonymous, 'studentProgress'))));
-    await assertSucceeds(getDoc(doc(teacher, 'studentProgress', '701-1')));
+    await assertSucceeds(getDoc(doc(teacher, 'studentProgress', '115-701-1')));
     await assertSucceeds(getDocs(query(collection(teacher, 'studentProgress'))));
-    await assertFails(getDoc(doc(unauthorized, 'studentProgress', '701-1')));
+    await assertFails(getDoc(doc(unauthorized, 'studentProgress', '115-701-1')));
     await assertFails(getDocs(query(collection(unauthorized, 'studentProgress'))));
-    await assertFails(getDoc(doc(disabled, 'studentProgress', '701-1')));
+    await assertFails(getDoc(doc(disabled, 'studentProgress', '115-701-1')));
     await assertFails(getDocs(query(collection(disabled, 'studentProgress'))));
 
     for (const db of [anonymous, teacher, unauthorized, disabled, unauthenticated]) {
@@ -73,39 +74,40 @@ async function checkpointCreate(db, studentKey = '701-12') {
     }
 
     await assertSucceeds(checkpointCreate(anonymous));
-    await assertSucceeds(updateDoc(doc(anonymous, 'studentProgress', '701-12'), {
+    await assertSucceeds(updateDoc(doc(anonymous, 'studentProgress', '115-701-12'), {
       level2Complete: true,
       updatedAt: serverTimestamp()
     }));
-    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '701-12'), {
+    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '115-701-12'), {
       unexpectedField: true,
       updatedAt: serverTimestamp()
     }));
-    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '701-12'), {
+    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '115-701-12'), {
       classId: '702',
       updatedAt: serverTimestamp()
     }));
-    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '701-12'), {
+    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '115-701-12'), {
       level2Complete: false,
       updatedAt: serverTimestamp()
     }));
-    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '701-12'), {
+    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '115-701-12'), {
       level1Complete: deleteField(),
       updatedAt: serverTimestamp()
     }));
-    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '701-12'), {
+    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '115-701-12'), {
       level3Complete: true,
       updatedAt: new Date()
     }));
-    await assertFails(checkpointCreate(teacher, '701-13'));
-    await assertFails(updateDoc(doc(teacher, 'studentProgress', '701-1'), {
+    await assertFails(checkpointCreate(anonymous, '115-701-13', '116'));
+    await assertFails(checkpointCreate(teacher, '115-701-13'));
+    await assertFails(updateDoc(doc(teacher, 'studentProgress', '115-701-1'), {
       level2Complete: true,
       updatedAt: serverTimestamp()
     }));
-    await assertFails(checkpointCreate(unauthenticated, '701-14'));
-    await assertFails(getDoc(doc(unauthenticated, 'studentProgress', '701-1')));
+    await assertFails(checkpointCreate(unauthenticated, '115-701-14'));
+    await assertFails(getDoc(doc(unauthenticated, 'studentProgress', '115-701-1')));
     await assertFails(getDocs(query(collection(unauthenticated, 'studentProgress'))));
-    await assertFails(deleteDoc(doc(teacher, 'studentProgress', '701-1')));
+    await assertFails(deleteDoc(doc(teacher, 'studentProgress', '115-701-1')));
 
     console.log('Firestore Rules Emulator: all C1-B allow/deny cases passed');
   } finally {

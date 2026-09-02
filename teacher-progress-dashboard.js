@@ -1,4 +1,5 @@
 import { CLASSROOMS } from './classroom-config.js';
+import { ACTIVE_ACADEMIC_YEAR, buildStudentKey } from './academic-year.js';
 import { STUDENT_PROGRESS_COLLECTION, STUDENT_PROGRESS_CHECKPOINTS } from './student-progress-cloud.js';
 
 export const TEACHER_PROGRESS_ITEMS = Object.freeze([
@@ -12,8 +13,9 @@ export function activeTeacherClassrooms(classrooms = CLASSROOMS) {
   return classrooms.filter((classroom) => classroom.active !== false);
 }
 
-export function emptyTeacherProgressSummary(classroom) {
+export function emptyTeacherProgressSummary(classroom, academicYear = ACTIVE_ACADEMIC_YEAR) {
   return {
+    academicYear,
     classId: classroom.id,
     validCount: classroom.validSeatNumbers.length,
     counts: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, 0])),
@@ -21,18 +23,20 @@ export function emptyTeacherProgressSummary(classroom) {
   };
 }
 
-export function summarizeTeacherProgress(classroom, records = []) {
-  const summary = emptyTeacherProgressSummary(classroom);
+export function summarizeTeacherProgress(classroom, records = [], academicYear = ACTIVE_ACADEMIC_YEAR) {
+  const summary = emptyTeacherProgressSummary(classroom, academicYear);
   const validSeats = new Set(classroom.validSeatNumbers.map(Number));
   const completedStudents = Object.fromEntries(
     STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, new Map()])
   );
 
   for (const record of records) {
+    const recordAcademicYear = String(record?.academicYear ?? '');
     const classId = String(record?.classId ?? '');
     const seatNo = Number(record?.seatNo);
     const studentKey = String(record?.studentKey ?? '');
-    if (classId !== classroom.id || !validSeats.has(seatNo) || !studentKey) continue;
+    if (recordAcademicYear !== academicYear || classId !== classroom.id || !validSeats.has(seatNo)
+      || studentKey !== buildStudentKey(recordAcademicYear, classId, seatNo)) continue;
     for (const checkpoint of STUDENT_PROGRESS_CHECKPOINTS) {
       if (record[checkpoint] === true && !completedStudents[checkpoint].has(studentKey)) {
         completedStudents[checkpoint].set(studentKey, seatNo);
@@ -47,13 +51,16 @@ export function summarizeTeacherProgress(classroom, records = []) {
   return summary;
 }
 
-export async function loadTeacherClassProgress(client, classroom) {
+export async function loadTeacherClassProgress(client, classroom, academicYear = ACTIVE_ACADEMIC_YEAR) {
   const progress = client.collection(client.db, STUDENT_PROGRESS_COLLECTION);
-  const classQuery = client.query(progress, client.where('classId', '==', classroom.id));
+  const yearConstraint = client.where('academicYear', '==', academicYear);
+  const classConstraint = client.where('classId', '==', classroom.id);
+  const classQuery = client.query(progress, yearConstraint, classConstraint);
   const snapshot = await client.getDocs(classQuery);
   const records = snapshot.docs.map((item) => {
     const data = item.data();
     return {
+      academicYear: data.academicYear,
       classId: data.classId,
       seatNo: data.seatNo,
       studentKey: data.studentKey,
@@ -63,7 +70,7 @@ export async function loadTeacherClassProgress(client, classroom) {
       level3Complete: data.level3Complete
     };
   });
-  return summarizeTeacherProgress(classroom, records);
+  return summarizeTeacherProgress(classroom, records, academicYear);
 }
 
 export function createTeacherDashboardController({
@@ -76,6 +83,7 @@ export function createTeacherDashboardController({
   let generation = 0;
   let disposed = false;
   const state = {
+    academicYear: ACTIVE_ACADEMIC_YEAR,
     classrooms: available,
     selectedClassId: available[0]?.id ?? '',
     status: 'idle',
@@ -95,7 +103,7 @@ export function createTeacherDashboardController({
     state.error = '';
     notify();
     try {
-      const summary = await loadProgress(client, classroom);
+      const summary = await loadProgress(client, classroom, state.academicYear);
       if (disposed || requestGeneration !== generation) return;
       state.summary = summary;
       state.status = 'success';

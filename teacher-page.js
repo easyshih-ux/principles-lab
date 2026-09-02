@@ -37,7 +37,7 @@ function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
         ? '正在讀取班級進度…'
         : dashboard.status === 'permission-denied' || dashboard.status === 'error'
           ? escapeHtml(dashboard.error)
-          : `${escapeHtml(dashboard.selectedClassId)} 班學習進度`}</p>
+          : `${escapeHtml(dashboard.academicYear)} 學年度｜${escapeHtml(dashboard.selectedClassId)} 班學習進度`}</p>
       ${dashboard.status === 'permission-denied' ? '' : `
         <div class="teacher-progress-grid">
           ${TEACHER_PROGRESS_ITEMS.map(({ key, label }, index) => {

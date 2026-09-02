@@ -10,14 +10,15 @@ export const STUDENT_PROGRESS_CHECKPOINTS = Object.freeze([
 ]);
 
 export function studentProgressDocumentId(identity) {
-  return createStudentIdentity(identity?.classId, identity?.seatNo)?.studentKey ?? null;
+  return createStudentIdentity(identity?.classId, identity?.seatNo, identity?.academicYear)?.studentKey ?? null;
 }
 
 export function buildCheckpointData(identity, checkpointName, updatedAt) {
-  const student = createStudentIdentity(identity?.classId, identity?.seatNo);
+  const student = createStudentIdentity(identity?.classId, identity?.seatNo, identity?.academicYear);
   if (!student) throw new TypeError('Invalid student identity');
   if (!STUDENT_PROGRESS_CHECKPOINTS.includes(checkpointName)) throw new TypeError('Invalid student progress checkpoint');
   return {
+    academicYear: student.academicYear,
     classId: student.classId,
     seatNo: student.seatNo,
     studentKey: student.studentKey,

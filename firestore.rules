@@ -16,9 +16,9 @@ service cloud.firestore {
 
     function hasExactProgressFields() {
       return request.resource.data.keys().hasAll([
-        'classId', 'seatNo', 'studentKey', 'updatedAt'
+        'academicYear', 'classId', 'seatNo', 'studentKey', 'updatedAt'
       ]) && request.resource.data.keys().hasOnly([
-        'classId', 'seatNo', 'studentKey', 'freeReviewComplete',
+        'academicYear', 'classId', 'seatNo', 'studentKey', 'freeReviewComplete',
         'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt'
       ]);
     }
@@ -44,13 +44,15 @@ service cloud.firestore {
     }
 
     function hasValidIdentity(studentKey) {
-      return request.resource.data.classId is string
+      return request.resource.data.academicYear is string
+        && request.resource.data.academicYear.matches('[0-9]+')
+        && request.resource.data.classId is string
         && request.resource.data.classId.matches('[0-9]{3}')
         && request.resource.data.seatNo is int
         && request.resource.data.seatNo > 0
         && request.resource.data.studentKey is string
         && request.resource.data.studentKey == studentKey
-        && studentKey == request.resource.data.classId + '-' + string(request.resource.data.seatNo);
+        && studentKey == request.resource.data.academicYear + '-' + request.resource.data.classId + '-' + string(request.resource.data.seatNo);
     }
 
     function hasServerTimestamp() {
@@ -71,6 +73,7 @@ service cloud.firestore {
       allow update: if isAnonymousStudent()
         && hasExactProgressFields()
         && hasValidIdentity(studentKey)
+        && request.resource.data.academicYear == resource.data.academicYear
         && request.resource.data.classId == resource.data.classId
         && request.resource.data.seatNo == resource.data.seatNo
         && request.resource.data.studentKey == resource.data.studentKey

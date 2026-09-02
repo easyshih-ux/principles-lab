@@ -26,12 +26,14 @@ test('Dashboard lists only active classes and derives denominators from validSea
 
 test('summary counts only valid seats, true checkpoints, and each studentKey once', () => {
   const summary = summarizeTeacherProgress(classrooms[0], [
-    { classId: '701', seatNo: 1, studentKey: '701-1', freeReviewComplete: true, level1Complete: true },
-    { classId: '701', seatNo: 2, studentKey: '701-2', freeReviewComplete: false, level1Complete: true, level2Complete: true },
-    { classId: '701', seatNo: 2, studentKey: '701-2', freeReviewComplete: true, level3Complete: true },
-    { classId: '701', seatNo: 4, studentKey: '701-4', freeReviewComplete: true, level1Complete: true },
-    { classId: '702', seatNo: 1, studentKey: '702-1', level3Complete: true },
-    { classId: '701', seatNo: 5, studentKey: '701-5', level3Complete: true }
+    { academicYear: '115', classId: '701', seatNo: 1, studentKey: '115-701-1', freeReviewComplete: true, level1Complete: true },
+    { academicYear: '115', classId: '701', seatNo: 2, studentKey: '115-701-2', freeReviewComplete: false, level1Complete: true, level2Complete: true },
+    { academicYear: '115', classId: '701', seatNo: 2, studentKey: '115-701-2', freeReviewComplete: true, level3Complete: true },
+    { academicYear: '115', classId: '701', seatNo: 4, studentKey: '115-701-4', freeReviewComplete: true, level1Complete: true },
+    { academicYear: '115', classId: '702', seatNo: 1, studentKey: '115-702-1', level3Complete: true },
+    { academicYear: '115', classId: '701', seatNo: 5, studentKey: '115-701-5', level3Complete: true },
+    { academicYear: '116', classId: '701', seatNo: 3, studentKey: '116-701-3', level1Complete: true },
+    { classId: '701', seatNo: 3, studentKey: '701-3', level1Complete: true }
   ]);
   assert.equal(summary.validCount, 4);
   assert.deepEqual(summary.counts, {
@@ -55,16 +57,16 @@ test('empty classroom keeps zero counts with the configured valid denominator', 
   assert.equal(summary.validCount, 4);
 });
 
-test('Firestore loader queries studentProgress by classId and retains only progress fields', async () => {
+test('Firestore loader queries studentProgress by academicYear and classId and retains only progress fields', async () => {
   const calls = [];
   const client = {
     db: { app: { name: 'teacher' } },
     collection: (db, name) => { calls.push(['collection', db.app.name, name]); return { name }; },
     where: (...parts) => { calls.push(['where', ...parts]); return { parts }; },
-    query: (reference, constraint) => { calls.push(['query', reference.name, constraint.parts]); return { reference, constraint }; },
+    query: (reference, ...constraints) => { calls.push(['query', reference.name, ...constraints.map(({ parts }) => parts)]); return { reference, constraints }; },
     getDocs: async () => ({
       docs: [{ data: () => ({
-        classId: '701', seatNo: 1, studentKey: '701-1', level1Complete: true,
+        academicYear: '115', classId: '701', seatNo: 1, studentKey: '115-701-1', level1Complete: true,
         studentName: '不得保留', answers: ['不得保留']
       }) }]
     })
@@ -74,8 +76,9 @@ test('Firestore loader queries studentProgress by classId and retains only progr
   assert.deepEqual(summary.completedSeats.level1Complete, [1]);
   assert.deepEqual(calls, [
     ['collection', 'teacher', 'studentProgress'],
+    ['where', 'academicYear', '==', '115'],
     ['where', 'classId', '==', '701'],
-    ['query', 'studentProgress', ['classId', '==', '701']]
+    ['query', 'studentProgress', ['academicYear', '==', '115'], ['classId', '==', '701']]
   ]);
 });
 
@@ -103,10 +106,10 @@ test('refresh replaces completion counts and completed seats from the same resul
     loadProgress: async (_client, classroom) => {
       loadCount += 1;
       return summarizeTeacherProgress(classroom, loadCount === 1
-        ? [{ classId: '701', seatNo: 1, studentKey: '701-1', level1Complete: true }]
+        ? [{ academicYear: '115', classId: '701', seatNo: 1, studentKey: '115-701-1', level1Complete: true }]
         : [
-            { classId: '701', seatNo: 1, studentKey: '701-1', level1Complete: true },
-            { classId: '701', seatNo: 5, studentKey: '701-5', level1Complete: true }
+            { academicYear: '115', classId: '701', seatNo: 1, studentKey: '115-701-1', level1Complete: true },
+            { academicYear: '115', classId: '701', seatNo: 5, studentKey: '115-701-5', level1Complete: true }
           ]);
     }
   });
@@ -138,17 +141,18 @@ test('controller exposes permission-denied and network error states for retry', 
 
 test('authorized Dashboard markup shows counts without percentages or student details', () => {
   const dashboard = {
+    academicYear: '115',
     classrooms: activeTeacherClassrooms(classrooms),
     selectedClassId: '701',
     status: 'success',
     summary: summarizeTeacherProgress(classrooms[0], [
-      { classId: '701', seatNo: 1, studentKey: '701-1', freeReviewComplete: true }
+      { academicYear: '115', classId: '701', seatNo: 1, studentKey: '115-701-1', freeReviewComplete: true }
     ]),
     error: ''
   };
   const markup = teacherPageMarkup({ user: { uid: 'teacher' }, authorization: 'authorized', dashboard });
   assert.match(markup, /班級學習進度/);
-  assert.match(markup, /701 班學習進度/);
+  assert.match(markup, /115 學年度｜701 班學習進度/);
   assert.match(markup, /自由練習[\s\S]*<strong>1<\/strong><span>\/ 4<\/span>/);
   assert.match(markup, /更新進度/);
   assert.equal((markup.match(/查看已完成座號 ▾/g) ?? []).length, 4);
@@ -160,9 +164,9 @@ test('expanded checkpoint shows sorted two-digit completed seats and empty state
   const dashboard = {
     classrooms: activeTeacherClassrooms(classrooms), selectedClassId: '701', status: 'success',
     summary: summarizeTeacherProgress(classrooms[0], [
-      { classId: '701', seatNo: 5, studentKey: '701-5', level1Complete: true },
-      { classId: '701', seatNo: 1, studentKey: '701-1', level1Complete: true },
-      { classId: '701', seatNo: 2, studentKey: '701-2', level1Complete: false }
+      { academicYear: '115', classId: '701', seatNo: 5, studentKey: '115-701-5', level1Complete: true },
+      { academicYear: '115', classId: '701', seatNo: 1, studentKey: '115-701-1', level1Complete: true },
+      { academicYear: '115', classId: '701', seatNo: 2, studentKey: '115-701-2', level1Complete: false }
     ]), error: ''
   };
   const level1 = teacherPageMarkup({

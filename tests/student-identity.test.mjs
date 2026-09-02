@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { CLASSROOMS, classroomOptions, formatSeatNumber, isValidStudentIdentity, seatOptions } from '../classroom-config.js';
+import { ACTIVE_ACADEMIC_YEAR, buildStudentKey } from '../academic-year.js';
 import { CLASSROOM_UNLOCK_STORAGE_KEY, attemptClassroomUnlock, createLockedClassroomUnlocks, loadClassroomUnlocks, resetClassroomUnlocks } from '../classroom-unlocks.js';
 import { clearCurrentStudent, createStudentIdentity, CURRENT_STUDENT_STORAGE_KEY, loadCurrentStudent, saveCurrentStudent } from '../student-session.js';
 
@@ -48,10 +49,14 @@ test('adding seat 31 requires only validSeatNumbers config data', () => {
   assert.equal(isValidStudentIdentity('701', 31, classrooms), true);
 });
 
-test('studentKey includes both class and seat', () => {
+test('active academic year and canonical studentKey include year, class, and unpadded seat', () => {
+  assert.equal(ACTIVE_ACADEMIC_YEAR, '115');
+  assert.equal(buildStudentKey('115', '701', 1), '115-701-1');
+  assert.equal(buildStudentKey('115', '701', '01'), '115-701-1');
+  assert.notEqual(buildStudentKey('115', '701', 12), buildStudentKey('116', '701', 12));
   assert.notEqual(createStudentIdentity('701', 12).studentKey, createStudentIdentity('702', 12).studentKey);
-  assert.equal(createStudentIdentity('701', 1).studentKey, '701-1');
-  assert.equal(createStudentIdentity('701', '01').studentKey, '701-1');
+  assert.equal(createStudentIdentity('701', 1).studentKey, '115-701-1');
+  assert.equal(createStudentIdentity('701', '01').studentKey, '115-701-1');
   assert.deepEqual(createStudentIdentity('701', 1), createStudentIdentity('701', '01'));
 });
 
@@ -64,7 +69,7 @@ test('drafting an identity does not create a session before confirmation', () =>
 test('confirmation saves classId seatNo and studentKey and reload restores them', () => {
   const storage = new MemoryStorage();
   const saved = saveCurrentStudent({ classId: '701', seatNo: '12' }, storage);
-  assert.deepEqual(saved, { classId: '701', seatNo: 12, studentKey: '701-12' });
+  assert.deepEqual(saved, { academicYear: '115', classId: '701', seatNo: 12, studentKey: '115-701-12' });
   assert.deepEqual(loadCurrentStudent(storage), saved);
 });
 
@@ -77,7 +82,7 @@ test('ending use clears current student and classroom unlocks for the next stude
   resetClassroomUnlocks(storage);
   assert.equal(loadCurrentStudent(storage), null);
   assert.deepEqual(loadClassroomUnlocks(storage), createLockedClassroomUnlocks());
-  assert.equal(saveCurrentStudent({ classId: '702', seatNo: 8 }, storage).studentKey, '702-8');
+  assert.equal(saveCurrentStudent({ classId: '702', seatNo: 8 }, storage).studentKey, '115-702-8');
   assert.deepEqual(loadClassroomUnlocks(storage), createLockedClassroomUnlocks());
 });
 
@@ -97,4 +102,11 @@ test('identity gate can return to entry without creating or changing student ide
     appSource.indexOf("document.querySelector('#identity-class')")
   );
   assert.doesNotMatch(backHandler, /saveCurrentStudent|clearCurrentStudent|createStudentIdentity|identityDraft\s*=/);
+});
+
+test('student identity UI asks only for class and seat, never academic year', () => {
+  const appSource = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(appSource, /id="identity-class"/);
+  assert.match(appSource, /id="identity-seat"/);
+  assert.doesNotMatch(appSource, /identity-academic-year/);
 });

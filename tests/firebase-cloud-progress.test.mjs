@@ -24,13 +24,14 @@ test('checkpoint allowlist contains only the four formal completion fields', () 
 test('each payload writes only one selected checkpoint as true and never creates false', () => {
   for (const checkpoint of STUDENT_PROGRESS_CHECKPOINTS) {
     const data = buildCheckpointData({ classId: '701', seatNo: '01' }, checkpoint, 'timestamp');
-    assert.deepEqual(data, { classId: '701', seatNo: 1, studentKey: '701-1', [checkpoint]: true, updatedAt: 'timestamp' });
+    assert.deepEqual(data, { academicYear: '115', classId: '701', seatNo: 1, studentKey: '115-701-1', [checkpoint]: true, updatedAt: 'timestamp' });
     assert.doesNotMatch(JSON.stringify(data), /false/);
   }
 });
 
 test('document ids are canonical and class-specific', () => {
-  assert.equal(studentProgressDocumentId({ classId: '701', seatNo: '01' }), '701-1');
+  assert.equal(studentProgressDocumentId({ classId: '701', seatNo: '01' }), '115-701-1');
+  assert.notEqual(studentProgressDocumentId({ academicYear: '115', classId: '701', seatNo: 12 }), studentProgressDocumentId({ academicYear: '116', classId: '701', seatNo: 12 }));
   assert.notEqual(studentProgressDocumentId({ classId: '701', seatNo: 12 }), studentProgressDocumentId({ classId: '702', seatNo: 12 }));
 });
 
@@ -41,7 +42,8 @@ test('repeated checkpoint writes merge true into the same document safely', asyn
   await writeStudentProgressCheckpoint(identity, 'level1Complete', { client });
   assert.equal(client.writes.length, 2);
   client.writes.forEach(({ reference, data, options }) => {
-    assert.equal(reference, 'studentProgress/701-12');
+    assert.equal(reference, 'studentProgress/115-701-12');
+    assert.equal(data.academicYear, '115');
     assert.equal(data.level1Complete, true);
     assert.deepEqual(options, { merge: true });
   });
@@ -117,6 +119,8 @@ test('Firestore rules preserve progress validation while separating anonymous wr
   assert.doesNotMatch(rules, /testCheckpointComplete/);
   for (const checkpoint of STUDENT_PROGRESS_CHECKPOINTS) assert.match(rules, new RegExp(checkpoint));
   assert.match(rules, /keys\(\)\.hasOnly/);
+  assert.match(rules, /academicYear/);
+  assert.match(rules, /studentKey == request\.resource\.data\.academicYear \+ '-' \+ request\.resource\.data\.classId/);
   assert.match(rules, /get\('level1Complete', true\) == true/);
   assert.match(rules, /preservesCompletedCheckpoints/);
   assert.match(rules, /affectedKeys\(\)[\s\S]*hasOnly\(\['freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt'\]\)/);
