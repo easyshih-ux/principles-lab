@@ -8,10 +8,10 @@ import {
 import {
   createTeacherDashboardController,
   TEACHER_PROGRESS_ITEMS
-} from './teacher-progress-dashboard.js?v=v2-d2-1';
+} from './teacher-progress-dashboard.js?v=v2-d3-1';
 import { formatSeatNumber } from './classroom-config.js';
-import { ACTIVE_ACADEMIC_YEAR } from './academic-year.js';
-import { changeDraftMaximum, createTeacherClassSettingsController, toggleDraftSeat } from './teacher-class-settings.js?v=v2-d2-1';
+import { changeDraftMaximum, createTeacherClassSettingsController, toggleDraftSeat } from './teacher-class-settings.js?v=v2-d3-1';
+import { createAcademicYearManagementController } from './teacher-academic-year-management.js?v=v2-d3-1';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -37,6 +37,8 @@ function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
       </div>
       <p class="teacher-dashboard-state" role="status">${dashboard.status === 'loading'
         ? '正在讀取班級進度…'
+        : !dashboard.classrooms.length
+          ? `${escapeHtml(dashboard.academicYear)} 學年度尚未建立班級設定。`
         : dashboard.status === 'permission-denied' || dashboard.status === 'error'
           ? escapeHtml(dashboard.error)
           : `${escapeHtml(dashboard.academicYear)} 學年度｜${escapeHtml(dashboard.selectedClassId)} 班學習進度`}</p>
@@ -59,7 +61,7 @@ function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
             </article>`;
           }).join('')}
         </div>`}
-      <button class="teacher-refresh-button" id="teacher-dashboard-refresh" type="button" ${dashboard.status === 'loading' ? 'disabled' : ''}>更新進度</button>
+      <button class="teacher-refresh-button" id="teacher-dashboard-refresh" type="button" ${dashboard.status === 'loading' ? 'disabled' : ''}>取得最新進度</button>
     </section>`;
 }
 
@@ -69,7 +71,7 @@ export function teacherClassSettingsMarkup(settings) {
     const draft = settings.draft;
     const seats = Array.from({ length: Number(draft.maximum) || 0 }, (_, index) => index + 1);
     return `<section class="teacher-class-settings" aria-labelledby="class-settings-title">
-      <h2 id="class-settings-title">${ACTIVE_ACADEMIC_YEAR} 學年度班級設定</h2>
+      <h2 id="class-settings-title">${escapeHtml(settings.academicYear)} 學年度班級設定</h2>
       <p>儲存班級：<strong>${escapeHtml(draft.classId || '尚未輸入')}</strong></p>
       <label>班級代碼 <input id="class-settings-id" inputmode="numeric" value="${escapeHtml(draft.classId)}" ${settings.mode === 'edit' ? 'readonly' : ''}></label>
       <label>最大座號 <input id="class-settings-maximum" type="number" min="1" max="200" value="${draft.maximum}"></label>
@@ -84,11 +86,37 @@ export function teacherClassSettingsMarkup(settings) {
     </section>`;
   }
   return `<section class="teacher-class-settings" aria-labelledby="class-settings-title">
-    <h2 id="class-settings-title">${ACTIVE_ACADEMIC_YEAR} 學年度班級設定</h2>
+    <h2 id="class-settings-title">${escapeHtml(settings.academicYear)} 學年度班級設定</h2>
     ${settings.source === 'fallback' ? '<p class="teacher-settings-bootstrap">Firestore 尚未建立本年度設定，目前顯示既有班級。<button type="button" id="class-settings-bootstrap">建立目前年度班級設定</button></p>' : ''}
+    ${settings.source === 'firestore' && !settings.configs.length ? `<p class="teacher-settings-empty">${escapeHtml(settings.academicYear)} 學年度尚未建立班級設定。</p>` : ''}
     <div class="class-settings-list">${settings.configs.map((config) => `<article><strong>${escapeHtml(config.classId)} 班</strong><span>${config.validSeatNumbers.length} 人</span><span>${config.active ? '啟用' : '停用'}</span><button type="button" data-edit-class="${escapeHtml(config.classId)}">編輯</button></article>`).join('')}</div>
     <button type="button" class="primary-button" id="class-settings-add" ${settings.source !== 'firestore' ? 'disabled' : ''}>＋ 新增班級</button>
     <p class="teacher-settings-message" role="status">${escapeHtml(settings.message)}</p><p role="alert">${escapeHtml(settings.error)}</p>
+  </section>`;
+}
+
+export function academicYearManagementMarkup(management) {
+  if (!management) return '<p role="status">正在讀取學年度設定…</p>';
+  if (management.mode === 'add') return `<section class="teacher-year-management" aria-labelledby="year-management-title">
+    <h2 id="year-management-title">新增學年度</h2>
+    <label>學年度 <input id="academic-year-input" inputmode="numeric" value="${escapeHtml(management.draft.academicYear)}"></label>
+    <fieldset><legend>班級設定</legend>
+      <label><input type="radio" name="academic-year-method" value="copy" ${management.draft.method === 'copy' ? 'checked' : ''}> 複製目前 ${escapeHtml(management.activeAcademicYear)} 學年度</label>
+      <label><input type="radio" name="academic-year-method" value="empty" ${management.draft.method === 'empty' ? 'checked' : ''}> 建立空白年度</label>
+    </fieldset>
+    <div class="identity-actions"><button type="button" class="secondary-button" id="academic-year-cancel">取消</button><button type="button" class="primary-button" id="academic-year-create" ${management.status === 'saving' ? 'disabled' : ''}>${management.status === 'saving' ? '建立中…' : '建立'}</button></div>
+    <p role="alert">${escapeHtml(management.error)}</p></section>`;
+  return `<section class="teacher-year-management" aria-labelledby="year-management-title">
+    <h2 id="year-management-title">學年度管理</h2>
+    ${management.warning ? `<p class="teacher-year-warning" role="status">${escapeHtml(management.warning)}</p>` : ''}
+    ${management.inconsistent ? '<p class="teacher-year-warning" role="alert">目前學年度設定與年度狀態不一致；系統仍以目前學年度設定為準。</p>' : ''}
+    ${!management.initialized ? '<button type="button" class="primary-button" id="academic-year-bootstrap">建立 115 學年度管理設定</button>' : ''}
+    <div class="academic-year-list">${management.years.map((year) => {
+      const active = year.academicYear === management.activeAcademicYear;
+      return `<article><div><strong>${escapeHtml(year.academicYear)} 學年度</strong><span>${active ? '目前使用中' : '已封存'}</span></div>${active ? '<button type="button" disabled>目前年度不可封存</button>' : `<button type="button" data-activate-year="${escapeHtml(year.academicYear)}">設為目前學年度</button>`}</article>`;
+    }).join('')}</div>
+    ${management.initialized ? '<button type="button" class="primary-button" id="academic-year-add">＋ 新增學年度</button>' : ''}
+    <p class="teacher-settings-message" role="status">${escapeHtml(management.message)}</p><p role="alert">${escapeHtml(management.error)}</p>
   </section>`;
 }
 
@@ -102,7 +130,7 @@ export async function copyTeacherUid(uid, clipboard = globalThis.navigator?.clip
   }
 }
 
-export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, settings = null, teacherView = 'dashboard', ready = true, busy = false, error = '', copyStatus = '', expandedCheckpoints = new Set() } = {}) {
+export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, settings = null, management = null, teacherView = 'dashboard', ready = true, busy = false, error = '', copyStatus = '', expandedCheckpoints = new Set() } = {}) {
   return `
     <section class="teacher-auth-page" aria-labelledby="teacher-title">
       <div class="teacher-auth-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -131,9 +159,10 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
               <button class="secondary-button" id="teacher-copy-uid" type="button">複製 UID</button>
               <p id="teacher-copy-status" role="status">${escapeHtml(copyStatus)}</p>
             </section>` : ''}
-          ${authorization === 'authorized' ? `<nav class="teacher-section-nav"><button type="button" id="teacher-show-dashboard" ${teacherView === 'dashboard' ? 'aria-current="page"' : ''}>學習進度</button><button type="button" id="teacher-show-settings" ${teacherView === 'settings' ? 'aria-current="page"' : ''}>班級設定</button></nav>` : ''}
+          ${authorization === 'authorized' ? `<nav class="teacher-section-nav"><button type="button" id="teacher-show-dashboard" ${teacherView === 'dashboard' ? 'aria-current="page"' : ''}>學習進度</button><button type="button" id="teacher-show-settings" ${teacherView === 'settings' ? 'aria-current="page"' : ''}>班級設定</button><button type="button" id="teacher-show-years" ${teacherView === 'years' ? 'aria-current="page"' : ''}>學年度管理</button></nav>` : ''}
           ${authorization === 'authorized' && teacherView === 'dashboard' && dashboard ? teacherDashboardMarkup(dashboard, expandedCheckpoints) : ''}
           ${authorization === 'authorized' && teacherView === 'settings' ? teacherClassSettingsMarkup(settings) : ''}
+          ${authorization === 'authorized' && teacherView === 'years' ? academicYearManagementMarkup(management) : ''}
           <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回網站入口</button>
         ` : `
           <p class="teacher-auth-lead">請使用授權的教師 Google 帳號登入</p>
@@ -149,11 +178,21 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
   let client = null;
   let unsubscribe = null;
   let disposed = false;
-  const pageState = { user: null, authorization: 'idle', dashboard: null, settings: null, teacherView: 'dashboard', ready: false, busy: false, error: '', copyStatus: '' };
+  const pageState = { user: null, authorization: 'idle', dashboard: null, settings: null, management: null, teacherView: 'dashboard', ready: false, busy: false, error: '', copyStatus: '' };
   let authorizationGeneration = 0;
   let dashboardController = null;
   let settingsController = null;
+  let managementController = null;
   const expandedCheckpoints = new Set();
+
+  async function loadActiveYearViews(academicYear, allowLegacyFallback) {
+    settingsController = createTeacherClassSettingsController({ client, academicYear, allowLegacyFallback, onChange: (settings) => { pageState.settings = settings; render(); } });
+    const classResult = await settingsController.refresh();
+    dashboardController?.destroy();
+    dashboardController = createTeacherDashboardController({ client, academicYear, classrooms: classResult.configs, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
+    pageState.dashboard = dashboardController.getState();
+    void dashboardController.refresh();
+  }
 
   async function applyTeacherUser(user) {
     const generation = ++authorizationGeneration;
@@ -161,6 +200,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
     dashboardController?.destroy();
     dashboardController = null;
     settingsController = null;
+    managementController = null;
     pageState.dashboard = null;
     pageState.error = '';
     pageState.copyStatus = '';
@@ -172,14 +212,10 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
       if (disposed || generation !== authorizationGeneration) return;
       pageState.authorization = isAuthorized ? 'authorized' : 'unauthorized';
       if (isAuthorized) {
-        settingsController = createTeacherClassSettingsController({ client, onChange: (settings) => {
-          pageState.settings = settings;
-          render();
-        } });
-        const classResult = await settingsController.refresh();
+        managementController = createAcademicYearManagementController({ client, onChange: (management) => { pageState.management = management; render(); }, onActiveYearChange: async (academicYear, legacyBootstrap) => { await loadActiveYearViews(academicYear, legacyBootstrap); } });
+        const management = await managementController.refresh();
         if (disposed || generation !== authorizationGeneration) return;
-        dashboardController = createTeacherDashboardController({ client, classrooms: classResult.configs, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
-        pageState.dashboard = dashboardController.getState(); void dashboardController.refresh();
+        await loadActiveYearViews(management.activeAcademicYear, !management.initialized);
       }
     } catch (error) {
       if (disposed || generation !== authorizationGeneration) return;
@@ -233,6 +269,18 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
     });
     app.querySelector('#teacher-show-dashboard')?.addEventListener('click', () => { pageState.teacherView = 'dashboard'; render(); });
     app.querySelector('#teacher-show-settings')?.addEventListener('click', () => { pageState.teacherView = 'settings'; render(); });
+    app.querySelector('#teacher-show-years')?.addEventListener('click', () => { pageState.teacherView = 'years'; render(); });
+    app.querySelector('#academic-year-bootstrap')?.addEventListener('click', () => { void managementController?.bootstrap(); });
+    app.querySelector('#academic-year-add')?.addEventListener('click', () => managementController?.add());
+    app.querySelector('#academic-year-cancel')?.addEventListener('click', () => managementController?.cancel());
+    app.querySelector('#academic-year-input')?.addEventListener('change', (event) => managementController?.setDraft({ ...pageState.management.draft, academicYear: event.currentTarget.value }));
+    app.querySelectorAll('[name="academic-year-method"]').forEach((radio) => radio.addEventListener('change', (event) => managementController?.setDraft({ ...pageState.management.draft, method: event.currentTarget.value })));
+    app.querySelector('#academic-year-create')?.addEventListener('click', () => { void managementController?.create(); });
+    app.querySelectorAll('[data-activate-year]').forEach((button) => button.addEventListener('click', () => {
+      const academicYear = button.dataset.activateYear;
+      const confirmed = globalThis.confirm(`確定將 ${academicYear} 學年度設為目前學年度嗎？\n學生登入後將改用 ${academicYear} 的班級設定。`);
+      void managementController?.activate(academicYear, confirmed);
+    }));
     app.querySelector('#class-settings-bootstrap')?.addEventListener('click', async () => {
       await settingsController?.bootstrap();
       if (pageState.settings?.source === 'firestore') {

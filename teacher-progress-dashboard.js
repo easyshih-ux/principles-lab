@@ -1,4 +1,4 @@
-import { ACTIVE_ACADEMIC_YEAR, buildStudentKey } from './academic-year.js';
+import { LEGACY_DEFAULT_ACADEMIC_YEAR, buildStudentKey } from './academic-year.js?v=v2-d3-1';
 import { STUDENT_PROGRESS_COLLECTION, STUDENT_PROGRESS_CHECKPOINTS } from './student-progress-cloud.js';
 
 export const TEACHER_PROGRESS_ITEMS = Object.freeze([
@@ -12,7 +12,7 @@ export function activeTeacherClassrooms(classrooms = []) {
   return classrooms.filter((classroom) => classroom.active !== false);
 }
 
-export function emptyTeacherProgressSummary(classroom, academicYear = ACTIVE_ACADEMIC_YEAR) {
+export function emptyTeacherProgressSummary(classroom, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR) {
   return {
     academicYear,
     classId: classroom.id,
@@ -22,7 +22,7 @@ export function emptyTeacherProgressSummary(classroom, academicYear = ACTIVE_ACA
   };
 }
 
-export function summarizeTeacherProgress(classroom, records = [], academicYear = ACTIVE_ACADEMIC_YEAR) {
+export function summarizeTeacherProgress(classroom, records = [], academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR) {
   const summary = emptyTeacherProgressSummary(classroom, academicYear);
   const validSeats = new Set(classroom.validSeatNumbers.map(Number));
   const completedStudents = Object.fromEntries(
@@ -50,7 +50,7 @@ export function summarizeTeacherProgress(classroom, records = [], academicYear =
   return summary;
 }
 
-export async function loadTeacherClassProgress(client, classroom, academicYear = ACTIVE_ACADEMIC_YEAR) {
+export async function loadTeacherClassProgress(client, classroom, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR) {
   const progress = client.collection(client.db, STUDENT_PROGRESS_COLLECTION);
   const yearConstraint = client.where('academicYear', '==', academicYear);
   const classConstraint = client.where('classId', '==', classroom.id);
@@ -74,6 +74,7 @@ export async function loadTeacherClassProgress(client, classroom, academicYear =
 
 export function createTeacherDashboardController({
   client,
+  academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR,
   classrooms = [],
   loadProgress = loadTeacherClassProgress,
   onChange = () => {}
@@ -82,11 +83,11 @@ export function createTeacherDashboardController({
   let generation = 0;
   let disposed = false;
   const state = {
-    academicYear: ACTIVE_ACADEMIC_YEAR,
+    academicYear,
     classrooms: available,
     selectedClassId: available[0]?.id ?? '',
     status: 'idle',
-    summary: available[0] ? emptyTeacherProgressSummary(available[0]) : null,
+    summary: available[0] ? emptyTeacherProgressSummary(available[0], academicYear) : null,
     error: ''
   };
 
@@ -120,7 +121,7 @@ export function createTeacherDashboardController({
     if (!available.some(({ id }) => id === classId)) return Promise.resolve();
     state.selectedClassId = classId;
     const classroom = available.find(({ id }) => id === classId);
-    state.summary = emptyTeacherProgressSummary(classroom);
+    state.summary = emptyTeacherProgressSummary(classroom, state.academicYear);
     return refresh();
   }
 

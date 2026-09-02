@@ -42,8 +42,10 @@ export async function getFirebaseClient() {
         query: firestoreSdk.query,
         where: firestoreSdk.where,
         getDocs: firestoreSdk.getDocs,
+        getDoc: firestoreSdk.getDoc,
         setDoc: firestoreSdk.setDoc,
-        serverTimestamp: firestoreSdk.serverTimestamp
+        serverTimestamp: firestoreSdk.serverTimestamp,
+        runTransaction: firestoreSdk.runTransaction
       };
     }).catch((error) => {
       clientPromise = null;

@@ -1,4 +1,4 @@
-import { ACTIVE_ACADEMIC_YEAR } from './academic-year.js';
+import { LEGACY_DEFAULT_ACADEMIC_YEAR } from './academic-year.js?v=v2-d3-1';
 import {
   DEFAULT_NEW_CLASS_MAX_SEAT,
   bootstrapClassConfigs,
@@ -6,11 +6,11 @@ import {
   normalizeClassConfig,
   saveClassConfig,
   seatsForMaximum
-} from './class-config-service.js';
+} from './class-config-service.js?v=v2-d3-1';
 
-export function createNewClassDraft(classId = '', maximum = DEFAULT_NEW_CLASS_MAX_SEAT) {
+export function createNewClassDraft(classId = '', maximum = DEFAULT_NEW_CLASS_MAX_SEAT, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR) {
   return {
-    academicYear: ACTIVE_ACADEMIC_YEAR,
+    academicYear,
     classId: String(classId).trim(), active: true, maximum,
     validSeatNumbers: Array.from({ length: maximum }, (_, index) => index + 1)
   };
@@ -45,25 +45,26 @@ export function validateClassDraft(draft, configs, originalClassId = '') {
   return normalizeClassConfig({ ...draft, classId });
 }
 
-export function createTeacherClassSettingsController({ client, onChange = () => {} }) {
-  const state = { status: 'loading', source: '', configs: [], mode: 'list', draft: null, originalClassId: '', message: '', error: '' };
+export function createTeacherClassSettingsController({ client, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR, allowLegacyFallback = false, onChange = () => {} }) {
+  const state = { academicYear, status: 'loading', source: '', configs: [], mode: 'list', draft: null, originalClassId: '', message: '', error: '' };
   const notify = () => onChange({ ...state, configs: [...state.configs] });
   async function refresh() {
     state.status = 'loading'; notify();
-    const result = await loadClassConfigs(client);
+    const result = await loadClassConfigs(client, state.academicYear, undefined, { allowLegacyFallback });
     Object.assign(state, result, { mode: 'list', draft: null, message: '', error: result.error });
     notify(); return result;
   }
   async function bootstrap() {
     state.status = 'saving'; state.error = ''; notify();
     try {
-      await bootstrapClassConfigs(client);
-      const result = await loadClassConfigs(client);
+      if (!allowLegacyFallback) throw new Error('legacy bootstrap disabled');
+      await bootstrapClassConfigs(client, state.academicYear);
+      const result = await loadClassConfigs(client, state.academicYear, undefined, { allowLegacyFallback });
       Object.assign(state, result, { status: 'success', source: 'firestore', message: '已建立目前學年度班級設定。', error: '' });
     } catch { state.status = 'error'; state.error = '建立班級設定失敗，請稍後再試。'; }
     notify();
   }
-  function add() { state.mode = 'add'; state.draft = createNewClassDraft(); state.originalClassId = ''; state.message = ''; state.error = ''; notify(); }
+  function add() { state.mode = 'add'; state.draft = createNewClassDraft('', DEFAULT_NEW_CLASS_MAX_SEAT, state.academicYear); state.originalClassId = ''; state.message = ''; state.error = ''; notify(); }
   function edit(classId) { const config = state.configs.find((item) => item.classId === classId); if (!config) return; state.mode = 'edit'; state.draft = createEditClassDraft(config); state.originalClassId = classId; state.message = ''; state.error = ''; notify(); }
   function cancel() { state.mode = 'list'; state.draft = null; state.error = ''; notify(); }
   function setDraft(draft) { state.draft = draft; notify(); }
@@ -71,8 +72,8 @@ export function createTeacherClassSettingsController({ client, onChange = () => 
     state.status = 'saving'; state.error = ''; notify();
     try {
       const config = validateClassDraft(state.draft, state.configs, state.originalClassId);
-      await saveClassConfig(client, config);
-      const result = await loadClassConfigs(client);
+      await saveClassConfig(client, config, state.academicYear);
+      const result = await loadClassConfigs(client, state.academicYear, undefined, { allowLegacyFallback });
       Object.assign(state, result, { status: 'success', source: 'firestore', mode: 'list', draft: null, message: `${config.classId} 班設定已儲存。`, error: '' });
     } catch (error) { state.status = 'error'; state.error = error instanceof TypeError ? error.message : '儲存失敗，請稍後再試。'; }
     notify();

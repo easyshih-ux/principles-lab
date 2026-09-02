@@ -13,11 +13,12 @@ import { createPhase6cCourseState } from './phase6c-course-state.js?v=balance-as
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=balance-asymmetry-2';
 import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
-import { fallbackClassConfigs, loadClassConfigs } from './class-config-service.js?v=v2-d2-1';
-import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d2-1';
-import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d2-1';
+import { fallbackClassConfigs, loadClassConfigs } from './class-config-service.js?v=v2-d3-1';
+import { loadActiveAcademicYear } from './academic-year-service.js?v=v2-d3-1';
+import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d3-1';
+import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d3-1';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
-import { renderTeacherPage } from './teacher-page.js?v=v2-d2-1';
+import { renderTeacherPage } from './teacher-page.js?v=v2-d3-1';
 import { renderSiteEntry } from './site-entry.js?v=v2-entry-2';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
@@ -31,22 +32,49 @@ const state = createAppState(stages, recognizeQuestions, discoverQuestions);
 let classroomStorage = null;
 try { classroomStorage = window.localStorage; } catch { /* storage may be unavailable */ }
 state.classroomUnlocks = loadClassroomUnlocks(classroomStorage);
-state.currentStudent = loadCurrentStudent(classroomStorage);
+const pendingStoredStudent = loadCurrentStudent(classroomStorage);
+state.currentStudent = null;
 state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
 let identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
 let classConfigState = { status: 'loading', source: 'fallback', configs: fallbackClassConfigs(), error: '' };
 let classConfigRequest = null;
+let academicYearState = { status: 'loading', academicYear: '115', source: '', initialized: false, warning: '' };
+let academicYearRequest = null;
+
+function loadStudentAcademicYear() {
+  if (academicYearRequest) return academicYearRequest;
+  academicYearRequest = getFirebaseClient().then(async (client) => {
+    await ensureAnonymousAuth(client);
+    const result = await loadActiveAcademicYear(client);
+    academicYearState = { ...result, status: 'ready' };
+    const restored = loadCurrentStudent(classroomStorage, result.academicYear);
+    state.currentStudent = restored;
+    if (pendingStoredStudent && !restored) {
+      clearCurrentStudent(classroomStorage);
+      state.classroomUnlocks = resetClassroomUnlocks(classroomStorage);
+      state.classroomGate = { activeCourseId: null, message: '', error: '' };
+      history.replaceState(null, '', '#student');
+    }
+    return { client, result };
+  }).catch(() => {
+    academicYearState = { status: 'ready', academicYear: '115', source: 'legacy-error', initialized: false, warning: '學年度設定暫時無法連線，目前使用暫存年度 115。' };
+    state.currentStudent = loadCurrentStudent(classroomStorage, '115');
+    return { client: null, result: academicYearState };
+  }).then((loaded) => { renderCurrentRoute(); return loaded; });
+  return academicYearRequest;
+}
 
 function loadStudentClassConfigs() {
   if (classConfigRequest) return classConfigRequest;
-  classConfigRequest = getFirebaseClient()
-    .then(async (client) => {
-      await ensureAnonymousAuth(client);
-      return loadClassConfigs(client);
+  classConfigRequest = loadStudentAcademicYear()
+    .then(async ({ client, result: academicYear }) => {
+      if (!client) throw new Error('offline');
+      return loadClassConfigs(client, academicYear.academicYear, undefined, { allowLegacyFallback: !academicYear.initialized });
     })
     .catch(() => ({
-      status: 'error', source: 'fallback', configs: fallbackClassConfigs(),
-      error: '班級設定暫時無法連線，目前使用既有班級設定。'
+      status: 'error', source: academicYearState.initialized ? 'firestore' : 'fallback',
+      configs: academicYearState.initialized ? [] : fallbackClassConfigs(),
+      error: academicYearState.initialized ? '班級設定暫時無法連線。' : '班級設定暫時無法連線，目前使用既有班級設定。'
     }))
     .then((result) => {
       classConfigState = result;
@@ -68,6 +96,7 @@ function saveCloudCheckpoint(checkpointName) {
 }
 
 function renderIdentityGate() {
+  void loadStudentAcademicYear();
   void loadStudentClassConfigs();
   const activeConfigs = classConfigState.configs.filter(({ active }) => active);
   const configReady = classConfigState.status !== 'loading';
@@ -80,9 +109,10 @@ function renderIdentityGate() {
       <div class="identity-panel">
         <p class="section-label">V2 · DEMO 班級資料</p>
         <h1 id="identity-title">今天是哪位同學使用？</h1>
+        ${academicYearState.warning ? `<p class="identity-config-notice" role="status">${academicYearState.warning}</p>` : ''}
         ${classConfigState.status === 'loading' ? '<p role="status">正在讀取班級設定…</p>' : ''}
         ${classConfigState.error ? `<p class="identity-config-notice" role="status">${classConfigState.error}</p>` : ''}
-        ${identityDraft.confirming ? `
+        ${configReady && !activeConfigs.length ? `<p class="identity-config-notice" role="status">目前尚未設定班級。</p>` : identityDraft.confirming ? `
           <p class="identity-confirm-question">你是 <strong>${identityDraft.classId} 班 ${identityDraft.seatNo} 號</strong>嗎？</p>
           <div class="identity-actions">
             <button class="secondary-button" id="identity-reselect" type="button">重新選擇</button>
@@ -118,7 +148,7 @@ function renderIdentityGate() {
     renderIdentityGate();
   });
   document.querySelector('#identity-next')?.addEventListener('click', () => {
-    if (!createStudentIdentity(identityDraft.classId, identityDraft.seatNo, undefined, activeConfigs)) return;
+    if (!createStudentIdentity(identityDraft.classId, identityDraft.seatNo, academicYearState.academicYear, activeConfigs)) return;
     identityDraft.confirming = true;
     renderIdentityGate();
   });
@@ -127,7 +157,7 @@ function renderIdentityGate() {
     renderIdentityGate();
   });
   document.querySelector('#identity-confirm')?.addEventListener('click', () => {
-    state.currentStudent = saveCurrentStudent(identityDraft, classroomStorage, activeConfigs);
+    state.currentStudent = saveCurrentStudent(identityDraft, classroomStorage, activeConfigs, academicYearState.academicYear);
     identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
     renderCurrentRoute();
   });
@@ -192,6 +222,13 @@ function renderCurrentRoute() {
   }
   if (route.name === 'teacher') {
     activeTeacherPage = renderTeacherPage({ app, navigate });
+    window.scrollTo(0, 0);
+    focusRouteHeading();
+    return;
+  }
+  if (academicYearState.status === 'loading') {
+    void loadStudentAcademicYear();
+    renderIdentityGate();
     window.scrollTo(0, 0);
     focusRouteHeading();
     return;

@@ -1,4 +1,4 @@
-import { ACTIVE_ACADEMIC_YEAR } from './academic-year.js';
+import { LEGACY_DEFAULT_ACADEMIC_YEAR } from './academic-year.js?v=v2-d3-1';
 import { CLASSROOMS } from './classroom-config.js';
 
 export const CLASS_CONFIG_COLLECTION = 'classConfigs';
@@ -20,7 +20,7 @@ export function normalizeValidSeatNumbers(seats) {
   return [...new Set(normalized)].sort((left, right) => left - right);
 }
 
-export function normalizeClassConfig(input, academicYear = ACTIVE_ACADEMIC_YEAR) {
+export function normalizeClassConfig(input, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR) {
   const year = String(input?.academicYear ?? academicYear).trim();
   const classId = String(input?.classId ?? input?.id ?? '').trim();
   if (!buildClassConfigKey(year, classId) || typeof input?.active !== 'boolean') {
@@ -35,7 +35,7 @@ export function normalizeClassConfig(input, academicYear = ACTIVE_ACADEMIC_YEAR)
   });
 }
 
-export function fallbackClassConfigs(academicYear = ACTIVE_ACADEMIC_YEAR, classrooms = CLASSROOMS) {
+export function fallbackClassConfigs(academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR, classrooms = CLASSROOMS) {
   return classrooms.map((item) => normalizeClassConfig({
     academicYear,
     classId: item.id,
@@ -44,7 +44,7 @@ export function fallbackClassConfigs(academicYear = ACTIVE_ACADEMIC_YEAR, classr
   }, academicYear));
 }
 
-export async function loadClassConfigs(client, academicYear = ACTIVE_ACADEMIC_YEAR, classrooms = CLASSROOMS) {
+export async function loadClassConfigs(client, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR, classrooms = CLASSROOMS, { allowLegacyFallback = true } = {}) {
   try {
     const reference = client.collection(client.db, CLASS_CONFIG_COLLECTION);
     const request = client.query(reference, client.where('academicYear', '==', academicYear));
@@ -52,16 +52,18 @@ export async function loadClassConfigs(client, academicYear = ACTIVE_ACADEMIC_YE
     const configs = snapshot.docs.map((item) => normalizeClassConfig(item.data(), academicYear))
       .sort((left, right) => left.classId.localeCompare(right.classId, 'en', { numeric: true }));
     if (configs.length) return { status: 'success', source: 'firestore', configs, error: '' };
+    if (!allowLegacyFallback) return { status: 'empty', source: 'firestore', configs: [], error: '' };
     return { status: 'empty', source: 'fallback', configs: fallbackClassConfigs(academicYear, classrooms), error: '' };
   } catch (error) {
     return {
-      status: 'error', source: 'fallback', configs: fallbackClassConfigs(academicYear, classrooms),
-      error: '班級設定暫時無法連線，目前使用既有班級設定。', cause: error
+      status: 'error', source: allowLegacyFallback ? 'fallback' : 'firestore',
+      configs: allowLegacyFallback ? fallbackClassConfigs(academicYear, classrooms) : [],
+      error: allowLegacyFallback ? '班級設定暫時無法連線，目前使用既有班級設定。' : '班級設定暫時無法連線。', cause: error
     };
   }
 }
 
-export function buildClassConfigData(input, updatedAt, academicYear = ACTIVE_ACADEMIC_YEAR) {
+export function buildClassConfigData(input, updatedAt, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR) {
   const config = normalizeClassConfig(input, academicYear);
   return {
     academicYear: config.academicYear,
@@ -72,14 +74,14 @@ export function buildClassConfigData(input, updatedAt, academicYear = ACTIVE_ACA
   };
 }
 
-export async function saveClassConfig(client, input, academicYear = ACTIVE_ACADEMIC_YEAR) {
+export async function saveClassConfig(client, input, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR) {
   const data = buildClassConfigData(input, client.serverTimestamp(), academicYear);
   const key = buildClassConfigKey(data.academicYear, data.classId);
   await client.setDoc(client.doc(client.db, CLASS_CONFIG_COLLECTION, key), data, { merge: false });
   return normalizeClassConfig(data, academicYear);
 }
 
-export async function bootstrapClassConfigs(client, academicYear = ACTIVE_ACADEMIC_YEAR, classrooms = CLASSROOMS) {
+export async function bootstrapClassConfigs(client, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR, classrooms = CLASSROOMS) {
   const configs = fallbackClassConfigs(academicYear, classrooms);
   const batch = client.writeBatch(client.db);
   for (const config of configs) {

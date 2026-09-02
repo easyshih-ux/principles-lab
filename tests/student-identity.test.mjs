@@ -73,6 +73,14 @@ test('confirmation saves classId seatNo and studentKey and reload restores them'
   assert.deepEqual(loadCurrentStudent(storage), saved);
 });
 
+test('stored identity is retained only when it matches the canonical active academic year', () => {
+  const storage = new MemoryStorage();
+  saveCurrentStudent({ classId: '701', seatNo: 12 }, storage, null, '115');
+  assert.equal(loadCurrentStudent(storage, '115').studentKey, '115-701-12');
+  assert.equal(loadCurrentStudent(storage, '116'), null);
+  assert.equal(saveCurrentStudent({ classId: '701', seatNo: 12 }, storage, null, '116').studentKey, '116-701-12');
+});
+
 test('ending use clears current student and classroom unlocks for the next student', () => {
   const storage = new MemoryStorage();
   saveCurrentStudent({ classId: '701', seatNo: 12 }, storage);
@@ -91,6 +99,7 @@ test('app identity gate creates storage only from explicit confirmation and rese
   assert.match(appSource, /#identity-confirm[\s\S]*saveCurrentStudent/);
   assert.doesNotMatch(appSource, /#identity-next[\s\S]{0,240}saveCurrentStudent/);
   assert.match(appSource, /#student-end-confirm[\s\S]*clearCurrentStudent[\s\S]*resetClassroomUnlocks/);
+  assert.match(appSource, /pendingStoredStudent[\s\S]*!restored[\s\S]*clearCurrentStudent[\s\S]*resetClassroomUnlocks/);
 });
 
 test('identity gate can return to entry without creating or changing student identity', () => {

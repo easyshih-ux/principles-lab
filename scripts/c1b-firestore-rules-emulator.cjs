@@ -127,9 +127,34 @@ async function checkpointCreate(db, studentKey = '115-701-12', academicYear = '1
     await assertFails(setDoc(doc(teacher, 'classConfigs', '115-717'), { ...classConfig, classId: '717', studentCount: 4 }));
     await assertFails(deleteDoc(doc(teacher, 'classConfigs', '115-716')));
     await assertFails(getDoc(doc(unauthorized, 'classConfigs', '115-716')));
+
+    const academicYear = {
+      academicYear: '115', status: 'active', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    };
+    await assertSucceeds(setDoc(doc(teacher, 'academicYears', '115'), academicYear));
+    await assertSucceeds(getDoc(doc(teacher, 'academicYears', '115')));
+    await assertSucceeds(getDocs(query(collection(teacher, 'academicYears'))));
+    await assertFails(getDoc(doc(anonymous, 'academicYears', '115')));
+    await assertFails(setDoc(doc(anonymous, 'academicYears', '116'), { ...academicYear, academicYear: '116', status: 'archived' }));
+    await assertFails(setDoc(doc(unauthorized, 'academicYears', '116'), { ...academicYear, academicYear: '116', status: 'archived' }));
+    await assertFails(setDoc(doc(teacher, 'academicYears', '116'), { ...academicYear, academicYear: '117', status: 'archived' }));
+    await assertFails(setDoc(doc(teacher, 'academicYears', '116'), { ...academicYear, academicYear: '116', status: 'draft' }));
+    await assertFails(setDoc(doc(teacher, 'academicYears', '116'), { ...academicYear, academicYear: '116', status: 'archived', extra: true }));
+    await assertFails(deleteDoc(doc(teacher, 'academicYears', '115')));
+
+    const settings = { activeAcademicYear: '115', updatedAt: serverTimestamp() };
+    await assertSucceeds(setDoc(doc(teacher, 'appSettings', 'academicYear'), settings));
+    await assertSucceeds(getDoc(doc(anonymous, 'appSettings', 'academicYear')));
+    await assertSucceeds(getDoc(doc(teacher, 'appSettings', 'academicYear')));
+    await assertFails(setDoc(doc(anonymous, 'appSettings', 'academicYear'), settings));
+    await assertFails(setDoc(doc(unauthorized, 'appSettings', 'academicYear'), settings));
+    await assertFails(setDoc(doc(teacher, 'appSettings', 'academicYear'), { ...settings, extra: true }));
+    await assertFails(setDoc(doc(teacher, 'appSettings', 'academicYear'), { activeAcademicYear: 'bad', updatedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(teacher, 'appSettings', 'academicYear'), { activeAcademicYear: '116', updatedAt: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(teacher, 'appSettings', 'academicYear')));
     await assertFails(setDoc(doc(teacher, 'unknownCollection', 'blocked'), { active: true }));
 
-    console.log('Firestore Rules Emulator: all C1-B allow/deny cases passed');
+    console.log('Firestore Rules Emulator: all C1-B and D3 allow/deny cases passed');
   } finally {
     await env.cleanup();
   }

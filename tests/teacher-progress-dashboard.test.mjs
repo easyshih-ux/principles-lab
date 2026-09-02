@@ -154,7 +154,7 @@ test('authorized Dashboard markup shows counts without percentages or student de
   assert.match(markup, /班級學習進度/);
   assert.match(markup, /115 學年度｜701 班學習進度/);
   assert.match(markup, /自由練習[\s\S]*<strong>1<\/strong><span>\/ 4<\/span>/);
-  assert.match(markup, /更新進度/);
+  assert.match(markup, /取得最新進度/);
   assert.equal((markup.match(/查看已完成座號 ▾/g) ?? []).length, 4);
   assert.doesNotMatch(markup, /teacher-seat-chips/);
   assert.doesNotMatch(markup, /%|學生名單|排名|成績/);
@@ -207,9 +207,9 @@ test('Dashboard uses compact horizontal rows with full-width details and a narro
   assert.match(css, /teacher-seat-chips\{[^}]*flex-wrap:wrap[^}]*min-width:0/);
   assert.match(css, /@media\(max-width:620px\)[\s\S]*teacher-progress-card\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/);
   assert.doesNotMatch(css, /teacher-progress-grid\{[^}]*repeat\(2/);
-  assert.match(index, /styles\.css\?v=v2-d2-1/);
-  assert.match(index, /app\.js\?v=v2-d2-1/);
-  assert.match(app, /teacher-page\.js\?v=v2-d2-1/);
+  assert.match(index, /styles\.css\?v=v2-d3-1/);
+  assert.match(index, /app\.js\?v=v2-d3-1/);
+  assert.match(app, /teacher-page\.js\?v=v2-d3-1/);
 });
 
 test('permission-denied Dashboard hides progress cards and reports insufficient permission', () => {
@@ -221,7 +221,7 @@ test('permission-denied Dashboard hides progress cards and reports insufficient 
   const markup = teacherPageMarkup({ user: { uid: 'teacher' }, authorization: 'authorized', dashboard });
   assert.match(markup, /教師權限不足/);
   assert.doesNotMatch(markup, /teacher-progress-card-/);
-  assert.match(markup, /更新進度/);
+  assert.match(markup, /取得最新進度/);
 });
 
 test('Dashboard markup reports loading and retriable network errors', () => {

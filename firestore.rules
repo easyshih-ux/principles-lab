@@ -113,6 +113,44 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function hasValidAcademicYear(academicYear) {
+      return request.resource.data.keys().hasAll([
+        'academicYear', 'status', 'createdAt', 'updatedAt'
+      ]) && request.resource.data.keys().hasOnly([
+        'academicYear', 'status', 'createdAt', 'updatedAt'
+      ])
+        && request.resource.data.academicYear is string
+        && request.resource.data.academicYear.matches('[0-9]{2,4}')
+        && request.resource.data.academicYear == academicYear
+        && request.resource.data.status in ['active', 'archived']
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /academicYears/{academicYear} {
+      allow read: if isTeacher();
+      allow create: if isTeacher()
+        && hasValidAcademicYear(academicYear)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isTeacher()
+        && hasValidAcademicYear(academicYear)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    function hasValidAcademicYearSettings() {
+      return request.resource.data.keys().hasAll(['activeAcademicYear', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['activeAcademicYear', 'updatedAt'])
+        && request.resource.data.activeAcademicYear is string
+        && request.resource.data.activeAcademicYear.matches('[0-9]{2,4}')
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /appSettings/academicYear {
+      allow read: if isAnonymousStudent() || isTeacher();
+      allow create, update: if isTeacher() && hasValidAcademicYearSettings();
+      allow delete: if false;
+    }
+
     match /teachers/{uid} {
       allow read, write: if false;
     }
