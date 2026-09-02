@@ -38,6 +38,10 @@ export async function getFirebaseClient() {
         db: firestoreSdk.getFirestore(firebaseApp),
         signInAnonymously: authSdk.signInAnonymously,
         doc: firestoreSdk.doc,
+        collection: firestoreSdk.collection,
+        query: firestoreSdk.query,
+        where: firestoreSdk.where,
+        getDocs: firestoreSdk.getDocs,
         setDoc: firestoreSdk.setDoc,
         serverTimestamp: firestoreSdk.serverTimestamp
       };

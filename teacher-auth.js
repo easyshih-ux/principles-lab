@@ -29,7 +29,11 @@ export async function createTeacherFirebaseClient(appSdk, authSdk, firestoreSdk)
     where: firestoreSdk.where,
     getDocs: firestoreSdk.getDocs,
     limit: firestoreSdk.limit,
-    getCountFromServer: firestoreSdk.getCountFromServer
+    getCountFromServer: firestoreSdk.getCountFromServer,
+    doc: firestoreSdk.doc,
+    setDoc: firestoreSdk.setDoc,
+    serverTimestamp: firestoreSdk.serverTimestamp,
+    writeBatch: firestoreSdk.writeBatch
   };
 }
 

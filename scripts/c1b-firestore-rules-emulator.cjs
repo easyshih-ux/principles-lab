@@ -109,6 +109,26 @@ async function checkpointCreate(db, studentKey = '115-701-12', academicYear = '1
     await assertFails(getDocs(query(collection(unauthenticated, 'studentProgress'))));
     await assertFails(deleteDoc(doc(teacher, 'studentProgress', '115-701-1')));
 
+    const classConfig = {
+      academicYear: '115', classId: '716', active: true,
+      validSeatNumbers: [1, 2, 3, 4], updatedAt: serverTimestamp()
+    };
+    await assertSucceeds(setDoc(doc(teacher, 'classConfigs', '115-716'), classConfig));
+    await assertSucceeds(updateDoc(doc(teacher, 'classConfigs', '115-716'), {
+      active: false, validSeatNumbers: [1, 2, 4], updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(doc(anonymous, 'classConfigs', '115-716')));
+    await assertSucceeds(getDocs(query(collection(anonymous, 'classConfigs'))));
+    await assertSucceeds(getDoc(doc(teacher, 'classConfigs', '115-716')));
+    await assertFails(setDoc(doc(anonymous, 'classConfigs', '115-717'), { ...classConfig, classId: '717' }));
+    await assertFails(setDoc(doc(unauthorized, 'classConfigs', '115-717'), { ...classConfig, classId: '717' }));
+    await assertFails(setDoc(doc(teacher, 'classConfigs', '115-999'), classConfig));
+    await assertFails(setDoc(doc(teacher, 'classConfigs', '115-717'), { ...classConfig, classId: '717', academicYear: '116' }));
+    await assertFails(setDoc(doc(teacher, 'classConfigs', '115-717'), { ...classConfig, classId: '717', studentCount: 4 }));
+    await assertFails(deleteDoc(doc(teacher, 'classConfigs', '115-716')));
+    await assertFails(getDoc(doc(unauthorized, 'classConfigs', '115-716')));
+    await assertFails(setDoc(doc(teacher, 'unknownCollection', 'blocked'), { active: true }));
+
     console.log('Firestore Rules Emulator: all C1-B allow/deny cases passed');
   } finally {
     await env.cleanup();

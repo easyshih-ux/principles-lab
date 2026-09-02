@@ -1,4 +1,3 @@
-import { CLASSROOMS } from './classroom-config.js';
 import { ACTIVE_ACADEMIC_YEAR, buildStudentKey } from './academic-year.js';
 import { STUDENT_PROGRESS_COLLECTION, STUDENT_PROGRESS_CHECKPOINTS } from './student-progress-cloud.js';
 
@@ -9,7 +8,7 @@ export const TEACHER_PROGRESS_ITEMS = Object.freeze([
   Object.freeze({ key: 'level3Complete', label: '第三關' })
 ]);
 
-export function activeTeacherClassrooms(classrooms = CLASSROOMS) {
+export function activeTeacherClassrooms(classrooms = []) {
   return classrooms.filter((classroom) => classroom.active !== false);
 }
 
@@ -75,7 +74,7 @@ export async function loadTeacherClassProgress(client, classroom, academicYear =
 
 export function createTeacherDashboardController({
   client,
-  classrooms = activeTeacherClassrooms(),
+  classrooms = [],
   loadProgress = loadTeacherClassProgress,
   onChange = () => {}
 }) {

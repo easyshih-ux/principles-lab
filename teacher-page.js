@@ -4,12 +4,14 @@ import {
   signOutTeacher,
   teacherAuthErrorMessage,
   verifyTeacherAuthorization
-} from './teacher-auth.js?v=v2-c1-b-1';
+} from './teacher-auth.js?v=v2-d2-1';
 import {
   createTeacherDashboardController,
   TEACHER_PROGRESS_ITEMS
-} from './teacher-progress-dashboard.js?v=v2-c2-a-1';
+} from './teacher-progress-dashboard.js?v=v2-d2-1';
 import { formatSeatNumber } from './classroom-config.js';
+import { ACTIVE_ACADEMIC_YEAR } from './academic-year.js';
+import { changeDraftMaximum, createTeacherClassSettingsController, toggleDraftSeat } from './teacher-class-settings.js?v=v2-d2-1';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -61,6 +63,35 @@ function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
     </section>`;
 }
 
+export function teacherClassSettingsMarkup(settings) {
+  if (!settings) return '<p role="status">正在讀取班級設定…</p>';
+  if (settings.mode === 'add' || settings.mode === 'edit') {
+    const draft = settings.draft;
+    const seats = Array.from({ length: Number(draft.maximum) || 0 }, (_, index) => index + 1);
+    return `<section class="teacher-class-settings" aria-labelledby="class-settings-title">
+      <h2 id="class-settings-title">${ACTIVE_ACADEMIC_YEAR} 學年度班級設定</h2>
+      <p>儲存班級：<strong>${escapeHtml(draft.classId || '尚未輸入')}</strong></p>
+      <label>班級代碼 <input id="class-settings-id" inputmode="numeric" value="${escapeHtml(draft.classId)}" ${settings.mode === 'edit' ? 'readonly' : ''}></label>
+      <label>最大座號 <input id="class-settings-maximum" type="number" min="1" max="200" value="${draft.maximum}"></label>
+      <label class="class-settings-active"><input id="class-settings-active" type="checkbox" ${draft.active ? 'checked' : ''}> 啟用班級</label>
+      <p>有效學生：<strong>${draft.validSeatNumbers.length}</strong> 人</p>
+      <div class="class-settings-seats" aria-label="有效座號設定">${seats.map((seat) => {
+        const active = draft.validSeatNumbers.includes(seat);
+        return `<button type="button" data-class-seat="${seat}" class="${active ? 'is-valid' : 'is-empty'}" aria-pressed="${active}">${formatSeatNumber(seat)}<small>${active ? '有效' : '空號'}</small></button>`;
+      }).join('')}</div>
+      <div class="identity-actions"><button type="button" class="secondary-button" id="class-settings-cancel">取消</button><button type="button" class="primary-button" id="class-settings-save" ${settings.status === 'saving' ? 'disabled' : ''}>${settings.status === 'saving' ? '儲存中…' : '儲存設定'}</button></div>
+      <p role="alert">${escapeHtml(settings.error)}</p>
+    </section>`;
+  }
+  return `<section class="teacher-class-settings" aria-labelledby="class-settings-title">
+    <h2 id="class-settings-title">${ACTIVE_ACADEMIC_YEAR} 學年度班級設定</h2>
+    ${settings.source === 'fallback' ? '<p class="teacher-settings-bootstrap">Firestore 尚未建立本年度設定，目前顯示既有班級。<button type="button" id="class-settings-bootstrap">建立目前年度班級設定</button></p>' : ''}
+    <div class="class-settings-list">${settings.configs.map((config) => `<article><strong>${escapeHtml(config.classId)} 班</strong><span>${config.validSeatNumbers.length} 人</span><span>${config.active ? '啟用' : '停用'}</span><button type="button" data-edit-class="${escapeHtml(config.classId)}">編輯</button></article>`).join('')}</div>
+    <button type="button" class="primary-button" id="class-settings-add" ${settings.source !== 'firestore' ? 'disabled' : ''}>＋ 新增班級</button>
+    <p class="teacher-settings-message" role="status">${escapeHtml(settings.message)}</p><p role="alert">${escapeHtml(settings.error)}</p>
+  </section>`;
+}
+
 export async function copyTeacherUid(uid, clipboard = globalThis.navigator?.clipboard) {
   if (!uid || !clipboard?.writeText) return false;
   try {
@@ -71,7 +102,7 @@ export async function copyTeacherUid(uid, clipboard = globalThis.navigator?.clip
   }
 }
 
-export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, ready = true, busy = false, error = '', copyStatus = '', expandedCheckpoints = new Set() } = {}) {
+export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, settings = null, teacherView = 'dashboard', ready = true, busy = false, error = '', copyStatus = '', expandedCheckpoints = new Set() } = {}) {
   return `
     <section class="teacher-auth-page" aria-labelledby="teacher-title">
       <div class="teacher-auth-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -100,7 +131,9 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
               <button class="secondary-button" id="teacher-copy-uid" type="button">複製 UID</button>
               <p id="teacher-copy-status" role="status">${escapeHtml(copyStatus)}</p>
             </section>` : ''}
-          ${authorization === 'authorized' && dashboard ? teacherDashboardMarkup(dashboard, expandedCheckpoints) : ''}
+          ${authorization === 'authorized' ? `<nav class="teacher-section-nav"><button type="button" id="teacher-show-dashboard" ${teacherView === 'dashboard' ? 'aria-current="page"' : ''}>學習進度</button><button type="button" id="teacher-show-settings" ${teacherView === 'settings' ? 'aria-current="page"' : ''}>班級設定</button></nav>` : ''}
+          ${authorization === 'authorized' && teacherView === 'dashboard' && dashboard ? teacherDashboardMarkup(dashboard, expandedCheckpoints) : ''}
+          ${authorization === 'authorized' && teacherView === 'settings' ? teacherClassSettingsMarkup(settings) : ''}
           <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回網站入口</button>
         ` : `
           <p class="teacher-auth-lead">請使用授權的教師 Google 帳號登入</p>
@@ -116,9 +149,10 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
   let client = null;
   let unsubscribe = null;
   let disposed = false;
-  const pageState = { user: null, authorization: 'idle', dashboard: null, ready: false, busy: false, error: '', copyStatus: '' };
+  const pageState = { user: null, authorization: 'idle', dashboard: null, settings: null, teacherView: 'dashboard', ready: false, busy: false, error: '', copyStatus: '' };
   let authorizationGeneration = 0;
   let dashboardController = null;
+  let settingsController = null;
   const expandedCheckpoints = new Set();
 
   async function applyTeacherUser(user) {
@@ -126,6 +160,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
     pageState.user = user;
     dashboardController?.destroy();
     dashboardController = null;
+    settingsController = null;
     pageState.dashboard = null;
     pageState.error = '';
     pageState.copyStatus = '';
@@ -137,15 +172,14 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
       if (disposed || generation !== authorizationGeneration) return;
       pageState.authorization = isAuthorized ? 'authorized' : 'unauthorized';
       if (isAuthorized) {
-        dashboardController = createTeacherDashboardController({
-          client,
-          onChange: (dashboard) => {
-            pageState.dashboard = dashboard;
-            render();
-          }
-        });
-        pageState.dashboard = dashboardController.getState();
-        void dashboardController.refresh();
+        settingsController = createTeacherClassSettingsController({ client, onChange: (settings) => {
+          pageState.settings = settings;
+          render();
+        } });
+        const classResult = await settingsController.refresh();
+        if (disposed || generation !== authorizationGeneration) return;
+        dashboardController = createTeacherDashboardController({ client, classrooms: classResult.configs, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
+        pageState.dashboard = dashboardController.getState(); void dashboardController.refresh();
       }
     } catch (error) {
       if (disposed || generation !== authorizationGeneration) return;
@@ -196,6 +230,39 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
       if (disposed || pageState.authorization !== 'unauthorized') return;
       pageState.copyStatus = copied ? '已複製 UID' : '無法複製，請手動選取 UID';
       render();
+    });
+    app.querySelector('#teacher-show-dashboard')?.addEventListener('click', () => { pageState.teacherView = 'dashboard'; render(); });
+    app.querySelector('#teacher-show-settings')?.addEventListener('click', () => { pageState.teacherView = 'settings'; render(); });
+    app.querySelector('#class-settings-bootstrap')?.addEventListener('click', async () => {
+      await settingsController?.bootstrap();
+      if (pageState.settings?.source === 'firestore') {
+        dashboardController?.destroy();
+        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
+        pageState.dashboard = dashboardController.getState(); void dashboardController.refresh();
+      }
+    });
+    app.querySelector('#class-settings-add')?.addEventListener('click', () => settingsController?.add());
+    app.querySelectorAll('[data-edit-class]').forEach((button) => button.addEventListener('click', () => settingsController?.edit(button.dataset.editClass)));
+    app.querySelector('#class-settings-cancel')?.addEventListener('click', () => settingsController?.cancel());
+    app.querySelector('#class-settings-id')?.addEventListener('change', (event) => settingsController?.setDraft({ ...pageState.settings.draft, classId: event.currentTarget.value }));
+    app.querySelector('#class-settings-maximum')?.addEventListener('change', (event) => {
+      const draft = pageState.settings.draft; const next = Number(event.currentTarget.value);
+      if (next < draft.maximum && !globalThis.confirm(`將最大座號從 ${draft.maximum} 降為 ${next}，確定繼續？`)) { render(); return; }
+      try { settingsController?.setDraft(changeDraftMaximum(draft, next)); } catch { render(); }
+    });
+    app.querySelector('#class-settings-active')?.addEventListener('change', (event) => {
+      const active = event.currentTarget.checked;
+      if (!active && !globalThis.confirm(`確定停用 ${pageState.settings.draft.classId} 班？既有學習進度不會刪除。`)) { render(); return; }
+      settingsController?.setDraft({ ...pageState.settings.draft, active });
+    });
+    app.querySelectorAll('[data-class-seat]').forEach((button) => button.addEventListener('click', () => settingsController?.setDraft(toggleDraftSeat(pageState.settings.draft, button.dataset.classSeat))));
+    app.querySelector('#class-settings-save')?.addEventListener('click', async () => {
+      await settingsController?.save();
+      if (pageState.settings?.source === 'firestore' && pageState.settings.mode === 'list') {
+        dashboardController?.destroy();
+        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
+        pageState.dashboard = dashboardController.getState(); void dashboardController.refresh();
+      }
     });
     app.querySelector('#teacher-class-select')?.addEventListener('change', (event) => {
       void dashboardController?.selectClass(event.currentTarget.value);

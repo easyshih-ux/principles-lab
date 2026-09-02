@@ -85,6 +85,34 @@ service cloud.firestore {
         && hasServerTimestamp();
     }
 
+    function hasValidClassConfig(classConfigKey) {
+      return request.resource.data.keys().hasAll([
+        'academicYear', 'classId', 'active', 'validSeatNumbers', 'updatedAt'
+      ]) && request.resource.data.keys().hasOnly([
+        'academicYear', 'classId', 'active', 'validSeatNumbers', 'updatedAt'
+      ])
+        && request.resource.data.academicYear is string
+        && request.resource.data.academicYear.matches('[0-9]+')
+        && request.resource.data.classId is string
+        && request.resource.data.classId.matches('[0-9]{3}')
+        && request.resource.data.active is bool
+        && request.resource.data.validSeatNumbers is list
+        && request.resource.data.validSeatNumbers.size() <= 200
+        && request.resource.data.validSeatNumbers.toSet().size() == request.resource.data.validSeatNumbers.size()
+        && classConfigKey == request.resource.data.academicYear + '-' + request.resource.data.classId
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /classConfigs/{classConfigKey} {
+      allow get, list: if isAnonymousStudent() || isTeacher();
+      allow create: if isTeacher() && hasValidClassConfig(classConfigKey);
+      allow update: if isTeacher()
+        && hasValidClassConfig(classConfigKey)
+        && request.resource.data.academicYear == resource.data.academicYear
+        && request.resource.data.classId == resource.data.classId;
+      allow delete: if false;
+    }
+
     match /teachers/{uid} {
       allow read, write: if false;
     }

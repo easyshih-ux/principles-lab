@@ -3,11 +3,11 @@ import { ACTIVE_ACADEMIC_YEAR, buildStudentKey } from './academic-year.js';
 
 export const CURRENT_STUDENT_STORAGE_KEY = 'formalPrinciplesLab.currentStudent.v2';
 
-export function createStudentIdentity(classId, seatNo, academicYear = ACTIVE_ACADEMIC_YEAR) {
+export function createStudentIdentity(classId, seatNo, academicYear = ACTIVE_ACADEMIC_YEAR, classrooms = null) {
   const normalizedClassId = String(classId);
   const normalizedSeatNo = Number(seatNo);
   const normalizedAcademicYear = String(academicYear);
-  if (!isValidStudentIdentity(normalizedClassId, normalizedSeatNo)) return null;
+  if (classrooms && !isValidStudentIdentity(normalizedClassId, normalizedSeatNo, classrooms)) return null;
   const studentKey = buildStudentKey(normalizedAcademicYear, normalizedClassId, normalizedSeatNo);
   if (!studentKey) return null;
   return {
@@ -30,8 +30,8 @@ export function loadCurrentStudent(storage) {
   }
 }
 
-export function saveCurrentStudent(identity, storage) {
-  const currentStudent = createStudentIdentity(identity?.classId, identity?.seatNo, ACTIVE_ACADEMIC_YEAR);
+export function saveCurrentStudent(identity, storage, classrooms = null) {
+  const currentStudent = createStudentIdentity(identity?.classId, identity?.seatNo, ACTIVE_ACADEMIC_YEAR, classrooms);
   if (!currentStudent) return null;
   try { storage?.setItem(CURRENT_STUDENT_STORAGE_KEY, JSON.stringify(currentStudent)); } catch { /* session remains usable in memory */ }
   return currentStudent;

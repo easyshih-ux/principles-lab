@@ -13,9 +13,11 @@ import { createPhase6cCourseState } from './phase6c-course-state.js?v=balance-as
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=balance-asymmetry-2';
 import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
-import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js';
+import { fallbackClassConfigs, loadClassConfigs } from './class-config-service.js?v=v2-d2-1';
+import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d2-1';
+import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d2-1';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
-import { renderTeacherPage } from './teacher-page.js?v=v2-c2-layout-1';
+import { renderTeacherPage } from './teacher-page.js?v=v2-d2-1';
 import { renderSiteEntry } from './site-entry.js?v=v2-entry-2';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
@@ -32,6 +34,32 @@ state.classroomUnlocks = loadClassroomUnlocks(classroomStorage);
 state.currentStudent = loadCurrentStudent(classroomStorage);
 state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
 let identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
+let classConfigState = { status: 'loading', source: 'fallback', configs: fallbackClassConfigs(), error: '' };
+let classConfigRequest = null;
+
+function loadStudentClassConfigs() {
+  if (classConfigRequest) return classConfigRequest;
+  classConfigRequest = getFirebaseClient()
+    .then(async (client) => {
+      await ensureAnonymousAuth(client);
+      return loadClassConfigs(client);
+    })
+    .catch(() => ({
+      status: 'error', source: 'fallback', configs: fallbackClassConfigs(),
+      error: '班級設定暫時無法連線，目前使用既有班級設定。'
+    }))
+    .then((result) => {
+      classConfigState = result;
+      const activeConfigs = result.configs.filter(({ active }) => active);
+      const selectedSeats = seatOptions(identityDraft.classId, activeConfigs);
+      if (identityDraft.classId && (!selectedSeats.length || (identityDraft.seatNo && !selectedSeats.includes(Number(identityDraft.seatNo))))) {
+        identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
+      }
+      if (location.hash === '#student') renderCurrentRoute();
+      return result;
+    });
+  return classConfigRequest;
+}
 
 function saveCloudCheckpoint(checkpointName) {
   void writeStudentProgressCheckpoint(state.currentStudent, checkpointName).then((result) => {
@@ -40,8 +68,11 @@ function saveCloudCheckpoint(checkpointName) {
 }
 
 function renderIdentityGate() {
-  const classes = classroomOptions();
-  const seats = seatOptions(identityDraft.classId);
+  void loadStudentClassConfigs();
+  const activeConfigs = classConfigState.configs.filter(({ active }) => active);
+  const configReady = classConfigState.status !== 'loading';
+  const classes = classroomOptions(activeConfigs);
+  const seats = seatOptions(identityDraft.classId, activeConfigs);
   app.innerHTML = `
     <section class="identity-gate page-shell" aria-labelledby="identity-title">
       <button class="identity-entry-back" id="identity-entry-back" type="button">← 返回入口</button>
@@ -49,6 +80,8 @@ function renderIdentityGate() {
       <div class="identity-panel">
         <p class="section-label">V2 · DEMO 班級資料</p>
         <h1 id="identity-title">今天是哪位同學使用？</h1>
+        ${classConfigState.status === 'loading' ? '<p role="status">正在讀取班級設定…</p>' : ''}
+        ${classConfigState.error ? `<p class="identity-config-notice" role="status">${classConfigState.error}</p>` : ''}
         ${identityDraft.confirming ? `
           <p class="identity-confirm-question">你是 <strong>${identityDraft.classId} 班 ${identityDraft.seatNo} 號</strong>嗎？</p>
           <div class="identity-actions">
@@ -58,19 +91,19 @@ function renderIdentityGate() {
         ` : `
           <div class="identity-fields">
             <label>選擇班級
-              <select id="identity-class">
+              <select id="identity-class" ${configReady ? '' : 'disabled'}>
                 <option value="">請選擇班級</option>
                 ${classes.map(({ value, label }) => `<option value="${value}" ${identityDraft.classId === value ? 'selected' : ''}>${label}</option>`).join('')}
               </select>
             </label>
             <label>選擇座號
-              <select id="identity-seat" ${identityDraft.classId ? '' : 'disabled'}>
+              <select id="identity-seat" ${configReady && identityDraft.classId ? '' : 'disabled'}>
                 <option value="">請選擇座號</option>
                 ${seats.map((seat) => `<option value="${seat}" ${Number(identityDraft.seatNo) === seat ? 'selected' : ''}>${formatSeatNumber(seat)} 號</option>`).join('')}
               </select>
             </label>
           </div>
-          <button class="primary-button identity-next" id="identity-next" type="button" ${identityDraft.classId && identityDraft.seatNo ? '' : 'disabled'}>確認身分</button>
+          <button class="primary-button identity-next" id="identity-next" type="button" ${configReady && identityDraft.classId && identityDraft.seatNo ? '' : 'disabled'}>確認身分</button>
         `}
       </div>
     </section>`;
@@ -85,7 +118,7 @@ function renderIdentityGate() {
     renderIdentityGate();
   });
   document.querySelector('#identity-next')?.addEventListener('click', () => {
-    if (!createStudentIdentity(identityDraft.classId, identityDraft.seatNo)) return;
+    if (!createStudentIdentity(identityDraft.classId, identityDraft.seatNo, undefined, activeConfigs)) return;
     identityDraft.confirming = true;
     renderIdentityGate();
   });
@@ -94,7 +127,7 @@ function renderIdentityGate() {
     renderIdentityGate();
   });
   document.querySelector('#identity-confirm')?.addEventListener('click', () => {
-    state.currentStudent = saveCurrentStudent(identityDraft, classroomStorage);
+    state.currentStudent = saveCurrentStudent(identityDraft, classroomStorage, activeConfigs);
     identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
     renderCurrentRoute();
   });
