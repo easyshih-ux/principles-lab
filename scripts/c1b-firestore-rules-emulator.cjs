@@ -132,12 +132,15 @@ async function checkpointCreate(db, studentKey = '115-701-12', academicYear = '1
       academicYear: '115', status: 'active', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
     };
     await assertSucceeds(setDoc(doc(teacher, 'academicYears', '115'), academicYear));
+    await assertSucceeds(updateDoc(doc(teacher, 'academicYears', '115'), { status: 'archived', updatedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(teacher, 'academicYears', '115'), { status: 'active', updatedAt: serverTimestamp() }));
     await assertSucceeds(getDoc(doc(teacher, 'academicYears', '115')));
     await assertSucceeds(getDocs(query(collection(teacher, 'academicYears'))));
     await assertFails(getDoc(doc(anonymous, 'academicYears', '115')));
     await assertFails(setDoc(doc(anonymous, 'academicYears', '116'), { ...academicYear, academicYear: '116', status: 'archived' }));
     await assertFails(setDoc(doc(unauthorized, 'academicYears', '116'), { ...academicYear, academicYear: '116', status: 'archived' }));
     await assertFails(setDoc(doc(teacher, 'academicYears', '116'), { ...academicYear, academicYear: '117', status: 'archived' }));
+    await assertFails(setDoc(doc(teacher, 'academicYears', 'bad'), { ...academicYear, academicYear: 'bad', status: 'archived' }));
     await assertFails(setDoc(doc(teacher, 'academicYears', '116'), { ...academicYear, academicYear: '116', status: 'draft' }));
     await assertFails(setDoc(doc(teacher, 'academicYears', '116'), { ...academicYear, academicYear: '116', status: 'archived', extra: true }));
     await assertFails(deleteDoc(doc(teacher, 'academicYears', '115')));

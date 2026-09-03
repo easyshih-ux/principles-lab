@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizeAcademicYear } from '../academic-year.js';
-import { bootstrapAcademicYear, createAcademicYear, listAcademicYears, loadActiveAcademicYear, switchActiveAcademicYear } from '../academic-year-service.js';
+import { bootstrapAcademicYear, createAcademicYear, listAcademicYears, loadActiveAcademicYear, switchActiveAcademicYear, verifyActiveAcademicYear } from '../academic-year-service.js';
 import { createAcademicYearManagementController } from '../teacher-academic-year-management.js';
 import { academicYearManagementMarkup, teacherClassSettingsMarkup } from '../teacher-page.js';
 import { loadClassConfigs } from '../class-config-service.js';
@@ -37,13 +37,31 @@ function memoryClient(initial = {}) {
   };
 }
 
-test('active year uses appSettings and has explicit missing/network fallbacks', async () => {
-  assert.equal((await loadActiveAcademicYear(memoryClient({ 'appSettings/academicYear': { activeAcademicYear: '116' } }))).academicYear, '116');
+test('active year uses canonical appSettings and only missing/network failures fall back', async () => {
+  const canonical = await loadActiveAcademicYear(memoryClient({ 'appSettings/academicYear': { activeAcademicYear: '116' } }));
+  assert.deepEqual(canonical, { academicYear: '116', source: 'firestore', initialized: true, warning: '' });
   const missing = await loadActiveAcademicYear(memoryClient());
   assert.equal(missing.source, 'legacy-missing'); assert.equal(missing.academicYear, '115');
-  const failedClient = memoryClient(); failedClient.getDoc = async () => { throw new Error('offline'); };
+  const failedClient = memoryClient(); failedClient.getDoc = async () => { throw Object.assign(new Error('offline'), { code: 'unavailable' }); };
   const failed = await loadActiveAcademicYear(failedClient);
-  assert.equal(failed.source, 'legacy-error'); assert.match(failed.warning, /暫存年度 115/);
+  assert.equal(failed.source, 'network-fallback'); assert.equal(failed.errorCode, 'unavailable'); assert.match(failed.warning, /暫存年度 115/);
+});
+
+test('permission and schema failures never masquerade as a normal legacy bootstrap', async () => {
+  const denied = memoryClient(); denied.getDoc = async () => { throw Object.assign(new Error('denied'), { code: 'permission-denied' }); };
+  const permissionResult = await loadActiveAcademicYear(denied);
+  assert.equal(permissionResult.academicYear, null); assert.equal(permissionResult.source, 'permission-denied');
+  const invalid = await loadActiveAcademicYear(memoryClient({ 'appSettings/academicYear': { activeAcademicYear: 'invalid' } }));
+  assert.equal(invalid.academicYear, null); assert.equal(invalid.source, 'invalid-schema');
+  const programmingError = memoryClient(); programmingError.getDoc = async () => { throw new ReferenceError('bug'); };
+  await assert.rejects(() => loadActiveAcademicYear(programmingError), /bug/);
+});
+
+test('anonymous auth readiness is awaited before canonical academic-year loading', () => {
+  const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  const authReady = app.indexOf('await ensureAnonymousAuth(client)');
+  const activeYearRead = app.indexOf('const result = await loadActiveAcademicYear(client)');
+  assert.ok(authReady >= 0 && activeYearRead > authReady);
 });
 
 test('academic years validate canonical trimmed numeric strings', () => {
@@ -93,6 +111,41 @@ test('active switch commits settings and both statuses atomically', async () => 
   assert.equal(client.docs.get('appSettings/academicYear').activeAcademicYear, '116');
   assert.equal(client.docs.get('academicYears/116').status, 'active');
   assert.equal(client.docs.get('academicYears/115').status, 'archived');
+  assert.equal((await verifyActiveAcademicYear(client, '116')).source, 'firestore');
+});
+
+test('controller only reports switch success after canonical readback matches', async () => {
+  const client = memoryClient({
+    'appSettings/academicYear': { activeAcademicYear: '115', updatedAt: 'old' },
+    'academicYears/115': { academicYear: '115', status: 'active', createdAt: 'old', updatedAt: 'old' },
+    'academicYears/116': { academicYear: '116', status: 'archived', createdAt: 'old', updatedAt: 'old' }
+  });
+  const controller = createAcademicYearManagementController({ client }); await controller.refresh();
+  assert.equal(await controller.activate('116', true), true);
+  assert.equal(controller.getState().activeAcademicYear, '116');
+  assert.match(controller.getState().message, /已將 116 學年度設為目前學年度/);
+});
+
+test('post-write read failure or stale value never reports switch success', async () => {
+  for (const readback of ['failure', 'stale']) {
+    const client = memoryClient({
+      'appSettings/academicYear': { activeAcademicYear: '115', updatedAt: 'old' },
+      'academicYears/115': { academicYear: '115', status: 'active', createdAt: 'old', updatedAt: 'old' },
+      'academicYears/116': { academicYear: '116', status: 'archived', createdAt: 'old', updatedAt: 'old' }
+    });
+    const controller = createAcademicYearManagementController({ client }); await controller.refresh();
+    const normalGetDoc = client.getDoc;
+    client.getDoc = async (path) => {
+      if (path === 'appSettings/academicYear') {
+        if (readback === 'failure') throw Object.assign(new Error('offline'), { code: 'unavailable' });
+        return { exists: () => true, data: () => ({ activeAcademicYear: '115' }) };
+      }
+      return normalGetDoc(path);
+    };
+    assert.equal(await controller.activate('116', true), false);
+    assert.equal(controller.getState().message, '');
+    assert.match(controller.getState().error, /已送出更新.*無法確認最新設定/);
+  }
 });
 
 test('controller requires confirmation and failed switch leaves its visible active year unchanged', async () => {

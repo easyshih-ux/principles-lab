@@ -14,7 +14,7 @@ import { copyTeacherUid, teacherPageMarkup } from '../teacher-page.js';
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-test('teacher Firebase client uses a separate named app and in-memory persistence', async () => {
+test('teacher Firebase client uses a separate named app and browser session persistence', async () => {
   const calls = [];
   const teacherApp = { name: TEACHER_FIREBASE_APP_NAME };
   const teacherAuth = { app: teacherApp };
@@ -30,7 +30,8 @@ test('teacher Firebase client uses a separate named app and in-memory persistenc
   const authSdk = {
     getAuth: (app) => { calls.push(['getAuth', app.name]); return teacherAuth; },
     setPersistence: async (auth, persistence) => calls.push(['setPersistence', auth, persistence]),
-    inMemoryPersistence: { type: 'NONE' },
+    browserSessionPersistence: { type: 'SESSION' },
+    browserLocalPersistence: { type: 'LOCAL' },
     GoogleAuthProvider: FakeGoogleAuthProvider,
     signInWithPopup() {},
     signOut() {},
@@ -52,7 +53,8 @@ test('teacher Firebase client uses a separate named app and in-memory persistenc
   assert.deepEqual(calls[0], ['initializeApp', 'principles-lab', 'teacher']);
   assert.deepEqual(calls[1], ['getAuth', 'teacher']);
   assert.deepEqual(calls[2], ['getFirestore', 'teacher']);
-  assert.deepEqual(calls[3], ['setPersistence', teacherAuth, authSdk.inMemoryPersistence]);
+  assert.deepEqual(calls[3], ['setPersistence', teacherAuth, authSdk.browserSessionPersistence]);
+  assert.notDeepEqual(calls[3], ['setPersistence', teacherAuth, authSdk.browserLocalPersistence]);
   assert.deepEqual(calls[4], ['providerParameters', { prompt: 'select_account' }]);
 });
 

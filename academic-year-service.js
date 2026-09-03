@@ -9,15 +9,55 @@ const SAFE_BATCH_SIZE = 450;
 function settingsRef(client) { return client.doc(client.db, ACADEMIC_YEAR_SETTINGS_COLLECTION, ACADEMIC_YEAR_SETTINGS_DOCUMENT); }
 function yearRef(client, academicYear) { return client.doc(client.db, ACADEMIC_YEARS_COLLECTION, academicYear); }
 
+const NETWORK_ERROR_CODES = new Set(['unavailable', 'deadline-exceeded', 'cancelled', 'firebase/unavailable']);
+
+export function isAcademicYearNetworkError(error) {
+  const code = String(error?.code ?? '').replace(/^firestore\//, '');
+  return NETWORK_ERROR_CODES.has(code);
+}
+
+function activeYearReadFailure(error) {
+  const code = String(error?.code ?? '').replace(/^firestore\//, '');
+  if (code === 'permission-denied') {
+    return {
+      academicYear: null, source: 'permission-denied', initialized: false,
+      warning: '目前無法取得學年度設定，請通知老師檢查讀取權限。', errorCode: code, cause: error
+    };
+  }
+  if (isAcademicYearNetworkError(error)) {
+    return {
+      academicYear: LEGACY_DEFAULT_ACADEMIC_YEAR, source: 'network-fallback', initialized: false,
+      warning: '學年度設定暫時無法連線，目前使用暫存年度 115。', errorCode: code, cause: error
+    };
+  }
+  throw error;
+}
+
 export async function loadActiveAcademicYear(client) {
   try {
     const snapshot = await client.getDoc(settingsRef(client));
     if (!snapshot.exists()) return { academicYear: LEGACY_DEFAULT_ACADEMIC_YEAR, source: 'legacy-missing', initialized: false, warning: '尚未建立學年度管理設定，目前暫用 115 學年度。' };
-    const academicYear = normalizeAcademicYear(snapshot.data()?.activeAcademicYear);
+    let academicYear;
+    try { academicYear = normalizeAcademicYear(snapshot.data()?.activeAcademicYear); }
+    catch (error) {
+      return { academicYear: null, source: 'invalid-schema', initialized: true, warning: '學年度設定格式不正確，請通知老師處理。', errorCode: 'invalid-schema', cause: error };
+    }
     return { academicYear, source: 'firestore', initialized: true, warning: '' };
   } catch (error) {
-    return { academicYear: LEGACY_DEFAULT_ACADEMIC_YEAR, source: 'legacy-error', initialized: false, warning: '學年度設定暫時無法連線，目前使用暫存年度 115。', cause: error };
+    return activeYearReadFailure(error);
   }
+}
+
+export async function verifyActiveAcademicYear(client, expectedValue) {
+  const expectedAcademicYear = normalizeAcademicYear(expectedValue);
+  const result = await loadActiveAcademicYear(client);
+  if (result.source !== 'firestore' || result.academicYear !== expectedAcademicYear) {
+    const error = new Error('無法確認最新學年度設定。');
+    error.code = 'academic-year/verification-failed';
+    error.result = result;
+    throw error;
+  }
+  return result;
 }
 
 export async function listAcademicYears(client, activeAcademicYear) {

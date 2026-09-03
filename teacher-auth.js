@@ -13,7 +13,7 @@ export async function createTeacherFirebaseClient(appSdk, authSdk, firestoreSdk)
   const firebaseApp = appSdk.initializeApp(firebaseConfig, TEACHER_FIREBASE_APP_NAME);
   const auth = authSdk.getAuth(firebaseApp);
   const db = firestoreSdk.getFirestore(firebaseApp);
-  await authSdk.setPersistence(auth, authSdk.inMemoryPersistence);
+  await authSdk.setPersistence(auth, authSdk.browserSessionPersistence);
   const googleProvider = new authSdk.GoogleAuthProvider();
   googleProvider.setCustomParameters({ prompt: 'select_account' });
   return {

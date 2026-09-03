@@ -4,14 +4,14 @@ import {
   signOutTeacher,
   teacherAuthErrorMessage,
   verifyTeacherAuthorization
-} from './teacher-auth.js?v=v2-d2-1';
+} from './teacher-auth.js?v=v2-d3-1-1';
 import {
   createTeacherDashboardController,
   TEACHER_PROGRESS_ITEMS
 } from './teacher-progress-dashboard.js?v=v2-d3-1';
 import { formatSeatNumber } from './classroom-config.js';
 import { changeDraftMaximum, createTeacherClassSettingsController, toggleDraftSeat } from './teacher-class-settings.js?v=v2-d3-1';
-import { createAcademicYearManagementController } from './teacher-academic-year-management.js?v=v2-d3-1';
+import { createAcademicYearManagementController } from './teacher-academic-year-management.js?v=v2-d3-1-1';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -215,7 +215,8 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
         managementController = createAcademicYearManagementController({ client, onChange: (management) => { pageState.management = management; render(); }, onActiveYearChange: async (academicYear, legacyBootstrap) => { await loadActiveYearViews(academicYear, legacyBootstrap); } });
         const management = await managementController.refresh();
         if (disposed || generation !== authorizationGeneration) return;
-        await loadActiveYearViews(management.activeAcademicYear, !management.initialized);
+        if (management.activeAcademicYear) await loadActiveYearViews(management.activeAcademicYear, !management.initialized);
+        else pageState.teacherView = 'years';
       }
     } catch (error) {
       if (disposed || generation !== authorizationGeneration) return;

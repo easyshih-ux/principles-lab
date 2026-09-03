@@ -14,11 +14,11 @@ import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definition
 import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { fallbackClassConfigs, loadClassConfigs } from './class-config-service.js?v=v2-d3-1';
-import { loadActiveAcademicYear } from './academic-year-service.js?v=v2-d3-1';
-import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d3-1';
+import { isAcademicYearNetworkError, loadActiveAcademicYear } from './academic-year-service.js?v=v2-d3-1-1';
+import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d3-1-1';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d3-1';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
-import { renderTeacherPage } from './teacher-page.js?v=v2-d3-1';
+import { renderTeacherPage } from './teacher-page.js?v=v2-d3-1-1';
 import { renderSiteEntry } from './site-entry.js?v=v2-entry-2';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
@@ -47,7 +47,8 @@ function loadStudentAcademicYear() {
     await ensureAnonymousAuth(client);
     const result = await loadActiveAcademicYear(client);
     academicYearState = { ...result, status: 'ready' };
-    const restored = loadCurrentStudent(classroomStorage, result.academicYear);
+    if (result.errorCode) console.warn(`[academic year] read failed: ${result.errorCode}`);
+    const restored = result.academicYear ? loadCurrentStudent(classroomStorage, result.academicYear) : null;
     state.currentStudent = restored;
     if (pendingStoredStudent && !restored) {
       clearCurrentStudent(classroomStorage);
@@ -56,9 +57,13 @@ function loadStudentAcademicYear() {
       history.replaceState(null, '', '#student');
     }
     return { client, result };
-  }).catch(() => {
-    academicYearState = { status: 'ready', academicYear: '115', source: 'legacy-error', initialized: false, warning: '學年度設定暫時無法連線，目前使用暫存年度 115。' };
-    state.currentStudent = loadCurrentStudent(classroomStorage, '115');
+  }).catch((error) => {
+    const networkFallback = isAcademicYearNetworkError(error);
+    academicYearState = networkFallback
+      ? { status: 'ready', academicYear: '115', source: 'network-fallback', initialized: false, warning: '學年度設定暫時無法連線，目前使用暫存年度 115。', errorCode: error?.code ?? 'network-error' }
+      : { status: 'ready', academicYear: null, source: 'runtime-error', initialized: false, warning: '目前無法取得學年度設定，請稍後重新整理或通知老師。', errorCode: error?.code ?? 'runtime-error' };
+    console.warn(`[academic year] initialization failed: ${academicYearState.errorCode}`);
+    state.currentStudent = networkFallback ? loadCurrentStudent(classroomStorage, '115') : null;
     return { client: null, result: academicYearState };
   }).then((loaded) => { renderCurrentRoute(); return loaded; });
   return academicYearRequest;
@@ -69,12 +74,13 @@ function loadStudentClassConfigs() {
   classConfigRequest = loadStudentAcademicYear()
     .then(async ({ client, result: academicYear }) => {
       if (!client) throw new Error('offline');
+      if (!academicYear.academicYear) return { status: 'error', source: academicYear.source, configs: [], error: academicYear.warning };
       return loadClassConfigs(client, academicYear.academicYear, undefined, { allowLegacyFallback: !academicYear.initialized });
     })
     .catch(() => ({
-      status: 'error', source: academicYearState.initialized ? 'firestore' : 'fallback',
-      configs: academicYearState.initialized ? [] : fallbackClassConfigs(),
-      error: academicYearState.initialized ? '班級設定暫時無法連線。' : '班級設定暫時無法連線，目前使用既有班級設定。'
+      status: 'error', source: academicYearState.source,
+      configs: academicYearState.source === 'network-fallback' || academicYearState.source === 'legacy-missing' ? fallbackClassConfigs() : [],
+      error: academicYearState.source === 'network-fallback' || academicYearState.source === 'legacy-missing' ? '班級設定暫時無法連線，目前使用既有班級設定。' : academicYearState.warning
     }))
     .then((result) => {
       classConfigState = result;

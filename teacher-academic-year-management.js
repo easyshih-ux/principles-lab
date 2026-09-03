@@ -1,5 +1,5 @@
 import { normalizeAcademicYear } from './academic-year.js?v=v2-d3-1';
-import { bootstrapAcademicYear, createAcademicYear, listAcademicYears, loadActiveAcademicYear, switchActiveAcademicYear } from './academic-year-service.js?v=v2-d3-1';
+import { bootstrapAcademicYear, createAcademicYear, listAcademicYears, loadActiveAcademicYear, switchActiveAcademicYear, verifyActiveAcademicYear } from './academic-year-service.js?v=v2-d3-1-1';
 
 export function suggestedNextAcademicYear(activeAcademicYear) {
   return String(Number(normalizeAcademicYear(activeAcademicYear)) + 1);
@@ -11,7 +11,11 @@ export function createAcademicYearManagementController({ client, onActiveYearCha
   async function refresh() {
     state.status = 'loading'; state.error = ''; notify();
     const active = await loadActiveAcademicYear(client);
-    Object.assign(state, active);
+    Object.assign(state, active, { activeAcademicYear: active.academicYear });
+    if (!active.academicYear) {
+      Object.assign(state, { status: 'error', years: [], inconsistent: false, error: active.warning });
+      notify(); return { ...state };
+    }
     try {
       const listed = await listAcademicYears(client, active.academicYear);
       Object.assign(state, listed, { status: 'success' });
@@ -37,8 +41,22 @@ export function createAcademicYearManagementController({ client, onActiveYearCha
   async function activate(academicYear, confirmed = false) {
     if (!confirmed) return false;
     state.status = 'saving'; state.error = ''; notify();
-    try { await switchActiveAcademicYear(client, academicYear, state.activeAcademicYear); await refresh(); state.message = `已將 ${academicYear} 學年度設為目前學年度。`; notify(); await onActiveYearChange(academicYear, false); return true; }
-    catch (error) { state.status = 'error'; state.error = error instanceof TypeError ? error.message : '切換學年度失敗，原設定未變更。'; notify(); return false; }
+    let transactionCompleted = false;
+    try {
+      await switchActiveAcademicYear(client, academicYear, state.activeAcademicYear);
+      transactionCompleted = true;
+      await verifyActiveAcademicYear(client, academicYear);
+      await refresh();
+      if (state.source !== 'firestore' || state.activeAcademicYear !== academicYear) throw new Error('academic-year/verification-failed');
+      state.message = `已將 ${academicYear} 學年度設為目前學年度。`; notify();
+      await onActiveYearChange(academicYear, false); return true;
+    } catch (error) {
+      state.status = 'error'; state.message = '';
+      state.error = transactionCompleted
+        ? '年度已送出更新，但目前無法確認最新設定，請稍後重新整理。'
+        : error instanceof TypeError ? error.message : '切換學年度失敗，原設定未變更。';
+      notify(); return false;
+    }
   }
   return { getState: () => ({ ...state }), refresh, bootstrap, add, cancel, setDraft, create, activate };
 }
