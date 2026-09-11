@@ -97,7 +97,7 @@ test('signed-in unauthorized view exposes the current UID and copy control', () 
   assert.match(markup, /此 Google 帳號未取得教師權限/);
   assert.match(markup, /教師 UID/);
   assert.match(markup, /id="teacher-copy-uid"[^>]*>複製 UID/);
-  assert.match(markup, /id="teacher-lab-home"[^>]*>返回教學畫面/);
+  assert.doesNotMatch(markup, /id="teacher-lab-home"|返回教學畫面/);
   assert.match(markup, /id="teacher-sign-out"[^>]*>登出教師帳號/);
 });
 
@@ -121,9 +121,38 @@ test('class Lab remembers a safe teaching route without clearing either session'
   assert.match(appSource, /id="teacher-progress"[^>]*>教師進度/);
   assert.match(appSource, /teachingReturnHash = isTeachingRoute\(route\) \? route\.hash : '#home'/);
   assert.match(appSource, /returnToTeaching[\s\S]*navigate\(isTeachingRoute\(route\) \? route\.hash : '#home'\)/);
-  assert.match(appSource, /renderTeacherPage\(\{ app, navigate, returnToTeaching \}\)/);
+  assert.match(appSource, /renderTeacherPage\(\{[\s\S]*returnToTeaching,[\s\S]*onAuthorizationChange/);
   const openHandler = appSource.slice(appSource.indexOf('function openTeacherProgress()'), appSource.indexOf('function returnToTeaching()'));
   assert.doesNotMatch(openHandler, /clearCurrentStudent|resetClassroomUnlocks|signOutTeacher|localStorage/);
+});
+
+test('authorized teacher without a student can enter the shared Lab through an explicit runtime teaching session', () => {
+  const appSource = source('../app.js');
+  assert.match(appSource, /teacherTeachingAuthorized = authorized/);
+  assert.match(appSource, /teacherTeachingActive = teacherTeachingAuthorized && !state\.currentStudent/);
+  assert.match(appSource, /!state\.currentStudent && teacherTeachingAuthorized && teacherTeachingActive/);
+  assert.match(appSource, /!state\.currentStudent && !isTeacherTeachingMode\(\)/);
+  assert.match(appSource, /!isExploreMode && !isTeacherTeachingMode\(\) && academicYearState\.status === 'loading'/);
+  assert.match(source('../teacher-page.js'), /authorization === 'authorized' \? '<button class="primary-button" id="teacher-lab-home"/);
+});
+
+test('teacher teaching unlocks are memory-only and student mode retains its persisted unlocks', () => {
+  const appSource = source('../app.js');
+  const rendererSource = source('../renderers.js');
+  assert.match(appSource, /teacherTeachingUnlocks = createLockedClassroomUnlocks\(\)/);
+  assert.match(appSource, /if \(teacherTeachingActive\) state\.classroomUnlocks = teacherTeachingUnlocks/);
+  assert.match(appSource, /clearTeacherTeachingSession[\s\S]*state\.classroomUnlocks = loadClassroomUnlocks\(classroomStorage\)/);
+  assert.match(appSource, /getClassroomStorage: \(\) => state\.currentStudent \? classroomStorage : null/);
+  assert.match(rendererSource, /attemptClassroomUnlock\([^;]*getClassroomStorage\(\)\)/);
+  assert.doesNotMatch(appSource, /formalPrinciplesLab\.teacher|teacherTeaching.*localStorage/);
+});
+
+test('teacher teaching checkpoints and identity controls are isolated from student mode', () => {
+  const appSource = source('../app.js');
+  assert.match(appSource, /runtimeMode !== 'class' \|\| !state\.currentStudent \|\| isTeacherTeachingMode\(\)/);
+  assert.match(appSource, /if \(!isTeacherTeachingMode\(\)\) saveCloudCheckpoint\(checkpointName\)/);
+  assert.match(appSource, /if \(state\.currentStudent\) attachStudentControls\(\);\s*else if \(isTeacherTeachingMode\(\)\) attachTeacherTeachingControls\(\)/);
+  assert.match(appSource, /教師模式[\s\S]*班級進度[\s\S]*登出教師/);
 });
 
 test('copyTeacherUid copies the current teacher UID and isolates clipboard failures', async () => {

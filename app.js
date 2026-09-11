@@ -11,14 +11,14 @@ import { createDiscoverCourseRenderers } from './discover-course.js?v=v2-b2-chec
 import { createExperimentCourseRenderers } from './experiment-course.js?v=v2-b2-checkpoints-1';
 import { createPhase6cCourseState } from './phase6c-course-state.js?v=balance-asymmetry-2';
 import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=balance-asymmetry-2';
-import { isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
+import { createLockedClassroomUnlocks, isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { fallbackClassConfigs, loadClassConfigs } from './class-config-service.js?v=v2-d3-1';
 import { isAcademicYearNetworkError, loadActiveAcademicYear } from './academic-year-service.js?v=v2-d3-1-1';
 import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d3-1-1';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d3-1';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
-import { renderTeacherPage } from './teacher-page.js?v=teacher-return-1';
+import { renderTeacherPage, signOutTeacherFromTeachingMode } from './teacher-page.js?v=teacher-teaching-1';
 import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
@@ -105,7 +105,7 @@ function loadStudentClassConfigs() {
 }
 
 function saveCloudCheckpoint(checkpointName) {
-  if (runtimeMode !== 'class') return;
+  if (runtimeMode !== 'class' || !state.currentStudent || isTeacherTeachingMode()) return;
   void writeStudentProgressCheckpoint(state.currentStudent, checkpointName).then((result) => {
     if (!result.ok) console.warn(`[cloud progress] ${checkpointName}: ${result.message}`);
   });
@@ -202,6 +202,26 @@ function attachStudentControls() {
   });
 }
 
+function attachTeacherTeachingControls() {
+  app.insertAdjacentHTML('beforeend', `
+    <aside class="student-identity-dock" aria-label="教師教學模式">
+      <strong>教師模式</strong>
+      <button type="button" id="teacher-progress">班級進度</button>
+      <button class="teacher-teaching-sign-out" type="button" id="teacher-teaching-sign-out">登出教師</button>
+    </aside>`);
+  document.querySelector('#teacher-progress')?.addEventListener('click', openTeacherProgress);
+  document.querySelector('#teacher-teaching-sign-out')?.addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    try {
+      await signOutTeacherFromTeachingMode();
+      clearTeacherTeachingSession();
+      navigate('#entry');
+    } catch {
+      event.currentTarget.disabled = false;
+    }
+  });
+}
+
 function focusRouteHeading() {
   const heading = app.querySelector('h1');
   if (!heading) return;
@@ -217,14 +237,30 @@ function navigate(hash) {
   location.hash = hash;
 }
 
-const checkpointCallback = isExploreMode ? () => {} : saveCloudCheckpoint;
-const renderers = createRenderers({ app, state, navigate, classroomStorage, onCheckpoint: checkpointCallback, mode: runtimeMode });
+const checkpointCallback = isExploreMode ? () => {} : (checkpointName) => {
+  if (!isTeacherTeachingMode()) saveCloudCheckpoint(checkpointName);
+};
+const renderers = createRenderers({ app, state, navigate, classroomStorage, getClassroomStorage: () => state.currentStudent ? classroomStorage : null, onCheckpoint: checkpointCallback, mode: runtimeMode });
 const recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
 const discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
 const experimentRenderers = createExperimentCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
 let activePlayground = null;
 let activeTeacherPage = null;
 let teachingReturnHash = '#home';
+let teacherTeachingAuthorized = false;
+let teacherTeachingActive = false;
+let teacherTeachingUnlocks = createLockedClassroomUnlocks();
+
+function isTeacherTeachingMode() {
+  return !isExploreMode && !state.currentStudent && teacherTeachingAuthorized && teacherTeachingActive;
+}
+
+function clearTeacherTeachingSession() {
+  teacherTeachingAuthorized = false;
+  teacherTeachingActive = false;
+  teacherTeachingUnlocks = createLockedClassroomUnlocks();
+  if (!isExploreMode) state.classroomUnlocks = loadClassroomUnlocks(classroomStorage);
+}
 
 function isTeachingRoute(route) {
   return !route.isFallback
@@ -240,6 +276,8 @@ function openTeacherProgress() {
 
 function returnToTeaching() {
   const route = resolveRoute(teachingReturnHash, stages, principles, recognizeQuestions);
+  teacherTeachingActive = teacherTeachingAuthorized && !state.currentStudent;
+  if (teacherTeachingActive) state.classroomUnlocks = teacherTeachingUnlocks;
   navigate(isTeachingRoute(route) ? route.hash : '#home');
 }
 
@@ -261,19 +299,27 @@ function renderCurrentRoute() {
     return;
   }
   if (route.name === 'teacher') {
-    activeTeacherPage = renderTeacherPage({ app, navigate, returnToTeaching });
+    activeTeacherPage = renderTeacherPage({
+      app,
+      navigate,
+      returnToTeaching,
+      onAuthorizationChange: (authorized) => {
+        teacherTeachingAuthorized = authorized;
+        if (!authorized) clearTeacherTeachingSession();
+      }
+    });
     window.scrollTo(0, 0);
     focusRouteHeading();
     return;
   }
-  if (!isExploreMode && academicYearState.status === 'loading') {
+  if (!isExploreMode && !isTeacherTeachingMode() && academicYearState.status === 'loading') {
     void loadStudentAcademicYear();
     renderIdentityGate();
     window.scrollTo(0, 0);
     focusRouteHeading();
     return;
   }
-  if (!isExploreMode && !state.currentStudent) {
+  if (!isExploreMode && !state.currentStudent && !isTeacherTeachingMode()) {
     if (route.name === 'studentEntry') renderIdentityGate();
     else renderSiteEntry({ app, navigate });
     window.scrollTo(0, 0);
@@ -334,7 +380,10 @@ function renderCurrentRoute() {
     renderers[route.name]();
   }
 
-  if (!isExploreMode) attachStudentControls();
+  if (!isExploreMode) {
+    if (state.currentStudent) attachStudentControls();
+    else if (isTeacherTeachingMode()) attachTeacherTeachingControls();
+  }
 
   window.scrollTo(0, 0);
   focusRouteHeading();

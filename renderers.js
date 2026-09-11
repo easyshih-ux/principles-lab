@@ -222,7 +222,7 @@ function taskFrame({ principle, stage, canvas, controls, feedback }) {
     </section>`;
 }
 
-export function createRenderers({ app, state, navigate, classroomStorage = null, onCheckpoint = () => {}, mode = 'class' }) {
+export function createRenderers({ app, state, navigate, classroomStorage = null, getClassroomStorage = () => classroomStorage, onCheckpoint = () => {}, mode = 'class' }) {
   const isExploreMode = mode === 'explore';
   function completeFreeReviewPrinciple(principleId) {
     markPrincipleComplete(state, principleId);
@@ -245,7 +245,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
     document.querySelectorAll('[data-unlock-form]').forEach((form) => form.addEventListener('submit', (event) => {
       event.preventDefault();
       const courseId = form.dataset.unlockForm;
-      const result = attemptClassroomUnlock(courseId, new FormData(form).get('passcode'), state.classroomUnlocks, classroomStorage);
+      const result = attemptClassroomUnlock(courseId, new FormData(form).get('passcode'), state.classroomUnlocks, getClassroomStorage());
       state.classroomUnlocks = result.unlocks;
       if (result.ok) {
         const course = CLASSROOM_COURSES.find(({ id }) => id === courseId);

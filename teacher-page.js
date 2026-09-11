@@ -163,7 +163,7 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
           ${authorization === 'authorized' && teacherView === 'dashboard' && dashboard ? teacherDashboardMarkup(dashboard, expandedCheckpoints) : ''}
           ${authorization === 'authorized' && teacherView === 'settings' ? teacherClassSettingsMarkup(settings) : ''}
           ${authorization === 'authorized' && teacherView === 'years' ? academicYearManagementMarkup(management) : ''}
-          <button class="primary-button" id="teacher-lab-home" type="button">返回教學畫面</button>
+          ${authorization === 'authorized' ? '<button class="primary-button" id="teacher-lab-home" type="button">返回教學畫面</button>' : ''}
           <button class="teacher-home-link" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出教師帳號</button>
         ` : `
           <p class="teacher-auth-lead">請使用授權的教師 Google 帳號登入</p>
@@ -175,7 +175,12 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
     </section>`;
 }
 
-export function renderTeacherPage({ app, navigate, returnToTeaching = () => navigate('#home'), getClient = getTeacherFirebaseClient }) {
+export async function signOutTeacherFromTeachingMode(getClient = getTeacherFirebaseClient) {
+  const client = await getClient();
+  await signOutTeacher(client);
+}
+
+export function renderTeacherPage({ app, navigate, returnToTeaching = () => navigate('#home'), onAuthorizationChange = () => {}, getClient = getTeacherFirebaseClient }) {
   let client = null;
   let unsubscribe = null;
   let disposed = false;
@@ -207,12 +212,16 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
     pageState.copyStatus = '';
     pageState.authorization = user ? 'checking' : 'idle';
     render();
-    if (!user) return;
+    if (!user) {
+      onAuthorizationChange(false);
+      return;
+    }
     try {
       const isAuthorized = await verifyTeacherAuthorization(client);
       if (disposed || generation !== authorizationGeneration) return;
       pageState.authorization = isAuthorized ? 'authorized' : 'unauthorized';
       if (isAuthorized) {
+        onAuthorizationChange(true);
         managementController = createAcademicYearManagementController({ client, onChange: (management) => { pageState.management = management; render(); }, onActiveYearChange: async (academicYear, legacyBootstrap) => { await loadActiveYearViews(academicYear, legacyBootstrap); } });
         const management = await managementController.refresh();
         if (disposed || generation !== authorizationGeneration) return;
@@ -257,6 +266,7 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
         dashboardController?.destroy();
         dashboardController = null;
         pageState.dashboard = null;
+        onAuthorizationChange(false);
         navigate('#entry');
       } catch (error) {
         pageState.busy = false;
