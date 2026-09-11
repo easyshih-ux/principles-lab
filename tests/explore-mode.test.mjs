@@ -48,6 +48,10 @@ test('explore protects entry, student, and teacher hashes before formal route st
   assert.match(appSource.slice(guard, entry), /history\.replaceState\(null, '', '#home'\)/);
 });
 
+test('explore never attaches student or teacher teaching controls', () => {
+  assert.match(appSource, /if \(!isExploreMode\) \{\s*if \(state\.currentStudent\) attachStudentControls\(\);\s*else if \(isTeacherTeachingMode\(\)\) attachTeacherTeachingControls\(\);\s*\}/);
+});
+
 test('explore lobby shares the existing renderer while removing class-only controls', () => {
   const cards = classroomCourseCardsMarkup(
     { recognize: true, discover: true, experiment: true },

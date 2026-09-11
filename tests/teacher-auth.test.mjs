@@ -116,9 +116,17 @@ test('signed-in teacher can return to the Lab without signing out', () => {
   assert.match(teacherPage, /#teacher-sign-out'[\s\S]*?await signOutTeacher\(client\)[\s\S]*?navigate\('#entry'\)/);
 });
 
-test('class Lab remembers a safe teaching route without clearing either session', () => {
+test('teacher teaching mode remembers a safe teaching route without clearing either session', () => {
   const appSource = source('../app.js');
-  assert.match(appSource, /id="teacher-progress"[^>]*>教師進度/);
+  const studentControls = appSource.slice(appSource.indexOf('function attachStudentControls()'), appSource.indexOf('function attachTeacherTeachingControls()'));
+  const teacherControls = appSource.slice(appSource.indexOf('function attachTeacherTeachingControls()'), appSource.indexOf('function focusRouteHeading()'));
+  assert.match(studentControls, /classId, seatNo/);
+  assert.match(studentControls, /結束本次使用/);
+  assert.doesNotMatch(studentControls, /教師進度|班級進度|登出教師|openTeacherProgress/);
+  assert.match(teacherControls, /教師模式/);
+  assert.match(teacherControls, /id="teacher-progress"[^>]*>班級進度/);
+  assert.match(teacherControls, /登出教師/);
+  assert.doesNotMatch(teacherControls, /classId|seatNo|結束本次使用/);
   assert.match(appSource, /teachingReturnHash = isTeachingRoute\(route\) \? route\.hash : '#home'/);
   assert.match(appSource, /returnToTeaching[\s\S]*navigate\(isTeachingRoute\(route\) \? route\.hash : '#home'\)/);
   assert.match(appSource, /renderTeacherPage\(\{[\s\S]*returnToTeaching,[\s\S]*onAuthorizationChange/);
@@ -153,6 +161,12 @@ test('teacher teaching checkpoints and identity controls are isolated from stude
   assert.match(appSource, /if \(!isTeacherTeachingMode\(\)\) saveCloudCheckpoint\(checkpointName\)/);
   assert.match(appSource, /if \(state\.currentStudent\) attachStudentControls\(\);\s*else if \(isTeacherTeachingMode\(\)\) attachTeacherTeachingControls\(\)/);
   assert.match(appSource, /教師模式[\s\S]*班級進度[\s\S]*登出教師/);
+});
+
+test('student identity always takes control priority over a simultaneous teacher session', () => {
+  const appSource = source('../app.js');
+  assert.match(appSource, /if \(state\.currentStudent\) attachStudentControls\(\);\s*else if \(isTeacherTeachingMode\(\)\) attachTeacherTeachingControls\(\)/);
+  assert.match(appSource, /return !isExploreMode && !state\.currentStudent && teacherTeachingAuthorized && teacherTeachingActive/);
 });
 
 test('copyTeacherUid copies the current teacher UID and isolates clipboard failures', async () => {

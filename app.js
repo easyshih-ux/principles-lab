@@ -188,9 +188,8 @@ function attachStudentControls() {
         <span>確定要結束 ${classId} 班 ${seatNo} 號的本次使用嗎？</span>
         <button type="button" id="student-end-cancel">取消</button>
         <button type="button" id="student-end-confirm">結束使用</button>
-      ` : '<button type="button" id="teacher-progress">教師進度</button><button type="button" id="student-end">結束本次使用</button>'}
+      ` : '<button type="button" id="student-end">結束本次使用</button>'}
     </aside>`);
-  document.querySelector('#teacher-progress')?.addEventListener('click', openTeacherProgress);
   document.querySelector('#student-end')?.addEventListener('click', () => { identityDraft.ending = true; renderCurrentRoute(); });
   document.querySelector('#student-end-cancel')?.addEventListener('click', () => { identityDraft.ending = false; renderCurrentRoute(); });
   document.querySelector('#student-end-confirm')?.addEventListener('click', () => {
