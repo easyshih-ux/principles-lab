@@ -60,6 +60,7 @@ test('explore lobby shares the existing renderer while removing class-only contr
   assert.match(rendererSource, /mode = 'class'/);
   assert.match(rendererSource, /\u81ea\u7531\u9ad4\u9a57\u6a21\u5f0f\uff5c\u5b78\u7fd2\u9032\u5ea6\u4e0d\u5217\u5165\u73ed\u7d1a\u7d00\u9304/);
   assert.match(rendererSource, /isExploreMode \? '' : '<button class="home-teacher-entry"/);
+  assert.match(appSource, /if \(!isExploreMode\) attachStudentControls\(\)/);
   assert.doesNotMatch(source('../recognize-course.js'), /runtimeMode|isExploreMode/);
   assert.doesNotMatch(source('../discover-course.js'), /runtimeMode|isExploreMode/);
   assert.doesNotMatch(source('../experiment-course.js'), /runtimeMode|isExploreMode/);

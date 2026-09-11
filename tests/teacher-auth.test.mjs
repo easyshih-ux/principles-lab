@@ -97,22 +97,33 @@ test('signed-in unauthorized view exposes the current UID and copy control', () 
   assert.match(markup, /此 Google 帳號未取得教師權限/);
   assert.match(markup, /教師 UID/);
   assert.match(markup, /id="teacher-copy-uid"[^>]*>複製 UID/);
-  assert.match(markup, /id="teacher-lab-home"[^>]*>返回 Lab 主大廳/);
+  assert.match(markup, /id="teacher-lab-home"[^>]*>返回教學畫面/);
   assert.match(markup, /id="teacher-sign-out"[^>]*>登出教師帳號/);
 });
 
 test('authorized teacher view does not expose the unauthorized UID block', () => {
   const markup = teacherPageMarkup({ user: { uid: 'authorized-teacher-uid' }, authorization: 'authorized' });
   assert.doesNotMatch(markup, /authorized-teacher-uid|教師 UID|teacher-copy-uid/);
-  assert.match(markup, /id="teacher-lab-home"[^>]*>返回 Lab 主大廳/);
+  assert.match(markup, /id="teacher-lab-home"[^>]*>返回教學畫面/);
   assert.match(markup, /id="teacher-sign-out"[^>]*>登出教師帳號/);
 });
 
 test('signed-in teacher can return to the Lab without signing out', () => {
   const teacherPage = source('../teacher-page.js');
-  assert.match(teacherPage, /#teacher-lab-home'\)\?\.addEventListener\('click', \(\) => navigate\('#home'\)\)/);
+  assert.match(teacherPage, /returnToTeaching = \(\) => navigate\('#home'\)/);
+  assert.match(teacherPage, /#teacher-lab-home'\)\?\.addEventListener\('click', returnToTeaching\)/);
   assert.doesNotMatch(teacherPage, /#teacher-lab-home'[\s\S]{0,180}signOutTeacher/);
   assert.match(teacherPage, /#teacher-sign-out'[\s\S]*?await signOutTeacher\(client\)[\s\S]*?navigate\('#entry'\)/);
+});
+
+test('class Lab remembers a safe teaching route without clearing either session', () => {
+  const appSource = source('../app.js');
+  assert.match(appSource, /id="teacher-progress"[^>]*>教師進度/);
+  assert.match(appSource, /teachingReturnHash = isTeachingRoute\(route\) \? route\.hash : '#home'/);
+  assert.match(appSource, /returnToTeaching[\s\S]*navigate\(isTeachingRoute\(route\) \? route\.hash : '#home'\)/);
+  assert.match(appSource, /renderTeacherPage\(\{ app, navigate, returnToTeaching \}\)/);
+  const openHandler = appSource.slice(appSource.indexOf('function openTeacherProgress()'), appSource.indexOf('function returnToTeaching()'));
+  assert.doesNotMatch(openHandler, /clearCurrentStudent|resetClassroomUnlocks|signOutTeacher|localStorage/);
 });
 
 test('copyTeacherUid copies the current teacher UID and isolates clipboard failures', async () => {

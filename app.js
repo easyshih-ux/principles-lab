@@ -18,7 +18,7 @@ import { isAcademicYearNetworkError, loadActiveAcademicYear } from './academic-y
 import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d3-1-1';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d3-1';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
-import { renderTeacherPage } from './teacher-page.js?v=teacher-nav-1';
+import { renderTeacherPage } from './teacher-page.js?v=teacher-return-1';
 import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
@@ -188,8 +188,9 @@ function attachStudentControls() {
         <span>確定要結束 ${classId} 班 ${seatNo} 號的本次使用嗎？</span>
         <button type="button" id="student-end-cancel">取消</button>
         <button type="button" id="student-end-confirm">結束使用</button>
-      ` : '<button type="button" id="student-end">結束本次使用</button>'}
+      ` : '<button type="button" id="teacher-progress">教師進度</button><button type="button" id="student-end">結束本次使用</button>'}
     </aside>`);
+  document.querySelector('#teacher-progress')?.addEventListener('click', openTeacherProgress);
   document.querySelector('#student-end')?.addEventListener('click', () => { identityDraft.ending = true; renderCurrentRoute(); });
   document.querySelector('#student-end-cancel')?.addEventListener('click', () => { identityDraft.ending = false; renderCurrentRoute(); });
   document.querySelector('#student-end-confirm')?.addEventListener('click', () => {
@@ -223,6 +224,24 @@ const discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate, 
 const experimentRenderers = createExperimentCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
 let activePlayground = null;
 let activeTeacherPage = null;
+let teachingReturnHash = '#home';
+
+function isTeachingRoute(route) {
+  return !route.isFallback
+    && !route.isLegacyAlias
+    && !['entry', 'studentEntry', 'teacher', 'geometryPlayground', 'validatorLab', 'recognizeTemplateDev', 'discoverDev', 'experimentDev'].includes(route.name);
+}
+
+function openTeacherProgress() {
+  const route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
+  teachingReturnHash = isTeachingRoute(route) ? route.hash : '#home';
+  navigate('#teacher');
+}
+
+function returnToTeaching() {
+  const route = resolveRoute(teachingReturnHash, stages, principles, recognizeQuestions);
+  navigate(isTeachingRoute(route) ? route.hash : '#home');
+}
 
 function renderCurrentRoute() {
   activePlayground?.canvas.destroy();
@@ -242,7 +261,7 @@ function renderCurrentRoute() {
     return;
   }
   if (route.name === 'teacher') {
-    activeTeacherPage = renderTeacherPage({ app, navigate });
+    activeTeacherPage = renderTeacherPage({ app, navigate, returnToTeaching });
     window.scrollTo(0, 0);
     focusRouteHeading();
     return;
