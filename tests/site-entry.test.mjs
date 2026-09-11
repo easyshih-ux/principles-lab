@@ -42,7 +42,7 @@ test('#teacher and public entry are handled before the student identity gate', (
   const appSource = source('../app.js');
   const entryPosition = appSource.indexOf("route.name === 'entry'");
   const teacherPosition = appSource.indexOf("route.name === 'teacher'");
-  const identityGatePosition = appSource.indexOf('if (!state.currentStudent)');
+  const identityGatePosition = appSource.indexOf('if (!isExploreMode && !state.currentStudent)');
   assert.ok(entryPosition > 0 && entryPosition < identityGatePosition);
   assert.ok(teacherPosition > 0 && teacherPosition < identityGatePosition);
   assert.match(appSource, /route\.name === 'studentEntry'\) renderIdentityGate\(\)/);

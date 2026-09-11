@@ -222,7 +222,8 @@ function taskFrame({ principle, stage, canvas, controls, feedback }) {
     </section>`;
 }
 
-export function createRenderers({ app, state, navigate, classroomStorage = null, onCheckpoint = () => {} }) {
+export function createRenderers({ app, state, navigate, classroomStorage = null, onCheckpoint = () => {}, mode = 'class' }) {
+  const isExploreMode = mode === 'explore';
   function completeFreeReviewPrinciple(principleId) {
     markPrincipleComplete(state, principleId);
     if (!areFreeReviewStagesComplete(state, getStagesForPrinciple(principleId))) return;
@@ -269,7 +270,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
         <div class="home-decor home-decor-right" aria-hidden="true"><i></i><i></i><i></i></div>
         <header class="home-brand">
           <span class="home-brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <span><strong>FORM LAB</strong><small>形式原理視覺實驗室</small><span class="home-brand-credit">Made by WenYi</span></span>
+          <span><strong>FORM LAB</strong><small>形式原理視覺實驗室</small><span class="home-brand-credit">Made by WenYi</span>${isExploreMode ? '<span class="home-brand-credit explore-mode-note">自由體驗模式｜學習進度不列入班級紀錄</span>' : ''}</span>
         </header>
         <div class="home-dot-grid home-dot-grid-top" aria-hidden="true"></div>
         <div class="home-main">
@@ -289,12 +290,12 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
           </div>
           <p class="classroom-gate-message home-gate-message" role="status" aria-live="polite">${state.classroomGate.message}</p>
         </div>
-        <button class="home-teacher-entry" id="enter-teacher" type="button">教師進度 →</button>
+        ${isExploreMode ? '' : '<button class="home-teacher-entry" id="enter-teacher" type="button">教師進度 →</button>'}
         <footer class="home-footer" aria-hidden="true"><span></span><b>FORM LAB</b><span></span></footer>
       </section>`;
     bindClassroomControls(renderHome);
     document.querySelector('#enter-free-review').addEventListener('click', () => navigate('#principles'));
-    document.querySelector('#enter-teacher').addEventListener('click', () => navigate('#teacher'));
+    document.querySelector('#enter-teacher')?.addEventListener('click', () => navigate('#teacher'));
   }
   function renderPrinciples() {
     app.innerHTML = `

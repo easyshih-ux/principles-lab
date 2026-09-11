@@ -1,5 +1,5 @@
 import { principles, stages } from './data.js';
-import { createRenderers } from './renderers.js?v=author-credit-2';
+import { createRenderers } from './renderers.js?v=explore-1';
 import { resolveRoute } from './router.js?v=v2-entry-1';
 import { createAppState, setCurrentRoute } from './state.js?v=v2-b2-checkpoints-1';
 import { renderGeometryPlayground } from './geometry/playground.js';
@@ -22,6 +22,9 @@ import { renderTeacherPage } from './teacher-page.js?v=v2-d3-1-1';
 import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
+const runtimePath = location.pathname.replace(/\/+$/, '');
+const runtimeMode = runtimePath === '/principles-lab/explore' || runtimePath === '/explore' ? 'explore' : 'class';
+const isExploreMode = runtimeMode === 'explore';
 if (captureWidth) {
   document.documentElement.classList.add('capture-wide');
   document.documentElement.style.setProperty('--capture-width', `${captureWidth}px`);
@@ -30,15 +33,21 @@ if (captureWidth) {
 const app = document.querySelector('#app');
 const state = createAppState(stages, recognizeQuestions, discoverQuestions);
 let classroomStorage = null;
-try { classroomStorage = window.localStorage; } catch { /* storage may be unavailable */ }
-state.classroomUnlocks = loadClassroomUnlocks(classroomStorage);
-const pendingStoredStudent = loadCurrentStudent(classroomStorage);
+if (!isExploreMode) {
+  try { classroomStorage = window.localStorage; } catch { /* storage may be unavailable */ }
+}
+state.classroomUnlocks = isExploreMode
+  ? { recognize: true, discover: true, experiment: true }
+  : loadClassroomUnlocks(classroomStorage);
+const pendingStoredStudent = isExploreMode ? null : loadCurrentStudent(classroomStorage);
 state.currentStudent = null;
 state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
 let identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
 let classConfigState = { status: 'loading', source: 'fallback', configs: fallbackClassConfigs(), error: '' };
 let classConfigRequest = null;
-let academicYearState = { status: 'loading', academicYear: '115', source: '', initialized: false, warning: '' };
+let academicYearState = isExploreMode
+  ? { status: 'ready', academicYear: null, source: 'explore', initialized: false, warning: '' }
+  : { status: 'loading', academicYear: '115', source: '', initialized: false, warning: '' };
 let academicYearRequest = null;
 
 function loadStudentAcademicYear() {
@@ -96,6 +105,7 @@ function loadStudentClassConfigs() {
 }
 
 function saveCloudCheckpoint(checkpointName) {
+  if (runtimeMode !== 'class') return;
   void writeStudentProgressCheckpoint(state.currentStudent, checkpointName).then((result) => {
     if (!result.ok) console.warn(`[cloud progress] ${checkpointName}: ${result.message}`);
   });
@@ -206,10 +216,11 @@ function navigate(hash) {
   location.hash = hash;
 }
 
-const renderers = createRenderers({ app, state, navigate, classroomStorage, onCheckpoint: saveCloudCheckpoint });
-const recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate, onCheckpoint: saveCloudCheckpoint });
-const discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate, onCheckpoint: saveCloudCheckpoint });
-const experimentRenderers = createExperimentCourseRenderers({ app, state, navigate, onCheckpoint: saveCloudCheckpoint });
+const checkpointCallback = isExploreMode ? () => {} : saveCloudCheckpoint;
+const renderers = createRenderers({ app, state, navigate, classroomStorage, onCheckpoint: checkpointCallback, mode: runtimeMode });
+const recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
+const discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
+const experimentRenderers = createExperimentCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
 let activePlayground = null;
 let activeTeacherPage = null;
 
@@ -220,6 +231,10 @@ function renderCurrentRoute() {
   activeTeacherPage = null;
   experimentRenderers.destroy();
   let route = resolveRoute(location.hash, stages, principles, recognizeQuestions);
+  if (isExploreMode && ['entry', 'studentEntry', 'teacher'].includes(route.name)) {
+    history.replaceState(null, '', '#home');
+    route = resolveRoute('#home', stages, principles, recognizeQuestions);
+  }
   if (route.name === 'entry') {
     renderSiteEntry({ app, navigate });
     window.scrollTo(0, 0);
@@ -232,14 +247,14 @@ function renderCurrentRoute() {
     focusRouteHeading();
     return;
   }
-  if (academicYearState.status === 'loading') {
+  if (!isExploreMode && academicYearState.status === 'loading') {
     void loadStudentAcademicYear();
     renderIdentityGate();
     window.scrollTo(0, 0);
     focusRouteHeading();
     return;
   }
-  if (!state.currentStudent) {
+  if (!isExploreMode && !state.currentStudent) {
     if (route.name === 'studentEntry') renderIdentityGate();
     else renderSiteEntry({ app, navigate });
     window.scrollTo(0, 0);
@@ -300,7 +315,7 @@ function renderCurrentRoute() {
     renderers[route.name]();
   }
 
-  attachStudentControls();
+  if (!isExploreMode) attachStudentControls();
 
   window.scrollTo(0, 0);
   focusRouteHeading();
@@ -309,4 +324,4 @@ function renderCurrentRoute() {
 window.addEventListener('hashchange', renderCurrentRoute);
 renderCurrentRoute();
 
-export { navigate, renderCurrentRoute, state };
+export { navigate, renderCurrentRoute, runtimeMode, state };
