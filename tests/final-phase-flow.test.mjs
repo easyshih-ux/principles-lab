@@ -43,6 +43,14 @@ test('FLOW A exposes three teacher-gated courses directly on the final homepage'
   assert.doesNotMatch(html, /data-course-enter/);
 });
 
+test('author credit appears in the lobby brand only and stays smaller than its subtitle', () => {
+  const styles = source('../styles.css');
+  assert.match(rendererSource, /<header class="home-brand">[\s\S]*?<span class="home-brand-credit">Made by WenYi<\/span>[\s\S]*?<\/header>/);
+  assert.equal((rendererSource.match(/Made by WenYi/g) ?? []).length, 1);
+  assert.match(styles, /\.home-brand small\{font-size:11px/);
+  assert.match(styles, /\.home-brand-credit\{[^}]*font-size:8px/);
+});
+
 test('free review is always-open, state-neutral and exposes only the released visual experiments', () => {
   assert.match(rendererSource, /id="enter-free-review">開始複習 →<\/button>/);
   assert.match(rendererSource, /#enter-free-review'[\s\S]*?navigate\('#principles'\)/);
@@ -158,7 +166,7 @@ test('accessibility and Final Phase cache markers remain scoped', () => {
   assert.doesNotMatch(indexSource, /<main[^>]*aria-live/);
   assert.match(recognizeSource, /aria-live="polite"/);
   assert.match(experimentSource, /id="experiment-feedback" aria-live="polite"/);
-  assert.ok(indexSource.includes('app.js?v=v2-d3-1-1'));
+  assert.ok(indexSource.includes('app.js?v=author-credit-2'));
   assert.ok(indexSource.includes('classroom-control.css?v=classroom-control-1'));
   assert.ok(indexSource.includes('phase6c.css?v=final-phase-1'));
   assert.ok(appSource.includes('recognize-course.js?v=v2-b2-checkpoints-1'));

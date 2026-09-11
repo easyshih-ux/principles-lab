@@ -18,6 +18,7 @@ test('empty URL opens the student-first public entry and exposes the teacher rou
   assert.match(markup, /開始實驗 →/);
   assert.match(markup, /班級與座號確認 →/);
   assert.match(markup, /教師登入 ↗/);
+  assert.match(markup, /<p class="site-entry-credit">Made by WenYi<\/p>/);
   assert.doesNotMatch(markup, /選擇這次要進入的學習入口|學生使用|教師進度|Google 教師登入/);
   assert.equal((markup.match(/class="site-entry-button"/g) ?? []).length, 1);
 });
@@ -59,4 +60,13 @@ test('entry flow changes do not modify Auth, progress, Dashboard, or Rules modul
   const appSource = source('../app.js');
   assert.doesNotMatch(source('../site-entry.js'), /firebase|studentProgress|signIn|signOut/);
   assert.match(appSource, /renderSiteEntry/);
+});
+
+test('author credit appears on the public homepage and once in the lobby brand', () => {
+  const styles = source('../styles.css');
+  const renderer = source('../renderers.js');
+  assert.match(styles, /\.site-entry-credit\{position:absolute;[^}]*left:clamp\([^}]*font-size:11px/);
+  assert.match(styles, /@media\(max-width:680px\)[^{]*\{[\s\S]*?\.site-entry-credit\{position:relative;left:auto;bottom:auto/);
+  assert.equal((renderer.match(/Made by WenYi/g) ?? []).length, 1);
+  assert.match(renderer, /<header class="home-brand">[\s\S]*?home-brand-credit/);
 });

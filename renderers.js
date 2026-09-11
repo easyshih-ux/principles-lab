@@ -269,7 +269,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
         <div class="home-decor home-decor-right" aria-hidden="true"><i></i><i></i><i></i></div>
         <header class="home-brand">
           <span class="home-brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <span><strong>FORM LAB</strong><small>形式原理視覺實驗室</small></span>
+          <span><strong>FORM LAB</strong><small>形式原理視覺實驗室</small><span class="home-brand-credit">Made by WenYi</span></span>
         </header>
         <div class="home-dot-grid home-dot-grid-top" aria-hidden="true"></div>
         <div class="home-main">

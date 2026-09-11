@@ -18,6 +18,7 @@ export function siteEntryMarkup() {
           <strong>開始實驗 →</strong><small>班級與座號確認 →</small>
         </button>
       </main>
+      <p class="site-entry-credit">Made by WenYi</p>
     </section>`;
 }
 

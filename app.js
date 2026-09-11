@@ -1,5 +1,5 @@
 import { principles, stages } from './data.js';
-import { createRenderers } from './renderers.js?v=v2-c1-a-1';
+import { createRenderers } from './renderers.js?v=author-credit-2';
 import { resolveRoute } from './router.js?v=v2-entry-1';
 import { createAppState, setCurrentRoute } from './state.js?v=v2-b2-checkpoints-1';
 import { renderGeometryPlayground } from './geometry/playground.js';
@@ -19,7 +19,7 @@ import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d3-1';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
 import { renderTeacherPage } from './teacher-page.js?v=v2-d3-1-1';
-import { renderSiteEntry } from './site-entry.js?v=v2-entry-2';
+import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 if (captureWidth) {
