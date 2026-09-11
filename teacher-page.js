@@ -163,7 +163,8 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
           ${authorization === 'authorized' && teacherView === 'dashboard' && dashboard ? teacherDashboardMarkup(dashboard, expandedCheckpoints) : ''}
           ${authorization === 'authorized' && teacherView === 'settings' ? teacherClassSettingsMarkup(settings) : ''}
           ${authorization === 'authorized' && teacherView === 'years' ? academicYearManagementMarkup(management) : ''}
-          <button class="primary-button" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出並返回網站入口</button>
+          <button class="primary-button" id="teacher-lab-home" type="button">返回 Lab 主大廳</button>
+          <button class="teacher-home-link" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出教師帳號</button>
         ` : `
           <p class="teacher-auth-lead">請使用授權的教師 Google 帳號登入</p>
           <button class="primary-button" id="teacher-google-sign-in" type="button" ${busy || !ready ? 'disabled' : ''}>${busy ? '正在開啟登入…' : !ready ? '正在準備登入…' : '使用 Google 帳號登入'}</button>
@@ -230,6 +231,7 @@ export function renderTeacherPage({ app, navigate, getClient = getTeacherFirebas
     if (disposed) return;
     app.innerHTML = teacherPageMarkup({ ...pageState, expandedCheckpoints });
     app.querySelector('#teacher-home')?.addEventListener('click', () => navigate('#entry'));
+    app.querySelector('#teacher-lab-home')?.addEventListener('click', () => navigate('#home'));
     app.querySelector('#teacher-google-sign-in')?.addEventListener('click', async () => {
       pageState.busy = true;
       pageState.error = '';

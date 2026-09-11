@@ -18,7 +18,7 @@ import { isAcademicYearNetworkError, loadActiveAcademicYear } from './academic-y
 import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d3-1-1';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d3-1';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
-import { renderTeacherPage } from './teacher-page.js?v=v2-d3-1-1';
+import { renderTeacherPage } from './teacher-page.js?v=teacher-nav-1';
 import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));

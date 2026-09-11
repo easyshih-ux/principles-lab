@@ -166,7 +166,7 @@ test('accessibility and Final Phase cache markers remain scoped', () => {
   assert.doesNotMatch(indexSource, /<main[^>]*aria-live/);
   assert.match(recognizeSource, /aria-live="polite"/);
   assert.match(experimentSource, /id="experiment-feedback" aria-live="polite"/);
-  assert.ok(indexSource.includes('app.js?v=explore-1'));
+  assert.ok(indexSource.includes('app.js?v=teacher-nav-1'));
   assert.ok(indexSource.includes('classroom-control.css?v=classroom-control-1'));
   assert.ok(indexSource.includes('phase6c.css?v=final-phase-1'));
   assert.ok(appSource.includes('recognize-course.js?v=v2-b2-checkpoints-1'));

@@ -298,7 +298,7 @@ test('first-course completion returns to student home and classroom cache marker
   assert.match(rendererSource, /#recognize-wall-return'[\s\S]*navigate\('#home'\)/);
   assert.doesNotMatch(rendererSource, /navigate\('#level\/discover\/start'\)/);
   assert.match(appSource, /recognize-course\.js\?v=v2-b2-checkpoints-1/);
-  assert.match(indexSource, /app\.js\?v=explore-1/);
+  assert.match(indexSource, /app\.js\?v=teacher-nav-1/);
   assert.match(indexSource, /classroom-control\.css\?v=classroom-control-1/);
   assert.match(indexSource, /post-final-a\.css\?v=post-final-a-templates/);
   assert.match(appSource, /discover-course\.js\?v=v2-b2-checkpoints-1/);

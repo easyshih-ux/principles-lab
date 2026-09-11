@@ -48,11 +48,13 @@ test('#teacher and public entry are handled before the student identity gate', (
   assert.match(appSource, /route\.name === 'studentEntry'\) renderIdentityGate\(\)/);
 });
 
-test('teacher return actions navigate to the public site entry', () => {
+test('teacher navigation separates Lab return from account sign-out', () => {
   const teacherPage = source('../teacher-page.js');
   assert.match(teacherPage, /id="teacher-home"[\s\S]*返回網站入口/);
-  assert.match(teacherPage, /id="teacher-sign-out"[\s\S]*登出並返回網站入口/);
+  assert.match(teacherPage, /id="teacher-lab-home"[\s\S]*返回 Lab 主大廳/);
+  assert.match(teacherPage, /id="teacher-sign-out"[\s\S]*登出教師帳號/);
   assert.match(teacherPage, /#teacher-home[\s\S]*navigate\('#entry'\)/);
+  assert.match(teacherPage, /#teacher-lab-home[\s\S]*navigate\('#home'\)/);
   assert.match(teacherPage, /signOutTeacher[\s\S]*navigate\('#entry'\)/);
 });
 
