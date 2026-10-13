@@ -45,13 +45,14 @@ export function validateClassDraft(draft, configs, originalClassId = '') {
   return normalizeClassConfig({ ...draft, classId });
 }
 
-export function createTeacherClassSettingsController({ client, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR, allowLegacyFallback = false, onChange = () => {} }) {
+export function createTeacherClassSettingsController({ client, academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR, allowLegacyFallback = false, onPermissionDenied = () => {}, onChange = () => {} }) {
   const state = { academicYear, status: 'loading', source: '', configs: [], mode: 'list', draft: null, originalClassId: '', message: '', error: '' };
   const notify = () => onChange({ ...state, configs: [...state.configs] });
   async function refresh() {
     state.status = 'loading'; notify();
     const result = await loadClassConfigs(client, state.academicYear, undefined, { allowLegacyFallback });
     Object.assign(state, result, { mode: 'list', draft: null, message: '', error: result.error });
+    if (result.cause?.code === 'permission-denied') void onPermissionDenied();
     notify(); return result;
   }
   async function bootstrap() {
@@ -61,7 +62,7 @@ export function createTeacherClassSettingsController({ client, academicYear = LE
       await bootstrapClassConfigs(client, state.academicYear);
       const result = await loadClassConfigs(client, state.academicYear, undefined, { allowLegacyFallback });
       Object.assign(state, result, { status: 'success', source: 'firestore', message: '已建立目前學年度班級設定。', error: '' });
-    } catch { state.status = 'error'; state.error = '建立班級設定失敗，請稍後再試。'; }
+    } catch (error) { state.status = 'error'; state.error = '建立班級設定失敗，請稍後再試。'; if (error?.code === 'permission-denied') void onPermissionDenied(); }
     notify();
   }
   function add() { state.mode = 'add'; state.draft = createNewClassDraft('', DEFAULT_NEW_CLASS_MAX_SEAT, state.academicYear); state.originalClassId = ''; state.message = ''; state.error = ''; notify(); }
@@ -75,7 +76,7 @@ export function createTeacherClassSettingsController({ client, academicYear = LE
       await saveClassConfig(client, config, state.academicYear);
       const result = await loadClassConfigs(client, state.academicYear, undefined, { allowLegacyFallback });
       Object.assign(state, result, { status: 'success', source: 'firestore', mode: 'list', draft: null, message: `${config.classId} 班設定已儲存。`, error: '' });
-    } catch (error) { state.status = 'error'; state.error = error instanceof TypeError ? error.message : '儲存失敗，請稍後再試。'; }
+    } catch (error) { state.status = 'error'; state.error = error instanceof TypeError ? error.message : '儲存失敗，請稍後再試。'; if (error?.code === 'permission-denied') void onPermissionDenied(); }
     notify();
   }
   return { getState: () => ({ ...state }), refresh, bootstrap, add, edit, cancel, setDraft, save };

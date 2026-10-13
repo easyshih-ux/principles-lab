@@ -223,10 +223,11 @@ test('authorized teacher markup waits for Dashboard state after reporting author
   assert.doesNotMatch(source('../app.js'), /signOut\(.*student|signOut.*Anonymous/i);
 });
 
-test('Firestore rules authorize only active teacher documents while teachers stays client-deny', () => {
+test('Firestore rules authorize active teachers while only admins may manage teacher documents', () => {
   const rules = source('../firestore.rules');
   assert.match(rules, /function isTeacher\(\)[\s\S]*request\.auth != null[\s\S]*get\([\s\S]*\/databases\/\$\(database\)\/documents\/teachers\/\$\(request\.auth\.uid\)[\s\S]*\)\.data\.active == true/);
-  assert.match(rules, /match \/teachers\/\{uid\}[\s\S]*allow read, write: if false/);
+  assert.match(rules, /match \/teachers\/\{uid\}[\s\S]*allow get, list: if isAdmin\(\)[\s\S]*allow create: if isAdmin\(\)[\s\S]*allow update: if isAdmin\(\)[\s\S]*allow delete: if false/);
+  assert.match(rules, /match \/admins\/\{uid\}[\s\S]*allow read, write: if false/);
   assert.match(rules, /match \/studentProgress\/\{studentKey\}[\s\S]*allow get, list: if isTeacher\(\)/);
   assert.match(rules, /allow delete: if false/);
   assert.doesNotMatch(rules, /teacherUid|teacher@example|google\.com.*isTeacher/);

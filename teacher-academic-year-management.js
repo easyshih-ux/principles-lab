@@ -5,12 +5,13 @@ export function suggestedNextAcademicYear(activeAcademicYear) {
   return String(Number(normalizeAcademicYear(activeAcademicYear)) + 1);
 }
 
-export function createAcademicYearManagementController({ client, onActiveYearChange = async () => {}, onChange = () => {} }) {
+export function createAcademicYearManagementController({ client, onActiveYearChange = async () => {}, onPermissionDenied = () => {}, onChange = () => {} }) {
   const state = { status: 'loading', activeAcademicYear: '115', initialized: false, warning: '', years: [], inconsistent: false, mode: 'list', draft: null, message: '', error: '' };
   const notify = () => onChange({ ...state, years: [...state.years], draft: state.draft ? { ...state.draft } : null });
   async function refresh() {
     state.status = 'loading'; state.error = ''; notify();
     const active = await loadActiveAcademicYear(client);
+    if (active.source === 'permission-denied') void onPermissionDenied();
     Object.assign(state, active, { activeAcademicYear: active.academicYear });
     if (!active.academicYear) {
       Object.assign(state, { status: 'error', years: [], inconsistent: false, error: active.warning });
@@ -19,13 +20,13 @@ export function createAcademicYearManagementController({ client, onActiveYearCha
     try {
       const listed = await listAcademicYears(client, active.academicYear);
       Object.assign(state, listed, { status: 'success' });
-    } catch { state.status = 'error'; state.error = '暫時無法取得學年度列表。'; }
+    } catch (error) { state.status = 'error'; state.error = '暫時無法取得學年度列表。'; if (error?.code === 'permission-denied') void onPermissionDenied(); }
     notify(); return { ...state };
   }
   async function bootstrap() {
     state.status = 'saving'; state.error = ''; notify();
     try { await bootstrapAcademicYear(client); state.message = '已建立 115 學年度管理設定。'; await refresh(); await onActiveYearChange('115', false); }
-    catch (error) { state.status = 'error'; state.error = error instanceof TypeError ? error.message : '建立學年度管理設定失敗。'; notify(); }
+    catch (error) { state.status = 'error'; state.error = error instanceof TypeError ? error.message : '建立學年度管理設定失敗。'; if (error?.code === 'permission-denied') void onPermissionDenied(); notify(); }
   }
   function add() { state.mode = 'add'; state.draft = { academicYear: suggestedNextAcademicYear(state.activeAcademicYear), method: 'copy' }; state.error = ''; state.message = ''; notify(); }
   function cancel() { state.mode = 'list'; state.draft = null; state.error = ''; notify(); }
@@ -36,7 +37,7 @@ export function createAcademicYearManagementController({ client, onActiveYearCha
       const result = await createAcademicYear(client, state.draft?.academicYear, { copyFrom: state.draft?.method === 'copy' ? state.activeAcademicYear : null });
       state.mode = 'list'; state.draft = null;
       await refresh(); state.message = result.copiedClassCount ? `已建立 ${result.academicYear} 學年度並複製 ${result.copiedClassCount} 個班級。` : `已建立空白的 ${result.academicYear} 學年度。`; notify();
-    } catch (error) { state.status = 'error'; state.error = error instanceof TypeError ? error.message : '新增學年度失敗，請稍後再試。'; notify(); }
+    } catch (error) { state.status = 'error'; state.error = error instanceof TypeError ? error.message : '新增學年度失敗，請稍後再試。'; if (error?.code === 'permission-denied') void onPermissionDenied(); notify(); }
   }
   async function activate(academicYear, confirmed = false) {
     if (!confirmed) return false;
@@ -55,6 +56,7 @@ export function createAcademicYearManagementController({ client, onActiveYearCha
       state.error = transactionCompleted
         ? '年度已送出更新，但目前無法確認最新設定，請稍後重新整理。'
         : error instanceof TypeError ? error.message : '切換學年度失敗，原設定未變更。';
+      if (error?.code === 'permission-denied') void onPermissionDenied();
       notify(); return false;
     }
   }

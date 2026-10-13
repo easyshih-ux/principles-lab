@@ -14,6 +14,34 @@ service cloud.firestore {
         ).data.active == true;
     }
 
+    function isGoogleUser() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function isActiveAdmin(uid) {
+      return exists(/databases/$(database)/documents/admins/$(uid))
+        && get(/databases/$(database)/documents/admins/$(uid)).data.active == true;
+    }
+
+    function isAdmin() {
+      return request.auth != null && isActiveAdmin(request.auth.uid);
+    }
+
+    function hasReviewLink(uid, action, eventId) {
+      return eventId is string
+        && eventId.size() >= 12
+        && getAfter(
+          /databases/$(database)/documents/teacherReviewHistory/$(eventId)
+        ).data.targetUid == uid
+        && getAfter(
+          /databases/$(database)/documents/teacherReviewHistory/$(eventId)
+        ).data.action == action
+        && getAfter(
+          /databases/$(database)/documents/teacherReviewHistory/$(eventId)
+        ).data.reviewedBy == request.auth.uid;
+    }
+
     function hasExactProgressFields() {
       return request.resource.data.keys().hasAll([
         'academicYear', 'classId', 'seatNo', 'studentKey', 'updatedAt'
@@ -151,8 +179,232 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function hasValidApplicationCreate(uid) {
+      return isGoogleUser()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasAll([
+          'uid', 'displayName', 'email', 'status', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'status', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName == request.auth.token.name
+        && request.resource.data.email is string
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function hasValidApplicationDecision(uid) {
+      return request.resource.data.keys().hasAll([
+          'uid', 'displayName', 'email', 'status', 'createdAt', 'updatedAt',
+          'reviewedAt', 'reviewedBy', 'lastReviewId'
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedAt', 'reviewedAt', 'reviewedBy', 'lastReviewId'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.displayName == resource.data.displayName
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.status in ['approved', 'rejected', 'revoked']
+        && (request.resource.data.status != 'revoked' || !isActiveAdmin(uid))
+        && (
+          (resource.data.status == 'pending' && request.resource.data.status in ['approved', 'rejected'])
+          || (resource.data.status == 'approved' && request.resource.data.status == 'revoked')
+        )
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.reviewedBy == request.auth.uid
+        && hasReviewLink(uid, request.resource.data.status, request.resource.data.lastReviewId)
+        && (
+          request.resource.data.status == 'rejected'
+          || (
+            request.resource.data.status == 'approved'
+            && getAfter(/databases/$(database)/documents/teachers/$(uid)).data.active == true
+            && getAfter(/databases/$(database)/documents/teachers/$(uid)).data.lastReviewId
+              == request.resource.data.lastReviewId
+          )
+          || (
+            request.resource.data.status == 'revoked'
+            && getAfter(/databases/$(database)/documents/teachers/$(uid)).data.active == false
+            && getAfter(/databases/$(database)/documents/teachers/$(uid)).data.lastReviewId
+              == request.resource.data.lastReviewId
+          )
+        );
+    }
+
+    function hasValidLegacyRevocationApplication(uid) {
+      return isAdmin()
+        && !isActiveAdmin(uid)
+        && request.resource.data.keys().hasAll([
+          'uid', 'displayName', 'email', 'status', 'createdAt', 'updatedAt',
+          'reviewedAt', 'reviewedBy', 'lastReviewId'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'status', 'createdAt', 'updatedAt',
+          'reviewedAt', 'reviewedBy', 'lastReviewId'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.email is string
+        && request.resource.data.status == 'revoked'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.reviewedBy == request.auth.uid
+        && hasReviewLink(uid, 'revoked', request.resource.data.lastReviewId)
+        && get(/databases/$(database)/documents/teachers/$(uid)).data.active == true
+        && getAfter(/databases/$(database)/documents/teachers/$(uid)).data.active == false
+        && getAfter(/databases/$(database)/documents/teachers/$(uid)).data.lastReviewId
+          == request.resource.data.lastReviewId;
+    }
+
+    match /teacherApplications/{uid} {
+      allow get: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if hasValidApplicationCreate(uid) || hasValidLegacyRevocationApplication(uid);
+      allow update: if isAdmin() && hasValidApplicationDecision(uid);
+      allow delete: if false;
+    }
+
+    function hasValidTeacherApproval(uid) {
+      return request.resource.data.active == true
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.approvedAt == request.time
+        && request.resource.data.approvedBy == request.auth.uid
+        && hasReviewLink(uid, 'approved', request.resource.data.lastReviewId)
+        && getAfter(/databases/$(database)/documents/teacherApplications/$(uid)).data.status == 'approved'
+        && getAfter(/databases/$(database)/documents/teacherApplications/$(uid)).data.lastReviewId
+          == request.resource.data.lastReviewId;
+    }
+
+    function hasValidTeacherRevocation(uid) {
+      return !isActiveAdmin(uid)
+        && resource.data.active == true
+        && request.resource.data.active == false
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.revokedAt == request.time
+        && request.resource.data.revokedBy == request.auth.uid
+        && hasReviewLink(uid, 'revoked', request.resource.data.lastReviewId)
+        && (
+          !existsAfter(/databases/$(database)/documents/teacherApplications/$(uid))
+          || (
+            getAfter(/databases/$(database)/documents/teacherApplications/$(uid)).data.status == 'revoked'
+            && getAfter(/databases/$(database)/documents/teacherApplications/$(uid)).data.lastReviewId
+              == request.resource.data.lastReviewId
+          )
+        );
+    }
+
     match /teachers/{uid} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll([
+          'active', 'displayName', 'email', 'approvedAt', 'approvedBy', 'updatedAt', 'lastReviewId'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'active', 'displayName', 'email', 'approvedAt', 'approvedBy', 'updatedAt', 'lastReviewId'
+        ])
+        && hasValidTeacherApproval(uid);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'active', 'displayName', 'email', 'approvedAt', 'approvedBy',
+          'revokedAt', 'revokedBy', 'updatedAt', 'lastReviewId'
+        ])
+        && (hasValidTeacherApproval(uid) || hasValidTeacherRevocation(uid));
+      allow delete: if false;
+    }
+
+    function hasValidReviewHistory(eventId) {
+      return request.resource.data.keys().hasAll([
+          'targetUid', 'action', 'reviewedBy', 'reviewedAt', 'previousStatus', 'nextStatus'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'targetUid', 'action', 'reviewedBy', 'reviewedAt', 'previousStatus', 'nextStatus'
+        ])
+        && request.resource.data.targetUid is string
+        && request.resource.data.targetUid.size() > 0
+        && request.resource.data.action in ['approved', 'rejected', 'revoked']
+        && (request.resource.data.action != 'revoked'
+          || !isActiveAdmin(request.resource.data.targetUid))
+        && request.resource.data.nextStatus == request.resource.data.action
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && (
+          (
+            request.resource.data.action in ['approved', 'rejected']
+            && request.resource.data.previousStatus == 'pending'
+            && get(
+              /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+            ).data.status == 'pending'
+            && getAfter(
+              /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+            ).data.status == request.resource.data.action
+            && getAfter(
+              /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+            ).data.lastReviewId == eventId
+          )
+          || (
+            request.resource.data.action == 'revoked'
+            && request.resource.data.previousStatus in ['approved', 'teacher-only']
+            && get(
+              /databases/$(database)/documents/teachers/$(request.resource.data.targetUid)
+            ).data.active == true
+            && getAfter(
+              /databases/$(database)/documents/teachers/$(request.resource.data.targetUid)
+            ).data.active == false
+            && getAfter(
+              /databases/$(database)/documents/teachers/$(request.resource.data.targetUid)
+            ).data.lastReviewId == eventId
+            && (
+              (
+                request.resource.data.previousStatus == 'teacher-only'
+                && !exists(
+                  /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+                )
+                && getAfter(
+                  /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+                ).data.status == 'revoked'
+                && getAfter(
+                  /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+                ).data.lastReviewId == eventId
+              )
+              || (
+                request.resource.data.previousStatus == 'approved'
+                && get(
+                  /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+                ).data.status == 'approved'
+                && getAfter(
+                  /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+                ).data.status == 'revoked'
+                && getAfter(
+                  /databases/$(database)/documents/teacherApplications/$(request.resource.data.targetUid)
+                ).data.lastReviewId == eventId
+              )
+            )
+          )
+        );
+    }
+
+    match /teacherReviewHistory/{eventId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin() && hasValidReviewHistory(eventId);
+      allow update, delete: if false;
+    }
+
+    match /admins/{uid} {
       allow read, write: if false;
+    }
+
+    match /adminProtectionProbes/{uid} {
+      allow get: if isAdmin() && isActiveAdmin(uid);
+      allow list, create, update, delete: if false;
     }
 
     match /{document=**} {

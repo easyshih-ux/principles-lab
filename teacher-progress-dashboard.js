@@ -77,6 +77,7 @@ export function createTeacherDashboardController({
   academicYear = LEGACY_DEFAULT_ACADEMIC_YEAR,
   classrooms = [],
   loadProgress = loadTeacherClassProgress,
+  onPermissionDenied = () => {},
   onChange = () => {}
 }) {
   const available = activeTeacherClassrooms(classrooms);
@@ -113,6 +114,7 @@ export function createTeacherDashboardController({
       state.error = state.status === 'permission-denied'
         ? '教師權限不足，無法讀取班級進度。'
         : '暫時無法取得進度，請稍後重新整理。';
+      if (state.status === 'permission-denied') void onPermissionDenied();
     }
     notify();
   }

@@ -12,6 +12,13 @@ import {
 import { formatSeatNumber } from './classroom-config.js';
 import { changeDraftMaximum, createTeacherClassSettingsController, toggleDraftSeat } from './teacher-class-settings.js?v=v2-d3-1';
 import { createAcademicYearManagementController } from './teacher-academic-year-management.js?v=v2-d3-1-1';
+import {
+  loadTeacherApplication,
+  loadTeacherReviewData,
+  reviewTeacherAccess,
+  submitTeacherApplication,
+  verifyAdminAuthorization
+} from './teacher-application-service.js?v=gate2-1';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -130,7 +137,52 @@ export async function copyTeacherUid(uid, clipboard = globalThis.navigator?.clip
   }
 }
 
-export function teacherPageMarkup({ user = null, authorization = 'idle', dashboard = null, settings = null, management = null, teacherView = 'dashboard', ready = true, busy = false, error = '', copyStatus = '', expandedCheckpoints = new Set() } = {}) {
+function formatReviewDate(value) {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return '時間讀取中';
+  return new Intl.DateTimeFormat('zh-TW', {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }).format(value);
+}
+
+function teacherApplicationMarkup(application, status, busy) {
+  if (status === 'loading') return '<section class="teacher-application"><p role="status">正在讀取申請狀態…</p></section>';
+  if (status === 'error') return '<section class="teacher-application"><p role="alert">暫時無法讀取申請狀態，請檢查網路後再試。</p><button class="secondary-button" id="teacher-recheck" type="button">重新驗證教師權限</button></section>';
+  if (!application) return `<section class="teacher-application" aria-labelledby="teacher-application-title"><h2 id="teacher-application-title">申請教師權限</h2><p>系統將使用目前 Google 帳號的姓名與 Email 送出申請。</p><button class="primary-button" id="teacher-apply" type="button" ${busy ? 'disabled' : ''}>${busy ? '正在送出…' : '申請教師權限'}</button></section>`;
+  const messages = {
+    pending: ['已送出申請，等待管理員審核', '管理員完成審核後，請回到此頁重新驗證。'],
+    approved: ['教師申請已通過', '不必登出 Google 帳號，請重新驗證教師權限。'],
+    rejected: ['教師申請未通過', '如需重新申請，請聯絡管理員重新開啟申請。'],
+    revoked: ['教師權限已撤銷', '如有疑問，請聯絡管理員。']
+  };
+  const [title, description] = messages[application.status] ?? ['申請狀態無法辨識', '請聯絡管理員。'];
+  return `<section class="teacher-application is-${escapeHtml(application.status)}" aria-labelledby="teacher-application-title"><h2 id="teacher-application-title">${title}</h2><p>${description}</p>${application.status === 'approved' ? `<button class="primary-button" id="teacher-recheck" type="button" ${busy ? 'disabled' : ''}>${busy ? '正在驗證…' : '重新驗證教師權限'}</button>` : ''}</section>`;
+}
+
+function teacherReviewMarkup(review, busyKey = '') {
+  if (!review || review.status === 'loading') return '<section class="teacher-review"><p role="status">正在讀取教師申請…</p></section>';
+  if (review.status === 'error') return `<section class="teacher-review"><p role="alert">${escapeHtml(review.error || '暫時無法讀取教師申請。')}</p><button class="secondary-button" id="teacher-review-refresh" type="button">重新讀取</button></section>`;
+  return `<section class="teacher-review" aria-labelledby="teacher-review-title">
+    <div class="teacher-review-heading"><div><p class="section-label">OWNER ONLY</p><h2 id="teacher-review-title">教師審核</h2></div><button class="secondary-button" id="teacher-review-refresh" type="button" ${busyKey ? 'disabled' : ''}>重新整理</button></div>
+    <h3>待審核申請</h3>
+    <div class="teacher-review-list">${review.pending.length ? review.pending.map((item) => {
+      const approveKey = `approved:${item.uid}`; const rejectKey = `rejected:${item.uid}`;
+      return `<article><div><strong>${escapeHtml(item.displayName)}</strong><span>${escapeHtml(item.email)}</span><small>${formatReviewDate(item.createdAt)}</small></div><div class="teacher-review-actions"><button class="primary-button" type="button" data-review-action="approved" data-review-uid="${escapeHtml(item.uid)}" ${busyKey ? 'disabled' : ''}>${busyKey === approveKey ? '核准中…' : '核准'}</button><button class="secondary-button" type="button" data-review-action="rejected" data-review-uid="${escapeHtml(item.uid)}" ${busyKey ? 'disabled' : ''}>${busyKey === rejectKey ? '拒絕中…' : '拒絕'}</button></div></article>`;
+    }).join('') : '<p class="teacher-review-empty">目前沒有待審核申請。</p>'}</div>
+    <h3>已核准教師</h3>
+    <div class="teacher-review-list">${review.teachers.length ? review.teachers.map((item) => {
+      const revokeKey = `revoked:${item.uid}`;
+      const action = item.isAdmin
+        ? '<span aria-label="系統管理員，不可撤銷">系統管理員</span>'
+        : `<button class="secondary-button danger-button" type="button" data-review-action="revoked" data-review-uid="${escapeHtml(item.uid)}" ${busyKey ? 'disabled' : ''}>${busyKey === revokeKey ? '撤銷中…' : '撤銷權限'}</button>`;
+      return `<article><div><strong>${escapeHtml(item.displayName || '既有教師')}</strong><span>${escapeHtml(item.email || item.uid)}</span>${item.hasApplication ? '' : '<small>既有白名單教師</small>'}</div>${action}</article>`;
+    }).join('') : '<p class="teacher-review-empty">目前沒有已核准教師。</p>'}</div>
+    <p class="teacher-settings-message" role="status">${escapeHtml(review.message || '')}</p>
+  </section>`;
+}
+
+export function teacherPageMarkup({ user = null, authorization = 'idle', adminAuthorization = 'idle', application = null, applicationStatus = 'idle', review = null, dashboard = null, settings = null, management = null, teacherView = 'dashboard', ready = true, busy = false, adminBusy = '', error = '', copyStatus = '', expandedCheckpoints = new Set() } = {}) {
+  const isAuthorized = authorization === 'authorized';
+  const isAdmin = adminAuthorization === 'authorized';
   return `
     <section class="teacher-auth-page" aria-labelledby="teacher-title">
       <div class="teacher-auth-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -159,10 +211,12 @@ export function teacherPageMarkup({ user = null, authorization = 'idle', dashboa
               <button class="secondary-button" id="teacher-copy-uid" type="button">複製 UID</button>
               <p id="teacher-copy-status" role="status">${escapeHtml(copyStatus)}</p>
             </section>` : ''}
-          ${authorization === 'authorized' ? `<nav class="teacher-section-nav"><button type="button" id="teacher-show-dashboard" ${teacherView === 'dashboard' ? 'aria-current="page"' : ''}>學習進度</button><button type="button" id="teacher-show-settings" ${teacherView === 'settings' ? 'aria-current="page"' : ''}>班級設定</button><button type="button" id="teacher-show-years" ${teacherView === 'years' ? 'aria-current="page"' : ''}>學年度管理</button></nav>` : ''}
-          ${authorization === 'authorized' && teacherView === 'dashboard' && dashboard ? teacherDashboardMarkup(dashboard, expandedCheckpoints) : ''}
-          ${authorization === 'authorized' && teacherView === 'settings' ? teacherClassSettingsMarkup(settings) : ''}
-          ${authorization === 'authorized' && teacherView === 'years' ? academicYearManagementMarkup(management) : ''}
+          ${authorization === 'unauthorized' && !isAdmin ? teacherApplicationMarkup(application, applicationStatus, busy) : ''}
+          ${(isAuthorized || isAdmin) ? `<nav class="teacher-section-nav">${isAuthorized ? `<button type="button" id="teacher-show-dashboard" ${teacherView === 'dashboard' ? 'aria-current="page"' : ''}>學習進度</button><button type="button" id="teacher-show-settings" ${teacherView === 'settings' ? 'aria-current="page"' : ''}>班級設定</button><button type="button" id="teacher-show-years" ${teacherView === 'years' ? 'aria-current="page"' : ''}>學年度管理</button>` : ''}${isAdmin ? `<button type="button" id="teacher-show-reviews" ${teacherView === 'reviews' ? 'aria-current="page"' : ''}>教師審核</button>` : ''}</nav>` : ''}
+          ${isAuthorized && teacherView === 'dashboard' && dashboard ? teacherDashboardMarkup(dashboard, expandedCheckpoints) : ''}
+          ${isAuthorized && teacherView === 'settings' ? teacherClassSettingsMarkup(settings) : ''}
+          ${isAuthorized && teacherView === 'years' ? academicYearManagementMarkup(management) : ''}
+          ${isAdmin && teacherView === 'reviews' ? teacherReviewMarkup(review, adminBusy) : ''}
           ${authorization === 'authorized' ? '<button class="primary-button" id="teacher-lab-home" type="button">返回教學畫面</button>' : ''}
           <button class="teacher-home-link" id="teacher-sign-out" type="button" ${busy ? 'disabled' : ''}>登出教師帳號</button>
         ` : `
@@ -184,54 +238,145 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
   let client = null;
   let unsubscribe = null;
   let disposed = false;
-  const pageState = { user: null, authorization: 'idle', dashboard: null, settings: null, management: null, teacherView: 'dashboard', ready: false, busy: false, error: '', copyStatus: '' };
+  const pageState = {
+    user: null,
+    authorization: 'idle',
+    adminAuthorization: 'idle',
+    application: null,
+    applicationStatus: 'idle',
+    review: null,
+    dashboard: null,
+    settings: null,
+    management: null,
+    teacherView: 'dashboard',
+    ready: false,
+    busy: false,
+    adminBusy: '',
+    error: '',
+    copyStatus: ''
+  };
   let authorizationGeneration = 0;
   let dashboardController = null;
   let settingsController = null;
   let managementController = null;
+  let revocationCheckPromise = null;
   const expandedCheckpoints = new Set();
 
+  async function refreshApplication() {
+    if (!pageState.user) return null;
+    pageState.applicationStatus = 'loading';
+    render();
+    try {
+      pageState.application = await loadTeacherApplication(client, pageState.user.uid);
+      pageState.applicationStatus = 'success';
+    } catch {
+      pageState.applicationStatus = 'error';
+    }
+    render();
+    return pageState.application;
+  }
+
+  async function refreshReview() {
+    if (pageState.adminAuthorization !== 'authorized') return;
+    pageState.review = { status: 'loading', pending: [], teachers: [], message: '', error: '' };
+    render();
+    try {
+      const data = await loadTeacherReviewData(client);
+      pageState.review = { status: 'success', ...data, message: '', error: '' };
+    } catch (error) {
+      pageState.review = {
+        status: 'error', pending: [], teachers: [], message: '',
+        error: error?.code === 'permission-denied' ? '管理員權限不足，無法讀取教師申請。' : '暫時無法讀取教師申請。'
+      };
+    }
+    render();
+  }
+
+  async function revalidateAfterPermissionDenied() {
+    if (!pageState.user || revocationCheckPromise) return revocationCheckPromise;
+    revocationCheckPromise = verifyTeacherAuthorization(client).then(async (authorized) => {
+      if (disposed || authorized) return authorized;
+      authorizationGeneration += 1;
+      pageState.authorization = 'unauthorized';
+      pageState.teacherView = pageState.adminAuthorization === 'authorized' ? 'reviews' : 'dashboard';
+      dashboardController?.destroy();
+      dashboardController = null;
+      settingsController = null;
+      managementController = null;
+      pageState.dashboard = null;
+      pageState.settings = null;
+      pageState.management = null;
+      onAuthorizationChange(false);
+      await refreshApplication();
+      return false;
+    }).catch(() => {
+      if (!disposed) pageState.error = '網路暫時無法使用，尚未變更目前教師登入狀態。';
+      return null;
+    }).finally(() => {
+      revocationCheckPromise = null;
+      render();
+    });
+    return revocationCheckPromise;
+  }
+
   async function loadActiveYearViews(academicYear, allowLegacyFallback) {
-    settingsController = createTeacherClassSettingsController({ client, academicYear, allowLegacyFallback, onChange: (settings) => { pageState.settings = settings; render(); } });
+    settingsController = createTeacherClassSettingsController({ client, academicYear, allowLegacyFallback, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (settings) => { pageState.settings = settings; render(); } });
     const classResult = await settingsController.refresh();
     dashboardController?.destroy();
-    dashboardController = createTeacherDashboardController({ client, academicYear, classrooms: classResult.configs, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
+    dashboardController = createTeacherDashboardController({ client, academicYear, classrooms: classResult.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
     pageState.dashboard = dashboardController.getState();
     void dashboardController.refresh();
   }
 
   async function applyTeacherUser(user) {
     const generation = ++authorizationGeneration;
+    const retainedTeacherAuthorization = Boolean(user && pageState.user?.uid === user.uid && pageState.authorization === 'authorized');
+    const retainedAdminAuthorization = Boolean(user && pageState.user?.uid === user.uid && pageState.adminAuthorization === 'authorized');
     pageState.user = user;
     dashboardController?.destroy();
     dashboardController = null;
     settingsController = null;
     managementController = null;
     pageState.dashboard = null;
+    pageState.settings = null;
+    pageState.management = null;
+    pageState.application = null;
+    pageState.applicationStatus = user ? 'loading' : 'idle';
+    pageState.review = null;
     pageState.error = '';
     pageState.copyStatus = '';
     pageState.authorization = user ? 'checking' : 'idle';
+    pageState.adminAuthorization = user ? 'checking' : 'idle';
     render();
     if (!user) {
       onAuthorizationChange(false);
       return;
     }
-    try {
-      const isAuthorized = await verifyTeacherAuthorization(client);
+    const [teacherResult, adminResult] = await Promise.allSettled([
+      verifyTeacherAuthorization(client),
+      verifyAdminAuthorization(client)
+    ]);
+    if (disposed || generation !== authorizationGeneration) return;
+    const isAuthorized = teacherResult.status === 'fulfilled' ? teacherResult.value : retainedTeacherAuthorization;
+    const isAdmin = adminResult.status === 'fulfilled' ? adminResult.value : retainedAdminAuthorization;
+    pageState.authorization = teacherResult.status === 'rejected' ? retainedTeacherAuthorization ? 'authorized' : 'error' : isAuthorized ? 'authorized' : 'unauthorized';
+    pageState.adminAuthorization = adminResult.status === 'rejected' ? retainedAdminAuthorization ? 'authorized' : 'error' : isAdmin ? 'authorized' : 'unauthorized';
+    if (teacherResult.status === 'rejected' || adminResult.status === 'rejected') {
+      pageState.error = '無法完整確認帳號權限，請檢查網路後重新整理頁面。';
+    }
+    onAuthorizationChange(Boolean(isAuthorized));
+    if (!isAuthorized) await refreshApplication();
+    if (disposed || generation !== authorizationGeneration) return;
+    if (isAuthorized) {
+      managementController = createAcademicYearManagementController({ client, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (management) => { pageState.management = management; render(); }, onActiveYearChange: async (academicYear, legacyBootstrap) => { await loadActiveYearViews(academicYear, legacyBootstrap); } });
+      const management = await managementController.refresh();
       if (disposed || generation !== authorizationGeneration) return;
-      pageState.authorization = isAuthorized ? 'authorized' : 'unauthorized';
-      if (isAuthorized) {
-        onAuthorizationChange(true);
-        managementController = createAcademicYearManagementController({ client, onChange: (management) => { pageState.management = management; render(); }, onActiveYearChange: async (academicYear, legacyBootstrap) => { await loadActiveYearViews(academicYear, legacyBootstrap); } });
-        const management = await managementController.refresh();
-        if (disposed || generation !== authorizationGeneration) return;
-        if (management.activeAcademicYear) await loadActiveYearViews(management.activeAcademicYear, !management.initialized);
-        else pageState.teacherView = 'years';
-      }
-    } catch (error) {
-      if (disposed || generation !== authorizationGeneration) return;
-      pageState.authorization = 'error';
-      pageState.error = '無法確認教師權限，請檢查網路後重新整理頁面。';
+      if (management.activeAcademicYear) await loadActiveYearViews(management.activeAcademicYear, !management.initialized);
+      else pageState.teacherView = 'years';
+    }
+    if (isAdmin) {
+      if (!isAuthorized) pageState.teacherView = 'reviews';
+      await refreshReview();
     }
     render();
   }
@@ -263,6 +408,10 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
         authorizationGeneration += 1;
         pageState.user = null;
         pageState.authorization = 'idle';
+        pageState.adminAuthorization = 'idle';
+        pageState.application = null;
+        pageState.applicationStatus = 'idle';
+        pageState.review = null;
         dashboardController?.destroy();
         dashboardController = null;
         pageState.dashboard = null;
@@ -280,9 +429,62 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
       pageState.copyStatus = copied ? '已複製 UID' : '無法複製，請手動選取 UID';
       render();
     });
+    app.querySelector('#teacher-apply')?.addEventListener('click', async () => {
+      if (!pageState.user || pageState.authorization !== 'unauthorized') return;
+      pageState.busy = true;
+      pageState.error = '';
+      render();
+      try {
+        const result = await submitTeacherApplication(client, pageState.user);
+        pageState.application = result.application;
+        pageState.applicationStatus = 'success';
+      } catch (error) {
+        pageState.error = error instanceof TypeError ? error.message : '申請送出失敗，請檢查網路後再試。';
+        await refreshApplication();
+      } finally {
+        pageState.busy = false;
+        render();
+      }
+    });
+    app.querySelector('#teacher-recheck')?.addEventListener('click', async () => {
+      if (!pageState.user) return;
+      pageState.busy = true;
+      pageState.error = '';
+      render();
+      await applyTeacherUser(pageState.user);
+      if (!disposed) { pageState.busy = false; render(); }
+    });
     app.querySelector('#teacher-show-dashboard')?.addEventListener('click', () => { pageState.teacherView = 'dashboard'; render(); });
     app.querySelector('#teacher-show-settings')?.addEventListener('click', () => { pageState.teacherView = 'settings'; render(); });
     app.querySelector('#teacher-show-years')?.addEventListener('click', () => { pageState.teacherView = 'years'; render(); });
+    app.querySelector('#teacher-show-reviews')?.addEventListener('click', () => { pageState.teacherView = 'reviews'; render(); });
+    app.querySelector('#teacher-review-refresh')?.addEventListener('click', () => { void refreshReview(); });
+    app.querySelectorAll('[data-review-action]').forEach((button) => button.addEventListener('click', async () => {
+      if (pageState.adminAuthorization !== 'authorized' || pageState.adminBusy) return;
+      const action = button.dataset.reviewAction;
+      const uid = button.dataset.reviewUid;
+      const labels = {
+        approved: '確定核准此教師申請？核准後對方可重新驗證並使用教師功能。',
+        rejected: '確定拒絕此教師申請？',
+        revoked: '確定撤銷此教師權限？既有學習紀錄與班級資料不會刪除。'
+      };
+      if (!labels[action] || !globalThis.confirm(labels[action])) return;
+      pageState.adminBusy = `${action}:${uid}`;
+      pageState.error = '';
+      render();
+      try {
+        await reviewTeacherAccess(client, { targetUid: uid, action });
+        await refreshReview();
+        if (uid === pageState.user?.uid) await applyTeacherUser(pageState.user);
+        if (pageState.review) pageState.review.message = action === 'approved' ? '教師權限已核准。' : action === 'rejected' ? '申請已拒絕。' : '教師權限已撤銷。';
+      } catch (error) {
+        pageState.error = error instanceof TypeError ? error.message : '審核操作失敗，資料未變更。';
+        await refreshReview();
+      } finally {
+        pageState.adminBusy = '';
+        render();
+      }
+    }));
     app.querySelector('#academic-year-bootstrap')?.addEventListener('click', () => { void managementController?.bootstrap(); });
     app.querySelector('#academic-year-add')?.addEventListener('click', () => managementController?.add());
     app.querySelector('#academic-year-cancel')?.addEventListener('click', () => managementController?.cancel());
@@ -298,7 +500,7 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
       await settingsController?.bootstrap();
       if (pageState.settings?.source === 'firestore') {
         dashboardController?.destroy();
-        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
+        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
         pageState.dashboard = dashboardController.getState(); void dashboardController.refresh();
       }
     });
@@ -321,7 +523,7 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
       await settingsController?.save();
       if (pageState.settings?.source === 'firestore' && pageState.settings.mode === 'list') {
         dashboardController?.destroy();
-        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
+        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
         pageState.dashboard = dashboardController.getState(); void dashboardController.refresh();
       }
     });
