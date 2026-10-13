@@ -129,11 +129,11 @@ function symmetryComposition(option, animated = false) {
   </span>`;
 }
 
-function balanceComposition(option) {
+function balanceComposition(option, completionClass = '') {
   const kind = typeof option === 'string' ? option : option.kind;
   const colors = typeof option === 'string' ? ['red', 'blue', 'yellow'] : option.colors;
   const rightXs = kind === 'asymmetric-balanced' ? [66, 73, 80] : kind === 'unbalanced' ? [76, 84, 92] : [70];
-  return `<span class="balance-mini"><i class="balance-center"></i>
+  return `<span class="balance-mini ${completionClass}"><i class="balance-center"></i>
     <span class="balance-shape large" style="--x:30%;--y:52%;--balance-color:var(--${colors[0]})"></span>
     ${rightXs.map((x, index) => `<span class="balance-shape small" style="--x:${x}%;--y:${35 + index * 17}%;--balance-color:var(--${colors[1 + index % (colors.length - 1)]})"></span>`).join('')}
     ${kind === 'symmetric' ? `<span class="balance-shape large mirror" style="--x:70%;--y:52%;--balance-color:var(--${colors[2]})"></span>` : ''}
@@ -148,25 +148,52 @@ function rhythmComposition(ys, animated = false) {
   return `<span class="rhythm-mini ${animationClass}">${ys.map((y, index) => `<i style="--x:${12 + index * 15}%;--y:${y}%;--delay:${index * .1}s"></i>`).join('')}</span>`;
 }
 
-function unityComposition(option, animated = false) {
-  return `<span class="principle-family unity-family ${animated ? 'unity-recognize-success' : ''}">${option.shapes.map((shape, index) => `<i class="family-shape ${shape}" style="--family-color:${visualColor(option.colors[index])};--delay:${index * .08}s"></i>`).join('')}</span>`;
+function unityComposition(option, animated = false, completionClass = '') {
+  return `<span class="principle-family unity-family ${animated ? 'unity-recognize-success' : ''} ${completionClass}">${option.shapes.map((shape, index) => `<i class="family-shape ${shape}" style="--family-color:${visualColor(option.colors[index])};--delay:${index * .08}s"></i>`).join('')}</span>`;
 }
 
 function harmonyComposition(option, animated = false) {
   return `<span class="principle-family harmony-family ${animated ? 'harmony-recognize-success' : ''}">${option.colors.map((color, index) => `<i style="--family-color:${visualColor(color)};--delay:${index * .08}s"></i>`).join('')}</span>`;
 }
 
-function contrastComposition(option, animated = false) {
-  return `<span class="contrast-composition ${animated ? 'contrast-recognize-success' : ''}">${option.sizes.map((size, index) => `<i style="--shape-size:${size}px;--shape-color:${visualColor(option.colors[index])};--delay:${index * .08}s"></i>`).join('')}</span>`;
+function contrastComposition(option, animated = false, completionClass = '') {
+  return `<span class="contrast-composition ${animated ? 'contrast-recognize-success' : ''} ${completionClass}">${option.sizes.map((size, index) => `<i style="--shape-size:${size}px;--shape-color:${visualColor(option.colors[index])};--delay:${index * .08}s"></i>`).join('')}</span>`;
 }
 
-function proportionComposition(option, animated = false) {
-  return `<span class="proportion-composition ${animated ? 'proportion-recognize-success' : ''}">${option.sizes.map((size, index) => `<i class="${index === 0 ? 'main' : 'support'} shape-${index % 3}" style="--shape-size:${size}px;--shape-color:${visualColor(option.colors[index])};--delay:${index * .07}s"></i>`).join('')}</span>`;
+function proportionComposition(option, animated = false, completionClass = '') {
+  return `<span class="proportion-composition ${animated ? 'proportion-recognize-success' : ''} ${completionClass}">${option.sizes.map((size, index) => `<i class="${index === 0 ? 'main' : 'support'} shape-${index % 3}" style="--shape-size:${size}px;--shape-color:${visualColor(option.colors[index])};--delay:${index * .07}s"></i>`).join('')}</span>`;
 }
 
 function simplicityComposition(option, animated = false) {
   const counts = { busy: 9, clear: 5, empty: 2 };
   return `<span class="simplicity-composition ${option.kind} ${animated ? 'simplicity-recognize-success' : ''}">${Array.from({ length: counts[option.kind] }, (_, index) => `<i class="${index < 3 ? 'core' : 'extra'} shape-${index % 3}" style="--shape-color:${visualColor(option.colors[index % option.colors.length])};--delay:${index * .06}s"></i>`).join('')}</span>`;
+}
+
+function harmonyCompletionComposition() {
+  const elements = [
+    { shape: 'circle', x: 38, y: 50, width: 62, height: 62, color: 'red', startColor: 'black' },
+    { shape: 'square harmony-complete-warm-square', x: 57, y: 39, width: 55, height: 55, color: 'orange', lightness: 4, startColor: 'blue' },
+    { shape: 'triangle', x: 61, y: 66, width: 58, height: 52, color: 'yellow-orange', startColor: 'yellow' },
+    { shape: 'circle', x: 76, y: 56, width: 25, height: 25, color: 'yellow', startColor: 'red' },
+    { shape: 'square harmony-complete-coral-square', x: 30, y: 31, width: 20, height: 20, color: 'red-orange', lightness: 4, startColor: 'black' }
+  ];
+  return `<span class="harmony-complete">${elements.map((element) => `<i class="${element.shape}" style="--x:${element.x}%;--y:${element.y}%;--w:${element.width}px;--h:${element.height}px;--family-color:${element.lightness ? getDisplayColor(element.color, element.lightness) : visualColor(element.color)};--start-color:${visualColor(element.startColor)}"></i>`).join('')}</span>`;
+}
+
+export function completionArtwork(principleId, finalOrder = [18, 28, 38, 48, 58, 70]) {
+  const artwork = {
+    repetition: ['●', '■', '●', '■', '●', '■'].map(symbolMark).join(''),
+    gradation: `<span class="gradation-complete-sequence">${finalOrder.map((size, index) => dot(size, index)).join('')}</span>`,
+    symmetry: symmetryComposition({ pairs: [[26, 28, 72], [42, 30, 70], [58, 32, 68]] }, true),
+    balance: balanceComposition('asymmetric-balanced', 'balance-complete'),
+    contrast: contrastComposition({ sizes: [108, 34], colors: ['black', 'yellow'] }, false, 'contrast-complete'),
+    rhythm: rhythmComposition([65, 48, 32, 44, 61, 75], true),
+    proportion: proportionComposition({ sizes: [96, 30, 30, 30], colors: ['red', 'blue', 'yellow', 'black'] }, false, 'proportion-complete'),
+    unity: unityComposition({ shapes: ['square', 'circle', 'triangle', 'square', 'circle'], colors: ['blue', 'blue', 'blue', 'blue', 'blue'] }, false, 'unity-complete'),
+    harmony: harmonyCompletionComposition(),
+    simplicity: '<span class="simplicity-complete"><i class="simplicity-complete-extra extra-one"></i><i class="simplicity-complete-extra extra-two"></i><i class="simplicity-complete-extra extra-three"></i><i class="simplicity-complete-extra extra-four"></i><i class="simplicity-complete-focus"></i><i class="simplicity-complete-accent"></i></span>'
+  };
+  return artwork[principleId] ?? '';
 }
 
 function editableShape(element, extraClass = '') {
@@ -191,7 +218,7 @@ function principleCardIcon(principleId) {
     rhythm: `<span class="rhythm-card-icon"><b></b>${['red','yellow','blue','red','yellow','blue'].map((color, index) => item(`circle ${color} beat-${index + 1}`)).join('')}</span>`,
     proportion: `<span class="proportion-card-icon">${item('circle red main')}${item('square blue support-one')}${item('circle yellow support-two')}${item('square black support-three')}${item('circle blue support-four')}</span>`,
     unity: `<span class="icon-row unity-row">${['square blue','square blue','circle blue','square blue','square blue'].map((classes) => item(classes)).join('')}</span>`,
-    harmony: `<span class="harmony-card-icon">${item('circle red')}${item('square yellow')}${item('triangle red-soft')}${item('circle yellow-soft')}${item('square black')}</span>`,
+    harmony: `<span class="harmony-card-icon">${item('circle harmony-final-red')}${item('square harmony-final-warm-square')}${item('triangle harmony-final-yellow-orange')}${item('circle harmony-final-yellow')}${item('square harmony-final-coral-square')}</span>`,
     simplicity: `<span class="simplicity-card-icon">${item('circle red main')}${item('bar blue')}${item('square black')}${item('circle yellow')}</span>`
   };
   return `<span class="principle-card-icon icon-${principleId}" aria-hidden="true">${icons[principleId]}</span>`;
@@ -1181,16 +1208,8 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
           ${button('回到實驗樣本牆', 'primary-button', 'back-wall')}
         </div>
         <div class="complete-art complete-art-${principle.id}" aria-label="${principle.name}完成圖">
-          ${principle.id === 'repetition'
-            ? ['●', '■', '●', '■', '●', '■'].map(symbolMark).join('')
-            : principle.id === 'symmetry'
-              ? symmetryComposition({ pairs: [[26, 28, 72], [42, 30, 70], [58, 32, 68]] }, true)
-              : principle.id === 'balance'
-                ? balanceComposition('asymmetric-balanced')
-                : principle.id === 'rhythm'
-                  ? rhythmComposition([65, 48, 32, 44, 61, 75], true)
-              : finalOrder.map((size, index) => dot(size, index)).join('')}
-          <i aria-hidden="true"></i>
+          ${completionArtwork(principle.id, finalOrder)}
+          <i class="completion-baseline" aria-hidden="true"></i>
         </div>
       </section>`;
 
