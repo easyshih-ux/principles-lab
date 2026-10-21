@@ -35,7 +35,8 @@ export const ROTATION_VALUES = Object.freeze([0, 45, 90, 135, 180, 225, 270, 315
 export const PROPORTION_LEVELS = Object.freeze([1, 2, 3]);
 // Gradation-only seven-step scale (Gate 4). Other questions keep the five-level size and lightness.
 export const STEP_LEVELS = Object.freeze([1, 2, 3, 4, 5, 6, 7]);
-export const STEP_SIZE_TO_LOGICAL = Object.freeze({ 1: 36, 2: 45, 3: 57, 4: 71, 5: 89, 6: 111, 7: 140 });
+// 10/21: level 7 lowered from 140 to 84 so a worst-case row (7 shapes, size and spacing both growing) fits the 1000-wide canvas.
+export const STEP_SIZE_TO_LOGICAL = Object.freeze({ 1: 36, 2: 41, 3: 48, 4: 55, 5: 63, 6: 73, 7: 84 });
 
 export const DEFAULT_ELEMENT_VALUES = Object.freeze({
   shape: 'circle',

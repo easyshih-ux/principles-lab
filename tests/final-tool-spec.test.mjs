@@ -37,7 +37,7 @@ test('gradation starts blank and can add duplicate resize recolor relight and mo
  const engine=new ConstrainedGeometryEngine({allowedTools:def.allowedTools,elements:[]});
  assert.equal(engine.add('circle',{x:300,y:300}).changed,true);
  assert.equal(engine.duplicate().changed,true);
- assert.equal(engine.setProperty('stepSize',7).changed,true); assert.equal(engine.getSelectedElement().logicalSize,140);
+ assert.equal(engine.setProperty('stepSize',7).changed,true); assert.equal(engine.getSelectedElement().logicalSize,84);
  assert.equal(engine.setProperty('hue','green').changed,true);
  assert.equal(engine.setProperty('stepLightness',7).changed,true);
  assert.equal(engine.setProperty('size',5).changed,false);

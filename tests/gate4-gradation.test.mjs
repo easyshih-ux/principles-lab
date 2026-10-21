@@ -15,7 +15,7 @@ import { auditComposition } from '../composition-audit.js';
 const definition = phase6cDefinitionsById['experiment-gradation'];
 const fixtures = phase6cFixtures.gradation;
 const validate = (elements) => validatePhase6cExperiment(definition, { workingElements: elements });
-const STEP = { 1: 36, 2: 45, 3: 57, 4: 71, 5: 89, 6: 111, 7: 140 };
+const STEP = { 1: 36, 2: 41, 3: 48, 4: 55, 5: 63, 6: 73, 7: 84 };
 const line = (values, { dx = 135, dy = 0, x0 = 80, y0 = 300, fields = ['stepSize', 'stepLightness'] } = {}) => values.map((value, index) => ({
   id: `t-${index}`, shape: 'circle', x: x0 + index * dx, y: y0 + index * dy, size: 3, hue: 'blue', lightness: 3, rotation: 0, proportion: 1,
   stepSize: 4, stepLightness: 4, ...Object.fromEntries(fields.map((field) => [field, value])), logicalSize: STEP[fields.includes('stepSize') ? value : 4]
@@ -117,7 +117,7 @@ test('Gate 4 seven-step scale: only gradation uses it; other questions keep five
 });
 
 test('Gate 4 seven-step scale: approved option B values, keeping the old darkest, middle and lightest colours', () => {
-  assert.deepEqual(Object.values(STEP_SIZE_TO_LOGICAL), [36, 45, 57, 71, 89, 111, 140]);
+  assert.deepEqual(Object.values(STEP_SIZE_TO_LOGICAL), [36, 41, 48, 55, 63, 73, 84]);
   for (const [hue, colours] of Object.entries(STEP_COLOR_PALETTE)) {
     assert.equal(colours.length, 7, hue);
     assert.deepEqual([colours[0], colours[3], colours[6]], [COLOR_PALETTE[hue][0], COLOR_PALETTE[hue][2], COLOR_PALETTE[hue][4]], hue);
@@ -130,7 +130,7 @@ test('Gate 4 seven-step scale: new shapes start at level 4 and the buttons rende
   const engine = new ConstrainedGeometryEngine({ allowedTools: definition.allowedTools, elements: [] });
   engine.add('circle', { x: 300, y: 300 });
   const added = engine.getSelectedElement();
-  assert.equal(added.stepSize, 4); assert.equal(added.stepLightness, 4); assert.equal(added.logicalSize, 71);
+  assert.equal(added.stepSize, 4); assert.equal(added.stepLightness, 4); assert.equal(added.logicalSize, 55);
   const left = { innerHTML: '', querySelectorAll: () => [] };
   const right = { innerHTML: '', querySelectorAll: () => [] };
   new GeometryControlPanel({ container: left, engine, region: 'primary' });
@@ -162,4 +162,43 @@ test('Gate 4 gradation: small spacing differences from placing shapes by hand ne
   const xs = [100, 220, 360, 500, 640, 800, 940];
   const elements = [1, 2, 3, 3, 5, 6, 7].map((value, index) => ({ id: `h-${index}`, shape: 'circle', x: xs[index], y: 300, size: 3, hue: 'red', lightness: 3, rotation: 0, proportion: 1, stepSize: value, stepLightness: index + 1, logicalSize: STEP[value] }));
   assert.equal(validate(elements).studentDetail, '從左邊數來第 4 個，大小的變化停住了。');
+});
+
+// 10/21: the basic left-to-right row must fit even in the worst case — seven shapes growing
+// from level 1 to 7 while the spacing also grows (the tightest layout the checker accepts).
+test('Gate 4 gradation: a worst-case left-to-right row fits inside the canvas', async () => {
+  const { clampElementPosition, getShapeDimensions } = await import('../geometry/bounds.js');
+  const { GEOMETRY_CANVAS } = await import('../geometry/config.js');
+  const rows = { circle: [20, 80, 160, 280, 420, 580, 780], rectangle: [40, 120, 220, 360, 520, 700, 920] };
+  for (const [shape, xs] of Object.entries(rows)) {
+    const row = xs.map((x, index) => ({ id: `w${index}`, shape, x, y: 300, size: 3, stepSize: index + 1, logicalSize: STEP_SIZE_TO_LOGICAL[index + 1], hue: 'blue', lightness: 3, stepLightness: 4, rotation: 0, proportion: 1 }));
+    const result = validatePhase6cExperiment(definition, { workingElements: row });
+    assert.equal(result.passed, true, shape);
+    for (const item of row) {
+      const { width } = getShapeDimensions(item);
+      assert.ok(item.x - width / 2 >= 0 && item.x + width / 2 <= GEOMETRY_CANVAS.width, `${shape} ${item.id}`);
+      assert.deepEqual(clampElementPosition(item, item, GEOMETRY_CANVAS, 20), { x: item.x, y: item.y });
+    }
+    const gaps = row.slice(1).map((item, index) => item.x - getShapeDimensions(item).width / 2 - (row[index].x + getShapeDimensions(row[index]).width / 2));
+    assert.ok(gaps.every((gap, index) => index === 0 || gap > gaps[index - 1]), `${shape} spacing grows`);
+  }
+});
+
+// 10/21: dragging past the edge never hides a shape — it stops at the edge, whole and visible.
+test('Gate 4 canvas edge: gradation and repetition shapes dragged off the canvas stay fully inside', async () => {
+  const { getShapeDimensions } = await import('../geometry/bounds.js');
+  const repetition = phase6cDefinitionsById['experiment-repetition'];
+  for (const [rules, setup] of [[definition, (engine) => engine.setProperty('stepSize', 7)], [repetition, () => {}]]) {
+    for (const shape of ['circle', 'rectangle']) {
+      const engine = new ConstrainedGeometryEngine({ allowedTools: rules.allowedTools, elements: [] });
+      engine.add(shape, { x: 500, y: 300 });
+      setup(engine);
+      const item = engine.getSelectedElement();
+      for (const point of [{ x: 1400, y: 300 }, { x: -300, y: 300 }, { x: 500, y: 900 }, { x: 500, y: -200 }]) {
+        engine.move(item.id, point);
+        const { width, height } = getShapeDimensions(item);
+        assert.ok(item.x - width / 2 >= 0 && item.x + width / 2 <= 1000 && item.y - height / 2 >= 0 && item.y + height / 2 <= 600, `${rules.id} ${shape} ${JSON.stringify(point)}`);
+      }
+    }
+  }
 });

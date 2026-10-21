@@ -1,5 +1,5 @@
-import { getLogicalSize } from './geometry/palette.js?v=gate4-symmetry-kinds-1';
-import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4-symmetry-kinds-1';
+import { getLogicalSize } from './geometry/palette.js?v=gate4-canvas-fit-1';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4-canvas-fit-1';
 import { auditComposition } from './composition-audit.js';
 
 function response(passed, code, metrics, detectedMethods = []) {

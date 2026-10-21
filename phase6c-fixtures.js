@@ -12,7 +12,7 @@ const row = (prefix, values, field, positions = null) => values.map((value, inde
 
 
 const SYMMETRY_HUES = Object.freeze(['red', 'blue', 'yellow', 'green']);
-const STEP_LOGICAL = Object.freeze({ 1: 36, 2: 45, 3: 57, 4: 71, 5: 89, 6: 111, 7: 140 });
+const STEP_LOGICAL = Object.freeze({ 1: 36, 2: 41, 3: 48, 4: 55, 5: 63, 6: 73, 7: 84 });
 const GRADATION_HUES = Object.freeze(['red', 'red-orange', 'orange', 'yellow-orange', 'yellow', 'yellow-green', 'green']);
 const stepElement = (id, values = {}) => {
   const item = element(id, { stepSize: 4, stepLightness: 4, ...values });

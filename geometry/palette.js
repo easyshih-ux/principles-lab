@@ -4,7 +4,7 @@ import {
   STEP_LEVELS,
   SIZE_LEVELS,
   SIZE_TO_LOGICAL
-} from './config.js?v=gate4-symmetry-kinds-1';
+} from './config.js?v=gate4-canvas-fit-1';
 
 export const HUE_LABELS = Object.freeze({
   red: '紅', 'red-orange': '紅橙', orange: '橙', 'yellow-orange': '黃橙',

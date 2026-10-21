@@ -1,5 +1,5 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
-import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4-symmetry-kinds-1';
+import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4-canvas-fit-1';
 
 const overlapHint = Object.freeze({
   observe: '有些圖形完全疊在一起了，看起來像只剩下一個圖形。',
@@ -26,7 +26,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('repetition', {
     title: '挑戰｜做出「反覆」',
     task: '設計一個單元，讓它反覆出現。過關：①至少 5 個單元 ②每個單元都一樣 ③每個造形都屬於某個單元',
-    creationTips: '可以先用兩種造形組成一個單元，造形可以重疊；單元和單元之間留一點空隙，會更清楚。',
+    creationTips: '可以先用兩種造形組成一個單元，造形可以重疊；單元可以排成一列、兩列、圍成一圈，或自由散布。',
     initialState: { elements: [] },
     validationSpec: { minimumUnits: 5, unitPositionTolerance: 24, unitLinkGaps: [0, 10, 20, 30, 40], canvasWidth: 1000, canvasHeight: 600 },
     diagnosticHints: {

@@ -124,6 +124,8 @@ test('Gate 4 repetition: task lists the three pass conditions; the feedback box 
   assert.match(definition.task, /①至少 5 個單元 ②每個單元都一樣 ③每個造形都屬於某個單元/);
   assert.match(feedbackMarkup(definition, null), /創作提示/);
   assert.equal((definition.creationTips.match(/。/g) ?? []).length, 1);
+  // 10/21: five side-by-side units barely fit one row, so the tip offers other layouts.
+  assert.equal(definition.creationTips, '可以先用兩種造形組成一個單元，造形可以重疊；單元可以排成一列、兩列、圍成一圈，或自由散布。');
 });
 
 test('Gate 4 repetition: failed checks show one specific next step at a time', () => {

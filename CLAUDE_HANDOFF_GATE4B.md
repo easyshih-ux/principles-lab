@@ -25,14 +25,15 @@
 - 造形各自重複但沒有組成單元時，回饋固定為：「你的造形已經反覆出現了！下一步：把它們組成一個單元，讓每個單元都一樣，就能完成這一關。」
 - 其他回饋：不屬於任何單元的造形、單元黏在一起、單元少了／多了造形、顏色或大小不同、排法不同、還差幾個單元。
 - 題目：「設計一個單元，讓它反覆出現。過關：①至少 5 個單元 ②每個單元都一樣 ③每個造形都屬於某個單元」
-- 提示：「可以先用兩種造形組成一個單元，造形可以重疊；單元和單元之間留一點空隙，會更清楚。」
+- 提示（10/21 修正）：「可以先用兩種造形組成一個單元，造形可以重疊；單元可以排成一列、兩列、圍成一圈，或自由散布。」原因：兩種預設大小造形組成的單元橫排 5 個，只有在單元內造形相貼、單元間距 40 以內才放得下（寬 880～960）；單元內留空隙或用長方形就超過 1000。
 - 反覆題方向按鈕由 4 個擴為 8 個（才做得出 ▼）。
 - 測試：`tests/gate4-repetition.test.mjs`（16 項），含教師附圖（三角形＋圓形＋方形 ×5 過關）與散置版本。
 - iPad 模擬：1180×820、1024×768 觸控流程皆可完成。三造形單元 ×5 約需點 40～50 次（只能逐一新增）。
 
 ### 2.2 漸層（教師已確認完成）
 
-- 漸層題專用 7 級大小與深淺（方案 B：大小 36/45/57/71/89/111/140；深淺每色 7 級，第 1、4、7 級沿用原最深、中間、最淺色）。其他題目仍為 5 級。
+- 漸層題專用 7 級大小與深淺（大小 10/21 調整為 36/41/48/55/63/73/84，原為 36/45/57/71/89/111/140；深淺每色 7 級，第 1、4、7 級沿用原最深、中間、最淺色）。其他題目仍為 5 級。
+- 畫布範圍（10/21）：畫布邏輯寬 1000，iPad 尺寸不影響能放多少。最壞情況（7 個造形大小一路變大、間距也一路變大，取檢查能接受的最緊排法）原刻度圓形需寬 1090、長方形 1265，第 7 個會被推回邊緣或疊到第 6 個；新刻度圓形 822、長方形 983，兩種 iPad 尺寸實測都放得下並過關。長方形仍最緊，間距若拉得很大仍可能放不下。
 - 7 級按鈕（48 點）放在右側工具欄，大小與深淺各 7 顆；左側只剩新增造形與色彩。
 - 至少 7 個階段（以位置計數）、同時兩種變化；每種變化可一路改變或只有一座山（一個低點也接受）；多次起伏不過關。
 - 排法自由（橫、直、斜、弧、S 形、圓環、反方向）；順序以「從一端走一遍」判斷；圓環可在某處切開即過關；不允許裝飾造形。
@@ -40,7 +41,7 @@
 - 題目：「用兩種變化做出 7 個階段的漸層。可以一路變大，也可以先變大再變小。」
 - 提示：「選兩種變化，例如大小和深淺，從第 1 級到第 7 級一路改變。」
 - 回饋例：「從左邊數來第 4 個，大小的變化停住了。」「目前只有大小在變化……」「圓環上有一處……斷掉了。」以及教師指定的「好幾座山」文字。
-- 測試：`tests/gate4-gradation.test.mjs`（17 項）。iPad 模擬兩種尺寸皆可完成；7 個造形約點 30 次。
+- 測試：`tests/gate4-gradation.test.mjs`（19 項，含最壞情況橫排放得下、拖出畫布仍完整可見）。iPad 模擬兩種尺寸皆可完成；7 個造形約點 30 次。
 - 色階預覽頁（不在專案中）：claude.ai artifact 4QQp8bSpvbjWTzbP9gNyp5。
 
 ### 2.3 對稱（完成，待教師試做確認）
@@ -83,6 +84,7 @@
 6. 1024×768 時所有題目的成功訊息超出回饋框約 3px（原本就有）。
 7. 另觀察到（Gate 3 原有行為）：作品過關後再新增造形，畫面重繪會取消選取，需再點一次造形。
 - 色彩名稱「橙色」改為「橘色」：評估全站統一修改的影響（畫面色票、回饋文字、測試、教師後台）後再決定。
+- 畫布邊緣：造形拖出畫布時會停在邊緣、完整可見，不會被切掉；但改大小、旋轉或複製時若靠近邊緣，會被自動推回畫布內，可能疊到旁邊的造形而學生不易察覺。可考慮：被推回時短暫標示該造形，或在回饋中提醒「有造形靠到邊緣被推回來了」。
 
 ## 5. iPad 實機檢查清單（教師回學校時確認）
 
@@ -117,16 +119,17 @@
 ## 6. Git 與檔案狀態
 
 - Branch `main`。10/21 經教師同意，將 Gate 2～4 所有成果與兩份交接紀錄一起 commit（上一版 `b232640`），由教師雙擊 `push-gate4.bat` push 到 GitHub Pages 供 iPad 實機測試（commit `efbd9be`，10/21 已 push、網站已更新）。
-- 10/21 對稱種類算法修正另做一次 commit，尚待教師雙擊 `push-gate4.bat` push。
+- 10/21 對稱種類算法修正 commit `7616023`，已 push、網站已更新。
+- 10/21 畫布範圍修正（漸層 7 級大小、反覆提示）另做一次 commit，尚待教師確認截圖後雙擊 `push-gate4.bat` push。
 - 未 commit（只在教師電腦上）：`start-preview.bat`、`push-gate4.bat`。
 - 本輪修改的檔案：
   - 判定與題目：`phase6c-validators.js`、`phase6c-definitions.js`、`phase6c-fixtures.js`、`phase6c-course-state.js`（指紋加入 stepSize／stepLightness）、`composition-audit.js`（7 級深淺不視為重疊）。
   - 畫面：`experiment-course.js`（創作提示、具體回饋、反覆 8 方向）、`phase6c.css`（7 級按鈕樣式，只新增）。
   - 共用畫布（只新增漸層 7 級，其他題不變）：`geometry/config.js`、`palette.js`、`controls.js`、`model.js`、`canvas.js`、`constrained-tools.js`、`constrained-engine.js`、`control-panel.js`；以及版本標記：`bounds.js`、`engine.js`、`constrained-canvas.js`。
-  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4-symmetry-kinds-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
+  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4-canvas-fit-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
   - 測試：新增 `tests/gate4-repetition.test.mjs`、`tests/gate4-gradation.test.mjs`、`tests/gate4-symmetry.test.mjs`、`tests/gate4-contrast.test.mjs`；更新 `final-tool-spec`、`phase6c-experiments`、`phase6c-student-flow`、`phase6-initial-state`、`explore-mode`、`final-phase-flow`、`phase6c-entry`、`post-final-a`、`teacher-progress-dashboard`。
 - 本次一併加入：`CLAUDE_HANDOFF_GATE4.md`、`CLAUDE_HANDOFF_GATE4B.md`（本文件）、`composition-audit.js`、`tests/phase6-v2-composition-audit.test.mjs`、四個 gate4 測試檔。
-- 驗證：`node --test` 629／629 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
+- 驗證：`node --test` 631／631 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
 - 教師試做方式：資料夾網址列輸入 `cmd` → `python -m http.server 8765` → 開 `http://localhost:8765/explore/#level/experiment/<principle>`（自由體驗模式，不登入、不寫入進度），並按 Ctrl+F5。或雙擊專案資料夾中的 `start-preview.bat`（10/21 新增，未追蹤；會開伺服器並打開反覆、對稱試做頁，關閉伺服器視窗即停止）。本 session 無法代為輸入指令（命令視窗與檔案總管只允許點擊）。
 - 發布：已在共用畫布檔加上版本標記，避免 iPad 混用新舊快取檔。正式網站 `https://easyshih-ux.github.io/principles-lab/`；自由體驗模式 `…/explore/`。push 不會更動 Firebase 資料或 Firestore 規則。
 
