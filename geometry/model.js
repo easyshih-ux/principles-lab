@@ -7,7 +7,7 @@ import {
   ROTATION_VALUES,
   SIZE_LEVELS,
   STEP_LEVELS
-} from './config.js?v=gate4-contrast-2';
+} from './config.js?v=gate4-symmetry-kinds-1';
 
 let idSequence = 0;
 

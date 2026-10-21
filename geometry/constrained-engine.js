@@ -1,7 +1,7 @@
-import { GeometryEngine } from './engine.js?v=gate4-contrast-2';
-import { engineToolsFor, logicalSizeForRatio, normalizeAllowedTools } from './constrained-tools.js?v=gate4-contrast-2';
-import { STEP_SIZE_TO_LOGICAL } from './config.js?v=gate4-contrast-2';
-import { snapAndClampElementPosition } from './bounds.js?v=gate4-contrast-2';
+import { GeometryEngine } from './engine.js?v=gate4-symmetry-kinds-1';
+import { engineToolsFor, logicalSizeForRatio, normalizeAllowedTools } from './constrained-tools.js?v=gate4-symmetry-kinds-1';
+import { STEP_SIZE_TO_LOGICAL } from './config.js?v=gate4-symmetry-kinds-1';
+import { snapAndClampElementPosition } from './bounds.js?v=gate4-symmetry-kinds-1';
 
 export class ConstrainedGeometryEngine extends GeometryEngine {
   constructor({ allowedTools = {}, ...options } = {}) {

@@ -1,5 +1,5 @@
-import { getLogicalSize } from './geometry/palette.js?v=gate4-contrast-2';
-import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4-contrast-2';
+import { getLogicalSize } from './geometry/palette.js?v=gate4-symmetry-kinds-1';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4-symmetry-kinds-1';
 import { auditComposition } from './composition-audit.js';
 
 function response(passed, code, metrics, detectedMethods = []) {
@@ -486,6 +486,21 @@ function attributesMatchAcrossAxes(source, target, axes) {
 // A shape sitting on an axis is its own mirror image only if it is symmetric about that axis.
 const selfSymmetric = (item, axis) => attributesMatch(item, item, axis);
 const symmetryName = (item) => `${SYMMETRY_HUE_LABELS[item.hue] ?? ''}${SYMMETRY_SHAPE_LABELS[item.shape] ?? '造形'}`;
+// Gate 4 (same idea as repetition): a different shape, colour, size or visible direction makes a different kind.
+// Direction is read as seen from the reference side (left / top), so a mirrored pair is one kind,
+// while ▲ and ▼ on the same side are two kinds. Invisible turns (circle, square 90°, rectangle 180°) do not count.
+function symmetryKind(item, mode, spec) {
+  const period = directionalPeriods[item.shape];
+  let direction = '-';
+  if (period) {
+    let reflected = { ...item };
+    if (mode !== 'horizontal' && item.x > (spec.axisX ?? 500) + 1) reflected = { ...reflected, rotation: mirrorRotation(reflected, 'vertical') };
+    if (mode !== 'vertical' && item.y > (spec.axisY ?? 300) + 1) reflected = { ...reflected, rotation: mirrorRotation(reflected, 'horizontal') };
+    direction = String(normalizeAngle(reflected.rotation ?? 0, period));
+  }
+  return `${item.shape}|${item.hue}|${item.size}|${direction}`;
+}
+const symmetrySizeWord = (item) => (item.size >= 4 ? '大的' : item.size <= 2 ? '小的' : '中型的');
 function symmetryPlace(item, spec) {
   const width = (spec.axisX ?? 500) * 2; const height = (spec.axisY ?? 300) * 2;
   const column = item.x < width / 3 ? 0 : item.x > (width * 2) / 3 ? 2 : 1;
@@ -527,7 +542,8 @@ function axisAudit(elements, axis, spec) {
   const axisBreaker = onAxis.find((item) => !selfSymmetric(item, axis)) ?? null;
   const passed = oneToOne && !positionMismatch && !attributeMismatch && !missing && !axisBreaker;
   const mirrored = oneToOne ? [...sources, ...assignment.map((index) => targets[index])] : [];
-  return { passed, positionMismatch, attributeMismatch, missing, axisBreaker, pairCount: oneToOne ? sources.length : 0, mirrored, participantCount: participants.length, axisElementCount: onAxis.length };
+  const units = oneToOne ? sources.map((source, index) => [source, targets[assignment[index]]]) : [];
+  return { passed, positionMismatch, attributeMismatch, missing, axisBreaker, pairCount: oneToOne ? sources.length : 0, mirrored, units, participantCount: participants.length, axisElementCount: onAxis.length };
 }
 
 function crossOrbitAudit(elements, spec) {
@@ -541,6 +557,7 @@ function crossOrbitAudit(elements, spec) {
   const used = new Set();
   let positionMismatch = null; let attributeMismatch = null; let missing = null;
   let orbitCount = 0;
+  const units = [];
   const mirrored = [];
   const at = (pool, x, y) => pool.filter((item) => !used.has(item.id) && Math.abs(item.x - x) <= tolerance && Math.abs(item.y - y) <= tolerance);
   for (const source of seeds) {
@@ -562,6 +579,7 @@ function crossOrbitAudit(elements, spec) {
     if (orbit.length === 4 && new Set(orbit.map((item) => item.id)).size === 4) {
       orbit.forEach((item) => used.add(item.id));
       mirrored.push(...orbit);
+      units.push(orbit);
       orbitCount += 1;
     }
   }
@@ -585,7 +603,7 @@ function crossOrbitAudit(elements, spec) {
       && attributesMatch(item, other, otherAxis));
     if (partner) { axisUsed.add(item.id); axisUsed.add(partner.id); } else axisUnpaired ??= item;
   }
-  return { passed: !positionMismatch && !attributeMismatch && !missing && !axisBreaker && !axisUnpaired, positionMismatch, attributeMismatch, missing, axisBreaker, axisUnpaired, orbitCount, mirrored, participantCount: participants.length, axisElementCount: elements.length - participants.length };
+  return { passed: !positionMismatch && !attributeMismatch && !missing && !axisBreaker && !axisUnpaired, positionMismatch, attributeMismatch, missing, axisBreaker, axisUnpaired, orbitCount, mirrored, units, participantCount: participants.length, axisElementCount: elements.length - participants.length };
 }
 
 // Finds the first shape that has no mirror partner across one axis and says why, in the order a
@@ -657,9 +675,10 @@ export function validateFormalSymmetry({ elements = [], spec = {}, selectedSymme
   const required = selectedSymmetryMode === 'cross' ? cross : selectedSymmetryMode === 'horizontal' ? horizontal : vertical;
   const minimum = selectedSymmetryMode === 'cross' ? (spec.minimumCrossOrbits ?? 2) : (spec.minimumMirrorPairs ?? 4);
   const count = selectedSymmetryMode === 'cross' ? required.orbitCount : required.pairCount;
-  const combinations = [...new Set(required.mirrored.map((item) => `${item.shape}|${item.hue}`))];
+  const kindOf = (item) => symmetryKind(item, selectedSymmetryMode, spec);
+  const combinations = [...new Set(required.mirrored.map(kindOf))];
   const requiredCombinations = spec.minimumCombinations ?? 4;
-  const strip = ({ mirrored, positionMismatch, attributeMismatch, missing, axisBreaker, axisUnpaired, ...rest }) => ({ ...rest, positionMismatch: Boolean(positionMismatch), attributeMismatch: Boolean(attributeMismatch), missing: Boolean(missing), axisBreaker: Boolean(axisBreaker), axisUnpaired: Boolean(axisUnpaired) });
+  const strip = ({ mirrored, units, positionMismatch, attributeMismatch, missing, axisBreaker, axisUnpaired, ...rest }) => ({ ...rest, positionMismatch: Boolean(positionMismatch), attributeMismatch: Boolean(attributeMismatch), missing: Boolean(missing), axisBreaker: Boolean(axisBreaker), axisUnpaired: Boolean(axisUnpaired) });
   const metrics = { selectedSymmetryMode, vertical: strip(vertical), horizontal: strip(horizontal), cross: strip(cross), requiredCount: minimum, matchedCount: count, combinationCount: combinations.length, requiredCombinations, elementCount: elements.length };
   // Shapes on the centre line are allowed but never count; whenever there is one, remind students of that.
   const onCentreLine = (item) => (selectedSymmetryMode !== 'horizontal' && Math.abs(item.x - (spec.axisX ?? 500)) <= 1)
@@ -688,7 +707,7 @@ export function validateFormalSymmetry({ elements = [], spec = {}, selectedSymme
     const tilted = ['triangle', 'rectangle', 'semicircle', 'line'].includes(item.shape) ? `，斜放的${SYMMETRY_SHAPE_LABELS[item.shape]}不行` : '';
     return fail('AXIS_SHAPE_NOT_SYMMETRIC', `放在${centre ? '正中心' : '中線上'}的造形要${side}對稱${tilted}。轉動它，或把它移開中線。`);
   }
-  const comboCount = (audit) => new Set(audit.mirrored.map((item) => `${item.shape}|${item.hue}`)).size;
+  const comboCount = (audit) => new Set(audit.mirrored.map((item) => symmetryKind(item, audit === cross ? 'cross' : audit === horizontal ? 'horizontal' : 'vertical', spec))).size;
   const fullyDone = (audit) => audit.passed && audit.pairCount >= (spec.minimumMirrorPairs ?? 4) && comboCount(audit) >= requiredCombinations;
   if (selectedSymmetryMode === 'cross' && !cross.passed) {
     const axis = vertical.passed && !horizontal.passed ? 'horizontal' : horizontal.passed && !vertical.passed ? 'vertical' : !vertical.passed ? 'vertical' : 'horizontal';
@@ -724,9 +743,20 @@ export function validateFormalSymmetry({ elements = [], spec = {}, selectedSymme
   }
   if (count < minimum) return fail('NOT_ENOUGH_SYMMETRY', `目前有 ${count} ${unit}，再做 ${minimum - count} ${unit}就完成了。`);
   const missingKinds = requiredCombinations - combinations.length;
-  const centreKinds = elements.filter(onCentreLine).map((item) => `${item.shape}|${item.hue}`).filter((kind) => !combinations.includes(kind));
-  if (centreKinds.length) return fail('NOT_ENOUGH_VARIETY', `中線上的造形不算在 4 種裡，兩側再加 ${missingKinds} 種對應的造形或顏色。`);
-  return fail('NOT_ENOUGH_VARIETY', `目前只有 ${combinations.length} 種造形和顏色的組合，再加 ${missingKinds} 種。可以換造形，也可以換顏色。`);
+  const centreKinds = elements.filter(onCentreLine).map(kindOf).filter((kind) => !combinations.includes(kind));
+  if (centreKinds.length) return fail('NOT_ENOUGH_VARIETY', `中線上的造形不算在 4 種裡，兩側再加 ${missingKinds} 種不同的造形、顏色、大小或方向。`);
+  // Name the repeated look when whole pairs / groups are exactly the same.
+  const unitKey = (group) => [...new Set(group.map(kindOf))].sort().join('/');
+  const sameUnits = new Map();
+  for (const group of required.units ?? []) sameUnits.set(unitKey(group), [...(sameUnits.get(unitKey(group)) ?? []), group]);
+  const repeated = [...sameUnits.values()].filter((groups) => groups.length > 1 && new Set(groups[0].map(kindOf)).size === 1).sort((a, b) => b.length - a.length)[0];
+  if (repeated) {
+    const item = repeated[0][0];
+    const look = `${symmetrySizeWord(item)}${symmetryName(item)}`;
+    const many = repeated.length === 2 ? '兩組' : `${repeated.length} 組`;
+    return fail('NOT_ENOUGH_VARIETY', `${many}都是${look}，算同一種；改變其中一組的顏色、大小或方向。`);
+  }
+  return fail('NOT_ENOUGH_VARIETY', `目前只有 ${combinations.length} 種，再加 ${missingKinds} 種。可以改變造形、顏色、大小或方向。`);
 }
 
 function valueCounts(elements, key) {

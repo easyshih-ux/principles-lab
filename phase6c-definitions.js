@@ -1,5 +1,5 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
-import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4-contrast-2';
+import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4-symmetry-kinds-1';
 
 const overlapHint = Object.freeze({
   observe: '有些圖形完全疊在一起了，看起來像只剩下一個圖形。',
@@ -96,7 +96,7 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('symmetry', {
     title: '挑戰｜做出「對稱」',
-    task: '做出對稱的畫面，用至少 4 種不同的造形或顏色。<br>左右、上下對稱要有 4 對互相對應的造形；十字對稱要有 2 組（每組上下左右 4 個）。',
+    task: '做出對稱的畫面，用至少 4 種不同的造形、顏色、大小或方向。<br>左右、上下對稱要有 4 對互相對應的造形；十字對稱要有 2 組（每組上下左右 4 個）。',
     creationTips: '造形要對稱，色彩可以自由變化。中線上也可以放造形，但不算在 4 種裡。',
     allowedTools: normalizeAllowedTools({ addShape: true, size: true, color: true, position: true, rotation: true, duplicate: true, delete: true, grid: true }),
     initialState: { elements: [], selectedSymmetryMode: 'vertical', gridConfig: { enabled: true, visible: true, step: 20, axis: 'vertical' } },
@@ -107,7 +107,7 @@ export const phase6cDefinitions = Object.freeze([
       ATTRIBUTE_MISMATCH: { observe: '對應位置上的造形不一樣。', think: '造形、大小和方向都要互相對應；顏色可以不同。', action: '調整造形、大小或方向。' },
       CROSS_INCOMPLETE: { observe: '十字對稱還不完整。', think: '上下左右四個位置都要有相同的造形。', action: '補上還缺的方向。' },
       NOT_ENOUGH_SYMMETRY: { observe: '對應的造形還不夠多。', think: '左右或上下要 4 對，十字要 2 組。', action: '再多做幾對對應的造形。' },
-      NOT_ENOUGH_VARIETY: { observe: '對稱已經做好了，但造形和顏色的組合還不夠多。', think: '要有 4 種不同的造形和顏色的組合。', action: '換一種造形，或換一種顏色。' },
+      NOT_ENOUGH_VARIETY: { observe: '對稱已經做好了，但不同的種類還不夠多。', think: '造形、顏色、大小或方向有一項不同，就算不同種類；要有 4 種。', action: '改變其中一組的造形、顏色、大小或方向。' },
       AXIS_SHAPE_NOT_SYMMETRIC: { observe: '中線上的造形本身不對稱。', think: '放在中線上的造形，要自己左右（或上下）對稱。', action: '轉動它，或把它移開中線。' }
     },
     successFeedback: { general: '成功！造形已沿對稱軸彼此對應。', byMethod: { vertical: '成功！你讓造形沿著垂直中軸彼此對應，形成了左右對稱。', horizontal: '成功！你讓造形沿著水平中軸彼此對應，形成了上下對稱。', cross: '成功！你的構圖同時沿著水平與垂直方向彼此對應，形成了十字對稱。' } },

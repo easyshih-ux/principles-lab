@@ -47,14 +47,16 @@
 
 - 開放色彩工具；鏡像判定位置、造形、大小、方向，不檢查顏色。
 - 修正正方形 0° 與 45°（菱形）被視為鏡像的 bug。
-- 組數不變：左右／上下 4 對，十字 2 組；至少 4 種「造形＋顏色」組合（只算參與鏡像的造形）。
+- 組數不變：左右／上下 4 對，十字 2 組；至少 4 種不同的種類（只算參與鏡像的造形）。
+- 種類算法（10/21 教師修正，與反覆一致）：造形、顏色、大小、看得出的方向，有一項不同就算不同種類（大紅三角形與小紅三角形算 2 種；▲ 與 ▼ 算 2 種）。看不出差別的方向不算（圓形任意角度、正方形每 90°、長方形每 180°）。方向以左側（上下模式為上方）為準，所以互相鏡像的一對算 1 種；完全相同的兩組只算 1 種。
 - 中線上的造形不算組合，但本身須對稱（左右模式三角形朝上或朝下；上下模式朝左或朝右；十字正中心須上下左右都對稱；十字模式中線上的其他造形要在另一側有對應）。
-- 題目（教師 10/21 定稿，兩行）：「做出對稱的畫面，用至少 4 種不同的造形或顏色。」／「左右、上下對稱要有 4 對互相對應的造形；十字對稱要有 2 組（每組上下左右 4 個）。」iPad 兩種尺寸皆完整顯示。
+- 題目（教師 10/21 定稿，兩行）：「做出對稱的畫面，用至少 4 種不同的造形、顏色、大小或方向。」（10/21 修正）／「左右、上下對稱要有 4 對互相對應的造形；十字對稱要有 2 組（每組上下左右 4 個）。」iPad 兩種尺寸皆完整顯示。
 - 提示：「造形要對稱，色彩可以自由變化。中線上也可以放造形，但不算在 4 種裡。」
 - 作品有中線造形時，檢查後加「小提醒　中線上的造形可以放，但不算在 4 種裡。」（過關時取代「小發現」）；回饋已提到中線造形或建議改選模式時不重複顯示（教師 10/21 選定，避免 1024×768 被切掉）。
-- 中線造形可以放，但不計入組數與種類；若學生因此種類不足，回饋：「中線上的造形不算在 4 種裡，兩側再加 N 種對應的造形或顏色。」
+- 中線造形可以放，但不計入組數與種類；若學生因此種類不足，回饋：「中線上的造形不算在 4 種裡，兩側再加 N 種不同的造形、顏色、大小或方向。」
+- 種類不足：有完全相同的組時說「兩組都是大的紅色三角形，算同一種；改變其中一組的顏色、大小或方向。」（3 組以上說「N 組都是…」）；其他情況說「目前只有 N 種，再加 M 種。可以改變造形、顏色、大小或方向。」
 - 回饋：十字模式先說缺哪個方向，用左上／左下等位置；已左右（或上下）對稱且組數組合夠時，加「你的作品已經左右對稱了！也可以改選『左右對稱』試試看。」；差幾格明說（「下方的紅色長方形離中線近了一格」「偏右一格」）。
-- 測試：`tests/gate4-symmetry.test.mjs`（19 項），含教師附圖（十字不過關、左右模式過關）。
+- 測試：`tests/gate4-symmetry.test.mjs`（25 項，含 10/21 種類算法 4 項），含教師附圖（十字不過關、左右模式過關）。
 - iPad 模擬兩種尺寸皆可完成；4 對 8 造形約點 24 次。
 - 開放色彩只影響對稱題（每題工具分開設定，其他 9 題工具清單有測試核對）。
 
@@ -63,7 +65,7 @@
 - 判定：至少 6 個圖形、分兩組（每組至少 2 個）、每個圖形都必須屬於其中一組（10/21 教師決定，與反覆、漸層不允許多餘造形一致；`groupCoverage: 1`，造形加分仍用 80%）、大小差至少 3 級；顏色符合其一：色相差至少 4 格（補色也算）或明度差至少 3 級（明度只在判定中，不寫進題目）。紅與橙等鄰近色不算。調和本輪不改。
 - 任務：「做出兩組對比強烈的圖形：大小要差很多，顏色也要差很多。至少 6 個圖形。」提示：「顏色可以選色環上距離很遠的，例如紅配藍、黃配紫。」
 - 回饋一次一件事：圖形數量不足、哪一組只有 1 個、大小差不多、「紅色和橙色太接近了，換一個色環上距離更遠的顏色。」、兩組同色、看不出屬於哪一組。
-- 測試：`tests/gate4-contrast.test.mjs`（10 項）；全部 625／625 通過。iPad 模擬 1180×820、1024×768 皆可完成，約點 15～21 次。
+- 測試：`tests/gate4-contrast.test.mjs`（10 項）；當時全部 625／625 通過。iPad 模擬 1180×820、1024×768 皆可完成，約點 15～21 次。
 - 落單圖形：只要有 1 個圖形不屬於任何一組就不過關，回饋「有一個圖形看不出屬於哪一組：右下角的綠色圓形。……」（iPad 兩種尺寸實測顯示正常）。
 - 色彩名稱本輪維持「橙色」，與畫面一致。
 
@@ -114,16 +116,17 @@
 
 ## 6. Git 與檔案狀態
 
-- Branch `main`。10/21 經教師同意，將 Gate 2～4 所有成果與兩份交接紀錄一起 commit（上一版 `b232640`），由教師雙擊 `push-gate4.bat` push 到 GitHub Pages 供 iPad 實機測試。
+- Branch `main`。10/21 經教師同意，將 Gate 2～4 所有成果與兩份交接紀錄一起 commit（上一版 `b232640`），由教師雙擊 `push-gate4.bat` push 到 GitHub Pages 供 iPad 實機測試（commit `efbd9be`，10/21 已 push、網站已更新）。
+- 10/21 對稱種類算法修正另做一次 commit，尚待教師雙擊 `push-gate4.bat` push。
 - 未 commit（只在教師電腦上）：`start-preview.bat`、`push-gate4.bat`。
 - 本輪修改的檔案：
   - 判定與題目：`phase6c-validators.js`、`phase6c-definitions.js`、`phase6c-fixtures.js`、`phase6c-course-state.js`（指紋加入 stepSize／stepLightness）、`composition-audit.js`（7 級深淺不視為重疊）。
   - 畫面：`experiment-course.js`（創作提示、具體回饋、反覆 8 方向）、`phase6c.css`（7 級按鈕樣式，只新增）。
   - 共用畫布（只新增漸層 7 級，其他題不變）：`geometry/config.js`、`palette.js`、`controls.js`、`model.js`、`canvas.js`、`constrained-tools.js`、`constrained-engine.js`、`control-panel.js`；以及版本標記：`bounds.js`、`engine.js`、`constrained-canvas.js`。
-  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4-contrast-2`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
+  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4-symmetry-kinds-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
   - 測試：新增 `tests/gate4-repetition.test.mjs`、`tests/gate4-gradation.test.mjs`、`tests/gate4-symmetry.test.mjs`、`tests/gate4-contrast.test.mjs`；更新 `final-tool-spec`、`phase6c-experiments`、`phase6c-student-flow`、`phase6-initial-state`、`explore-mode`、`final-phase-flow`、`phase6c-entry`、`post-final-a`、`teacher-progress-dashboard`。
 - 本次一併加入：`CLAUDE_HANDOFF_GATE4.md`、`CLAUDE_HANDOFF_GATE4B.md`（本文件）、`composition-audit.js`、`tests/phase6-v2-composition-audit.test.mjs`、四個 gate4 測試檔。
-- 驗證：`node --test` 625／625 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
+- 驗證：`node --test` 629／629 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
 - 教師試做方式：資料夾網址列輸入 `cmd` → `python -m http.server 8765` → 開 `http://localhost:8765/explore/#level/experiment/<principle>`（自由體驗模式，不登入、不寫入進度），並按 Ctrl+F5。或雙擊專案資料夾中的 `start-preview.bat`（10/21 新增，未追蹤；會開伺服器並打開反覆、對稱試做頁，關閉伺服器視窗即停止）。本 session 無法代為輸入指令（命令視窗與檔案總管只允許點擊）。
 - 發布：已在共用畫布檔加上版本標記，避免 iPad 混用新舊快取檔。正式網站 `https://easyshih-ux.github.io/principles-lab/`；自由體驗模式 `…/explore/`。push 不會更動 Firebase 資料或 Firestore 規則。
 

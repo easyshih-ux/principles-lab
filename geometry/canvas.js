@@ -1,11 +1,11 @@
-import { getShapeDimensions } from './bounds.js?v=gate4-contrast-2';
-import { GEOMETRY_TOOLS } from './config.js?v=gate4-contrast-2';
+import { getShapeDimensions } from './bounds.js?v=gate4-symmetry-kinds-1';
+import { GEOMETRY_TOOLS } from './config.js?v=gate4-symmetry-kinds-1';
 import {
   logicalScaleToScreen,
   logicalToScreen,
   screenToLogical
 } from './coordinates.js?v=geometry-aspect-1';
-import { getElementColor } from './palette.js?v=gate4-contrast-2';
+import { getElementColor } from './palette.js?v=gate4-symmetry-kinds-1';
 
 export class GeometryCanvas {
   constructor({ container, engine, onStateChange = () => {} }) {
