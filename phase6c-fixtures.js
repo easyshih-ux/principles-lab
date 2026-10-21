@@ -12,7 +12,7 @@ const row = (prefix, values, field, positions = null) => values.map((value, inde
 
 
 const SYMMETRY_HUES = Object.freeze(['red', 'blue', 'yellow', 'green']);
-const STEP_LOGICAL = Object.freeze({ 1: 36, 2: 41, 3: 48, 4: 55, 5: 63, 6: 73, 7: 84 });
+const STEP_LOGICAL = Object.freeze({ 1: 36, 2: 46, 3: 58, 4: 74, 5: 94, 6: 120 });
 const GRADATION_HUES = Object.freeze(['red', 'red-orange', 'orange', 'yellow-orange', 'yellow', 'yellow-green', 'green']);
 const stepElement = (id, values = {}) => {
   const item = element(id, { stepSize: 4, stepLightness: 4, ...values });
@@ -68,29 +68,29 @@ export const phase6cFixtures = Object.freeze({
   gradation: {
     // Gate 4: seven or more stages, two changes together, any path. Uses the gradation-only seven-step scale.
     pass: {
-      sizeLightness: stepLine('gsl', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness']),
-      descending: stepLine('gde', [7, 6, 5, 4, 3, 2, 1], ['stepSize', 'stepLightness']),
+      sizeLightness: stepLine('gsl', [1, 2, 3, 4, 5, 6], ['stepSize', 'stepLightness']),
+      descending: stepLine('gde', [6, 5, 4, 3, 2, 1], ['stepSize', 'stepLightness']),
       singlePeak: stepLine('gpk', [1, 2, 3, 4, 3, 2, 1], ['stepSize', 'stepLightness']),
       longPeak: stepLine('glp', [1, 2, 3, 4, 5, 4, 3, 2, 1], ['stepSize', 'stepLightness'], { dx: 105, x0: 70 }),
       singleValley: stepLine('gvl', [4, 3, 2, 1, 2, 3, 4], ['stepSize', 'stepLightness']),
-      sizeHue: stepLine('gsh', [1, 2, 3, 4, 5, 6, 7], ['stepSize']).map((item, index) => ({ ...item, hue: GRADATION_HUES[index] })),
+      sizeHue: stepLine('gsh', [1, 2, 3, 4, 5, 6], ['stepSize']).map((item, index) => ({ ...item, hue: GRADATION_HUES[index] })),
       hueSpacing: [0, 40, 100, 180, 280, 400, 540].map((x, index) => stepElement(`ghs-${index}`, { x: 60 + x, stepSize: 1, hue: GRADATION_HUES[index] })),
-      threeChanges: stepLine('g3c', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness']).map((item, index) => ({ ...item, hue: GRADATION_HUES[index] })),
-      vertical: stepLine('gvt', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness'], { dx: 0, dy: 85, x0: 500, y0: 40 }),
-      diagonal: stepLine('gdg', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness'], { dx: 120, dy: 75, x0: 100, y0: 60 }),
-      arc: [0, 1, 2, 3, 4, 5, 6].map((index) => { const angle = Math.PI * (0.1 + (0.8 * index) / 6); return stepElement(`gar-${index}`, { x: Math.round(500 - 420 * Math.cos(angle)), y: Math.round(560 - 420 * Math.sin(angle)), stepSize: index + 1, stepLightness: index + 1 }); }),
-      sCurve: [[80, 120], [220, 90], [360, 140], [480, 280], [600, 430], [740, 480], [880, 450]].map(([x, y], index) => stepElement(`gsc-${index}`, { x, y, stepSize: index + 1, stepLightness: index + 1 })),
-      ring: [2, 3, 4, 5, 6, 7, 5, 3].map((value, index) => { const angle = (2 * Math.PI * index) / 8; return stepElement(`grg-${index}`, { x: Math.round(500 + 230 * Math.cos(angle)), y: Math.round(300 + 230 * Math.sin(angle)), stepSize: value, stepLightness: value }); })
+      threeChanges: stepLine('g3c', [1, 2, 3, 4, 5, 6], ['stepSize', 'stepLightness']).map((item, index) => ({ ...item, hue: GRADATION_HUES[index] })),
+      vertical: stepLine('gvt', [1, 2, 3, 4, 5, 6], ['stepSize', 'stepLightness'], { dx: 0, dy: 85, x0: 500, y0: 40 }),
+      diagonal: stepLine('gdg', [1, 2, 3, 4, 5, 6], ['stepSize', 'stepLightness'], { dx: 120, dy: 75, x0: 100, y0: 60 }),
+      arc: [0, 1, 2, 3, 4, 5].map((index) => { const angle = Math.PI * (0.1 + (0.8 * index) / 5); return stepElement(`gar-${index}`, { x: Math.round(500 - 420 * Math.cos(angle)), y: Math.round(560 - 420 * Math.sin(angle)), stepSize: index + 1, stepLightness: index + 1 }); }),
+      sCurve: [[80, 120], [240, 90], [400, 170], [540, 330], [700, 470], [880, 450]].map(([x, y], index) => stepElement(`gsc-${index}`, { x, y, stepSize: index + 1, stepLightness: index + 1 })),
+      ring: [1, 2, 3, 4, 5, 6, 4, 2].map((value, index) => { const angle = (2 * Math.PI * index) / 8; return stepElement(`grg-${index}`, { x: Math.round(500 + 230 * Math.cos(angle)), y: Math.round(300 + 230 * Math.sin(angle)), stepSize: value, stepLightness: value }); })
     },
     fail: {
-      onlySize: stepLine('gos', [1, 2, 3, 4, 5, 6, 7], ['stepSize']),
-      stopsAtFourth: stepLine('gst', [1, 2, 3, 3, 5, 6, 7], ['stepSize', 'stepLightness']),
+      onlySize: stepLine('gos', [1, 2, 3, 4, 5, 6], ['stepSize']),
+      stopsAtFourth: stepLine('gst', [1, 2, 3, 3, 5, 6], ['stepSize', 'stepLightness']),
       manyPeaks: stepLine('gmp', [1, 2, 1, 2, 1, 2, 1], ['stepSize', 'stepLightness']),
-      sixStages: stepLine('g6s', [1, 2, 3, 4, 5, 6], ['stepSize', 'stepLightness']),
-      decoration: [...stepLine('gdc', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness']), stepElement('gdc-extra', { x: 500, y: 560, stepSize: 1 })],
-      scattered: [[100, 100], [800, 500], [300, 450], [600, 80], [900, 150], [150, 520], [500, 300]].map(([x, y], index) => stepElement(`gsx-${index}`, { x, y, stepSize: index + 1, stepLightness: index + 1 })),
-      hueJump: stepLine('ghj', [1, 2, 3, 4, 5, 6, 7], ['stepSize']).map((item, index) => ({ ...item, hue: ['red', 'red-orange', 'orange', 'green', 'blue-green', 'blue', 'blue-violet'][index] })),
-      ringBreak: [2, 3, 4, 4, 6, 7, 5, 3].map((value, index) => { const angle = (2 * Math.PI * index) / 8; return stepElement(`grb-${index}`, { x: Math.round(500 + 230 * Math.cos(angle)), y: Math.round(300 + 230 * Math.sin(angle)), stepSize: value, stepLightness: value }); })
+      fiveStages: stepLine('g5s', [1, 2, 3, 4, 5], ['stepSize', 'stepLightness']),
+      decoration: [...stepLine('gdc', [1, 2, 3, 4, 5, 6], ['stepSize', 'stepLightness']), stepElement('gdc-extra', { x: 500, y: 560, stepSize: 1 })],
+      scattered: [[100, 100], [800, 500], [300, 450], [600, 80], [900, 150], [150, 520]].map(([x, y], index) => stepElement(`gsx-${index}`, { x, y, stepSize: index + 1, stepLightness: index + 1 })),
+      hueJump: stepLine('ghj', [1, 2, 3, 4, 5, 6], ['stepSize']).map((item, index) => ({ ...item, hue: ['red', 'red-orange', 'orange', 'green', 'blue-green', 'blue'][index] })),
+      ringBreak: [1, 2, 3, 3, 5, 6, 4, 2].map((value, index) => { const angle = (2 * Math.PI * index) / 8; return stepElement(`grb-${index}`, { x: Math.round(500 + 230 * Math.cos(angle)), y: Math.round(300 + 230 * Math.sin(angle)), stepSize: value, stepLightness: value }); })
     }
   },
   balance: {

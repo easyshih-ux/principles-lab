@@ -1,5 +1,5 @@
-import { getLogicalSize } from './geometry/palette.js?v=gate4-canvas-fit-1';
-import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4-canvas-fit-1';
+import { getLogicalSize } from './geometry/palette.js?v=gate4-six-step-1';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4-six-step-1';
 import { auditComposition } from './composition-audit.js';
 
 function response(passed, code, metrics, detectedMethods = []) {
@@ -287,7 +287,7 @@ function orientPath(path) {
 }
 
 export function validateFormalGradation({ elements = [], spec = {} }) {
-  const minimumStages = spec.minimumStages ?? 7;
+  const minimumStages = spec.minimumStages ?? 6;
   const requiredChannels = spec.minimumChannels ?? 2;
   const metrics = { stageCount: elements.length, minimumStages, requiredChannels };
   const fail = (code, studentDetail, extra = {}) => ({ ...response(false, code, { ...metrics, ...extra }), studentDetail });
@@ -341,7 +341,7 @@ export function validateFormalGradation({ elements = [], spec = {} }) {
     const ideas = ['size', 'lightness', 'spacing', 'hue'].filter((name) => name !== used).slice(0, 2).map(label).join('或');
     return fail('ONLY_ONE_CHANGE', `目前只有${label(used)}在變化，再加入第二種變化，例如${ideas}。`, passedMetrics);
   }
-  return fail('NO_CLEAR_GRADATION', '目前看不出一步一步的變化。選兩種變化，例如大小和深淺，從第 1 級到第 7 級一路改變。', passedMetrics);
+  return fail('NO_CLEAR_GRADATION', '目前看不出一步一步的變化。選兩種變化，例如大小和深淺，從第 1 級到第 6 級一路改變。', passedMetrics);
 }
 
 function area(element) {

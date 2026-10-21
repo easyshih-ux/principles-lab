@@ -84,7 +84,7 @@ test('Gate 4 gradation reports every change that passed together', () => {
 
 test('Gate 4 gradation failures get their own diagnosis', () => {
   for (const [fixture, code] of [
-    ['onlySize', 'ONLY_ONE_CHANGE'], ['stopsAtFourth', 'CHANGE_STOPS'], ['manyPeaks', 'TOO_MANY_PEAKS'], ['sixStages', 'TOO_FEW_STAGES'],
+    ['onlySize', 'ONLY_ONE_CHANGE'], ['stopsAtFourth', 'CHANGE_STOPS'], ['manyPeaks', 'TOO_MANY_PEAKS'], ['fiveStages', 'TOO_FEW_STAGES'],
     ['decoration', 'NOT_ON_PATH'], ['scattered', 'NO_CLEAR_PATH'], ['hueJump', 'HUE_JUMP'], ['ringBreak', 'CHANGE_STOPS']
   ]) assert.equal(validate('gradation', phase6cFixtures.gradation.fail[fixture]).primaryDiagnosticCode, code, fixture);
 });

@@ -4,7 +4,7 @@ import {
   STEP_LEVELS,
   SIZE_LEVELS,
   SIZE_TO_LOGICAL
-} from './config.js?v=gate4-canvas-fit-1';
+} from './config.js?v=gate4-six-step-1';
 
 export const HUE_LABELS = Object.freeze({
   red: '紅', 'red-orange': '紅橙', orange: '橙', 'yellow-orange': '黃橙',
@@ -44,18 +44,18 @@ export function getDisplayColor(hue, lightness) {
 // Seven evenly spaced lightness steps per hue, used only by the gradation question.
 // Steps 1, 4 and 7 are the existing darkest, middle and lightest colours.
 export const STEP_COLOR_PALETTE = Object.freeze({
-  'red': Object.freeze(['#7F302B', '#9D3B33', '#BB493E', '#D95A4B', '#E37366', '#EA8E83', '#F0AAA2']),
-  'red-orange': Object.freeze(['#803623', '#9E432A', '#BB5331', '#D96538', '#E27B55', '#EA9372', '#F0AD91']),
-  'orange': Object.freeze(['#83401F', '#A25024', '#C0632B', '#DC7832', '#E48F50', '#EBA56C', '#F1BC8A']),
-  'yellow-orange': Object.freeze(['#765016', '#94641A', '#B27920', '#CF9128', '#DBA642', '#E5BB61', '#EDD083']),
-  'yellow': Object.freeze(['#756019', '#97781D', '#B79124', '#D5AC2D', '#E0BE49', '#E9CE68', '#F0DC8A']),
-  'yellow-green': Object.freeze(['#52601D', '#667725', '#7B8F2F', '#91A83B', '#A4BB55', '#B7CB71', '#CAD98F']),
-  'green': Object.freeze(['#245B42', '#2E7051', '#3C8662', '#4F9D78', '#6BAE8F', '#87BFA5', '#A4D0BA']),
-  'blue-green': Object.freeze(['#1E5B5B', '#25706E', '#2F8682', '#3D9B95', '#5DAEA7', '#7BBFB8', '#9ACFC9']),
-  'blue': Object.freeze(['#244D75', '#2B5C8A', '#346B9E', '#3E78B2', '#5B8DBF', '#79A3CB', '#9AB8D6']),
-  'blue-violet': Object.freeze(['#3D426F', '#4B5287', '#5A639E', '#6B74B3', '#838BC1', '#9BA2CF', '#B4B9DC']),
-  'violet': Object.freeze(['#573B6B', '#6B4985', '#80589D', '#9467B2', '#A57EBF', '#B795CC', '#C9ACD9']),
-  'red-violet': Object.freeze(['#6B385B', '#84456E', '#9D5281', '#B46094', '#C279A5', '#CF92B6', '#DBADC8'])
+  'red': Object.freeze(['#7F302B', '#A33E35', '#C75043', '#DF695B', '#E9897D', '#F0AAA2']),
+  'red-orange': Object.freeze(['#803623', '#A4462B', '#C75A34', '#DE724A', '#E88E6C', '#F0AD91']),
+  'orange': Object.freeze(['#83401F', '#A85425', '#CB6B2E', '#E18645', '#EAA167', '#F1BC8A']),
+  'yellow-orange': Object.freeze(['#765016', '#9A681B', '#BE8323', '#D69E38', '#E3B75B', '#EDD083']),
+  'yellow': Object.freeze(['#756019', '#9D7D1E', '#C39C28', '#DCB73F', '#E7CB62', '#F0DC8A']),
+  'yellow-green': Object.freeze(['#52601D', '#6A7C27', '#849934', '#9CB34B', '#B3C86C', '#CAD98F']),
+  'green': Object.freeze(['#245B42', '#317454', '#448F6B', '#60A786', '#81BCA1', '#A4D0BA']),
+  'blue-green': Object.freeze(['#1E5B5B', '#277472', '#358E8A', '#51A6A0', '#75BCB5', '#9ACFC9']),
+  'blue': Object.freeze(['#244D75', '#2D5F8E', '#3870A6', '#5085BA', '#739FC9', '#9AB8D6']),
+  'blue-violet': Object.freeze(['#3D426F', '#4E558C', '#616AA6', '#7982BB', '#969DCC', '#B4B9DC']),
+  'violet': Object.freeze(['#573B6B', '#6F4C8A', '#885EA5', '#9E75BA', '#B390C9', '#C9ACD9']),
+  'red-violet': Object.freeze(['#6B385B', '#894872', '#A65889', '#BC6F9E', '#CC8DB3', '#DBADC8'])
 });
 
 export function getStepColor(hue, stepLightness) {

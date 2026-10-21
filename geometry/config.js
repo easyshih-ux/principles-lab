@@ -33,10 +33,10 @@ export const HUE_IDS = Object.freeze([
 export const LIGHTNESS_LEVELS = Object.freeze([1, 2, 3, 4, 5]);
 export const ROTATION_VALUES = Object.freeze([0, 45, 90, 135, 180, 225, 270, 315]);
 export const PROPORTION_LEVELS = Object.freeze([1, 2, 3]);
-// Gradation-only seven-step scale (Gate 4). Other questions keep the five-level size and lightness.
-export const STEP_LEVELS = Object.freeze([1, 2, 3, 4, 5, 6, 7]);
-// 10/21: level 7 lowered from 140 to 84 so a worst-case row (7 shapes, size and spacing both growing) fits the 1000-wide canvas.
-export const STEP_SIZE_TO_LOGICAL = Object.freeze({ 1: 36, 2: 41, 3: 48, 4: 55, 5: 63, 6: 73, 7: 84 });
+// Gradation-only six-step scale (Gate 4; seven steps until 10/21). Other questions keep the five-level size and lightness.
+export const STEP_LEVELS = Object.freeze([1, 2, 3, 4, 5, 6]);
+// 10/21 (teacher option B): six steps up to 120 so a worst-case row (6 shapes, size and spacing both growing) fits the 1000-wide canvas.
+export const STEP_SIZE_TO_LOGICAL = Object.freeze({ 1: 36, 2: 46, 3: 58, 4: 74, 5: 94, 6: 120 });
 
 export const DEFAULT_ELEMENT_VALUES = Object.freeze({
   shape: 'circle',

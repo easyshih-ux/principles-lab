@@ -32,14 +32,14 @@ test('addShape is independent from shape mutation and color is independent from 
  assert.equal(repetition.color,true); assert.equal(repetition.lightness,false);
 });
 
-test('gradation starts blank and can add duplicate resize recolor relight and move on the seven-step scale',()=>{
+test('gradation starts blank and can add duplicate resize recolor relight and move on the six-step scale',()=>{
  const def=phase6cDefinitionsById['experiment-gradation']; assert.deepEqual(def.initialState.elements,[]);
  const engine=new ConstrainedGeometryEngine({allowedTools:def.allowedTools,elements:[]});
  assert.equal(engine.add('circle',{x:300,y:300}).changed,true);
  assert.equal(engine.duplicate().changed,true);
- assert.equal(engine.setProperty('stepSize',7).changed,true); assert.equal(engine.getSelectedElement().logicalSize,84);
+ assert.equal(engine.setProperty('stepSize',6).changed,true); assert.equal(engine.getSelectedElement().logicalSize,120);
  assert.equal(engine.setProperty('hue','green').changed,true);
- assert.equal(engine.setProperty('stepLightness',7).changed,true);
+ assert.equal(engine.setProperty('stepLightness',6).changed,true);
  assert.equal(engine.setProperty('size',5).changed,false);
  assert.equal(engine.move(engine.selectedId,{x:500,y:300}).changed,true);
 });

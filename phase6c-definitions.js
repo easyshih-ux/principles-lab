@@ -1,5 +1,5 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
-import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4-canvas-fit-1';
+import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4-six-step-1';
 
 const overlapHint = Object.freeze({
   observe: '有些圖形完全疊在一起了，看起來像只剩下一個圖形。',
@@ -46,13 +46,13 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('gradation', {
     title: '挑戰｜做出「漸層」',
-    task: '用兩種變化做出 7 個階段的漸層。可以一路變大，也可以先變大再變小。',
-    creationTips: '選兩種變化，例如大小和深淺，從第 1 級到第 7 級一路改變。',
+    task: '用兩種變化做出 6 個階段的漸層。可以一路變大，也可以先變大再變小。',
+    creationTips: '選兩種變化，例如大小和深淺，從第 1 級到第 6 級一路改變。',
     allowedTools: normalizeAllowedTools({ addShape: true, stepSize: true, color: true, stepLightness: true, position: true, duplicate: true, delete: true }),
     initialState: { elements: [] },
-    validationSpec: { minimumStages: 7, minimumChannels: 2, minimumSizeRange: 2, minimumLightnessRange: 2, minimumHueRange: 2, maximumHueStep: 1, minimumSpacingRange: 60, canvasWidth: 1000, canvasHeight: 600 },
+    validationSpec: { minimumStages: 6, minimumChannels: 2, minimumSizeRange: 2, minimumLightnessRange: 2, minimumHueRange: 2, maximumHueStep: 1, minimumSpacingRange: 60, canvasWidth: 1000, canvasHeight: 600 },
     diagnosticHints: {
-      TOO_FEW_STAGES: { observe: '階段還不夠多。', think: '漸層要有 7 個階段。', action: '再增加造形，讓變化多走幾步。' },
+      TOO_FEW_STAGES: { observe: '階段還不夠多。', think: '漸層要有 6 個階段。', action: '再增加造形，讓變化多走幾步。' },
       ONLY_ONE_CHANGE: { observe: '目前只有一種變化。', think: '漸層要同時有兩種變化。', action: '再加入第二種變化，例如深淺或間距。' },
       CHANGE_STOPS: { observe: '有一個地方的變化停住了。', think: '每一步都要繼續改變。', action: '找到停住的地方，讓它往同一個方向再變一級。' },
       HUE_JUMP: { observe: '有一個地方的顏色跳太遠了。', think: '色相漸層要沿著色相環一格一格走。', action: '換成相鄰的顏色。' },
@@ -60,7 +60,7 @@ export const phase6cDefinitions = Object.freeze([
       CHANGE_TOO_SMALL: { observe: '變化的差別太小了。', think: '頭尾兩端要看得出明顯不同。', action: '讓第一個和最後一個差多一點。' },
       NOT_ON_PATH: { observe: '有造形不在漸層的路線上。', think: '漸層裡的每個造形都是一個階段。', action: '把它排進路線，或刪除它。' },
       NO_CLEAR_PATH: { observe: '看不出造形的排列路線。', think: '漸層要讓變化一個接一個看下去。', action: '把造形排成一條線、斜線或弧線。' },
-      NO_CLEAR_GRADATION: { observe: '還看不出一步一步的變化。', think: '選兩種變化，一步一步改變。', action: '從第 1 級到第 7 級慢慢調整。' }
+      NO_CLEAR_GRADATION: { observe: '還看不出一步一步的變化。', think: '選兩種變化，一步一步改變。', action: '從第 1 級到第 6 級慢慢調整。' }
     },
     successFeedback: { general: '成功！畫面已形成漸層。', byMethod: { multiple: '成功！你讓兩種變化一起一步一步改變，形成了「漸層」。' } },
     discoveryFeedback: { multiple: '漸層可以一路改變，也可以先變大再變小；只要只有一座山，就不會變成律動。' }

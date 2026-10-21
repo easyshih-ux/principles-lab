@@ -32,16 +32,17 @@
 
 ### 2.2 漸層（教師已確認完成）
 
-- 漸層題專用 7 級大小與深淺（大小 10/21 調整為 36/41/48/55/63/73/84，原為 36/45/57/71/89/111/140；深淺每色 7 級，第 1、4、7 級沿用原最深、中間、最淺色）。其他題目仍為 5 級。
-- 畫布範圍（10/21）：畫布邏輯寬 1000，iPad 尺寸不影響能放多少。最壞情況（7 個造形大小一路變大、間距也一路變大，取檢查能接受的最緊排法）原刻度圓形需寬 1090、長方形 1265，第 7 個會被推回邊緣或疊到第 6 個；新刻度圓形 822、長方形 983，兩種 iPad 尺寸實測都放得下並過關。長方形仍最緊，間距若拉得很大仍可能放不下。
-- 7 級按鈕（48 點）放在右側工具欄，大小與深淺各 7 顆；左側只剩新增造形與色彩。
+- 漸層題專用 6 級大小與深淺（10/21 教師選定：原為 7 級，大小 36/45/57/71/89/111/140；改為 6 級，大小 36/46/58/74/94/120。深淺每色 6 級，最深與最淺沿用原 5 級的最深、最淺色，中間 4 級沿原 7 級色帶平均分配）。其他題目仍為 5 級。題目改為「6 個階段」，過關條件 `minimumStages: 6`。
+- 畫布範圍（10/21）：畫布邏輯寬 1000，iPad 尺寸不影響能放多少。最壞情況＝造形大小一路變大、看得到的空隙也一路變大，取檢查能接受的最緊排法。原 7 級：圓形需寬 1090，第 7 個被推回邊緣。現 6 級：圓形／正方形／三角形 820，兩種 iPad 尺寸實測放得下並過關；長方形橫排需 1030，放不下（教師 10/21 接受：學生可把長方形轉直或排成弧線）。曾比較 7 級最大 84、6 級最大 110／105，教師選 6 級最大 120 以保留清楚的大小差。
+- 已知問題（下一輪）：檢查程式量間距時把長方形當成正方形寬（半徑 = 大小 ÷ 2），長方形實際寬 1.5 倍，量到的空隙比眼睛看到的大。
+- 6 級按鈕（48 點）放在右側工具欄，大小與深淺各 6 顆；左側只剩新增造形與色彩。
 - 至少 7 個階段（以位置計數）、同時兩種變化；每種變化可一路改變或只有一座山（一個低點也接受）；多次起伏不過關。
 - 排法自由（橫、直、斜、弧、S 形、圓環、反方向）；順序以「從一端走一遍」判斷；圓環可在某處切開即過關；不允許裝飾造形。
 - 間距須中心距離與縫隙同方向變化，且差距明顯，才算間距變化（避免只改大小被算兩次、也忽略手放位置的小誤差）。
 - 題目：「用兩種變化做出 7 個階段的漸層。可以一路變大，也可以先變大再變小。」
-- 提示：「選兩種變化，例如大小和深淺，從第 1 級到第 7 級一路改變。」
+- 提示：「選兩種變化，例如大小和深淺，從第 1 級到第 6 級一路改變。」
 - 回饋例：「從左邊數來第 4 個，大小的變化停住了。」「目前只有大小在變化……」「圓環上有一處……斷掉了。」以及教師指定的「好幾座山」文字。
-- 測試：`tests/gate4-gradation.test.mjs`（19 項，含最壞情況橫排放得下、拖出畫布仍完整可見）。iPad 模擬兩種尺寸皆可完成；7 個造形約點 30 次。
+- 測試：`tests/gate4-gradation.test.mjs`（19 項，含最壞情況橫排放得下、拖出畫布仍完整可見）。iPad 模擬兩種尺寸皆可完成；6 個造形改大小約點 18 次，大小加深淺約 24 次。
 - 色階預覽頁（不在專案中）：claude.ai artifact 4QQp8bSpvbjWTzbP9gNyp5。
 
 ### 2.3 對稱（完成，待教師試做確認）
@@ -105,7 +106,8 @@
 
 漸層：
 - [ ] 選取造形後，右側出現大小 7 顆、深淺 7 顆按鈕，全部看得到、點得到。
-- [ ] 7 級深淺在 iPad 螢幕上相鄰兩級分得出來。
+- [ ] 6 級大小與深淺在 iPad 螢幕上相鄰兩級分得出來。
+- [ ] 長方形橫排放不下時，學生知道可以轉直或排成弧線。
 - [ ] 1→7 一排可過關；把中間一個改成相同大小，出現「從左邊數來第 N 個……停住了」。
 - [ ] 弧線或直排也能過關。
 
@@ -120,13 +122,13 @@
 
 - Branch `main`。10/21 經教師同意，將 Gate 2～4 所有成果與兩份交接紀錄一起 commit（上一版 `b232640`），由教師雙擊 `push-gate4.bat` push 到 GitHub Pages 供 iPad 實機測試（commit `efbd9be`，10/21 已 push、網站已更新）。
 - 10/21 對稱種類算法修正 commit `7616023`，已 push、網站已更新。
-- 10/21 畫布範圍修正（漸層 7 級大小、反覆提示）另做一次 commit，尚待教師確認截圖後雙擊 `push-gate4.bat` push。
+- 10/21 畫布範圍修正：`0218573`（漸層 7 級最大 84、反覆提示，未上線即被取代）＋ 下一個 commit（漸層改 6 級最大 120），兩個一起由教師雙擊 `push-gate4.bat` push。
 - 未 commit（只在教師電腦上）：`start-preview.bat`、`push-gate4.bat`。
 - 本輪修改的檔案：
-  - 判定與題目：`phase6c-validators.js`、`phase6c-definitions.js`、`phase6c-fixtures.js`、`phase6c-course-state.js`（指紋加入 stepSize／stepLightness）、`composition-audit.js`（7 級深淺不視為重疊）。
-  - 畫面：`experiment-course.js`（創作提示、具體回饋、反覆 8 方向）、`phase6c.css`（7 級按鈕樣式，只新增）。
-  - 共用畫布（只新增漸層 7 級，其他題不變）：`geometry/config.js`、`palette.js`、`controls.js`、`model.js`、`canvas.js`、`constrained-tools.js`、`constrained-engine.js`、`control-panel.js`；以及版本標記：`bounds.js`、`engine.js`、`constrained-canvas.js`。
-  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4-canvas-fit-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
+  - 判定與題目：`phase6c-validators.js`、`phase6c-definitions.js`、`phase6c-fixtures.js`、`phase6c-course-state.js`（指紋加入 stepSize／stepLightness）、`composition-audit.js`（漸層專用深淺不視為重疊）。
+  - 畫面：`experiment-course.js`（創作提示、具體回饋、反覆 8 方向）、`phase6c.css`（漸層級數按鈕樣式，只新增）。
+  - 共用畫布（只新增漸層專用級數，其他題不變）：`geometry/config.js`、`palette.js`、`controls.js`、`model.js`、`canvas.js`、`constrained-tools.js`、`constrained-engine.js`、`control-panel.js`；以及版本標記：`bounds.js`、`engine.js`、`constrained-canvas.js`。
+  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4-six-step-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
   - 測試：新增 `tests/gate4-repetition.test.mjs`、`tests/gate4-gradation.test.mjs`、`tests/gate4-symmetry.test.mjs`、`tests/gate4-contrast.test.mjs`；更新 `final-tool-spec`、`phase6c-experiments`、`phase6c-student-flow`、`phase6-initial-state`、`explore-mode`、`final-phase-flow`、`phase6c-entry`、`post-final-a`、`teacher-progress-dashboard`。
 - 本次一併加入：`CLAUDE_HANDOFF_GATE4.md`、`CLAUDE_HANDOFF_GATE4B.md`（本文件）、`composition-audit.js`、`tests/phase6-v2-composition-audit.test.mjs`、四個 gate4 測試檔。
 - 驗證：`node --test` 631／631 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
