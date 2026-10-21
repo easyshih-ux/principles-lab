@@ -35,7 +35,7 @@ test('all first nine architecture definitions are blank while simplicity owns an
 test('student reset returns released experiments to blank and simplicity to a fresh complex clone', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
   const repetition = phase6cDefinitions[0];
-  getExperimentState(course, repetition.id).workingElements = structuredClone(phase6cFixtures.repetition.pass.single);
+  getExperimentState(course, repetition.id).workingElements = structuredClone(phase6cFixtures.repetition.pass.group);
   resetPhase6cExperiment(course, repetition);
   assert.deepEqual(getExperimentState(course, repetition.id).workingElements, []);
 

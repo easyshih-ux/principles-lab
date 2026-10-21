@@ -10,7 +10,7 @@ const expected = {
   contrast: ['addShape','size','color','position','duplicate','delete'],
   rhythm: ['addShape','size','position','rotation','duplicate','delete'],
   proportion: ['addShape','ratioSize','position','duplicate','delete'],
-  unity: ['addShape','color','position','rotation','duplicate','delete'],
+  unity: ['addShape','size','color','position','rotation','duplicate','delete'],
   harmony: ['addShape','color','lightness','size','position','duplicate','delete'],
   simplicity: ['position','size','color','delete']
 };

@@ -11,6 +11,17 @@ const row = (prefix, values, field, positions = null) => values.map((value, inde
 }));
 
 
+const SYMMETRY_HUES = Object.freeze(['red', 'blue', 'yellow', 'green']);
+const STEP_LOGICAL = Object.freeze({ 1: 36, 2: 45, 3: 57, 4: 71, 5: 89, 6: 111, 7: 140 });
+const GRADATION_HUES = Object.freeze(['red', 'red-orange', 'orange', 'yellow-orange', 'yellow', 'yellow-green', 'green']);
+const stepElement = (id, values = {}) => {
+  const item = element(id, { stepSize: 4, stepLightness: 4, ...values });
+  return { ...item, logicalSize: STEP_LOGICAL[item.stepSize] };
+};
+const stepLine = (prefix, values, fields, { dx = 135, dy = 0, x0 = 80, y0 = 300 } = {}) => values.map((value, index) => stepElement(`${prefix}-${index}`, {
+  x: x0 + index * dx, y: y0 + index * dy, ...Object.fromEntries(fields.map((field) => [field, value]))
+}));
+
 const simplicityInitial = createSimplicityInitialArtwork();
 const simplicityCore = () => createSimplicityInitialArtwork().filter((item) => SIMPLICITY_CORE_ELEMENT_IDS.includes(item.id));
 const withoutSimplicity = (...ids) => createSimplicityInitialArtwork().filter((item) => !ids.includes(item.id));
@@ -19,50 +30,67 @@ const organized = (items) => items.map((item, index) => ({ ...item, x: 280 + (in
 export const phase6cFixtures = Object.freeze({
   repetition: {
     pass: {
-      single: [element('rs-1', { x: 150 }), element('rs-2', { x: 430, y: 220 }), element('rs-3', { x: 790, y: 370 })],
-      group: [0, 1, 2].flatMap((index) => [
-        element(`rg-c-${index}`, { x: 170 + index * 300, y: 300 }),
-        element(`rg-t-${index}`, { shape: 'triangle', x: 225 + index * 300, y: 300, hue: 'red', size: 2 })
+      // Teacher sample: teal triangle + red circle + orange square, overlapping, repeated five times.
+      group: [[240,300],[440,300],[640,160],[600,480],[820,400]].flatMap(([x,y],index)=>[
+        element(`ru-t-${index}`, { shape: 'triangle', x, y, hue: 'blue-green', size: 5 }),
+        element(`ru-c-${index}`, { x: x - 40, y: y - 20, hue: 'red', size: 3 }),
+        element(`ru-s-${index}`, { shape: 'square', x: x + 20, y: y + 80, hue: 'yellow-orange', size: 1 })
+      ]),
+      turnedUnits: [[240,300,0,false],[460,300,90,false],[680,160,0,true],[620,470,180,false],[840,420,270,true]].flatMap(([x,y,angle,flip],index)=>{
+        const place = (dx, dy) => { const fx = flip ? -dx : dx; const r = angle * Math.PI / 180; return { x: Math.round(x + fx * Math.cos(r) - dy * Math.sin(r)), y: Math.round(y + fx * Math.sin(r) + dy * Math.cos(r)) }; };
+        return [
+          element(`rt-t-${index}`, { shape: 'triangle', ...place(0, 0), hue: 'blue-green', size: 5, rotation: angle }),
+          element(`rt-c-${index}`, { ...place(-40, -20), hue: 'red', size: 3 }),
+          element(`rt-s-${index}`, { shape: 'square', ...place(20, 80), hue: 'yellow-orange', size: 1 })
+        ];
+      }),
+      concentric: [[140,150],[480,140],[840,160],[300,440],[700,450]].flatMap(([x,y],index)=>[
+        element(`rk-s-${index}`, { shape: 'square', x, y, hue: 'blue', size: 4 }),
+        element(`rk-c-${index}`, { x, y, hue: 'yellow', size: 2 })
+      ]),
+      directionUnit: [[140,150,0],[480,140,0],[840,160,90],[300,440,0],[700,450,90]].flatMap(([x,y,rotation],index)=>[
+        element(`rd-a-${index}`, { shape: 'triangle', x, y, hue: 'red', size: 2, rotation }),
+        element(`rd-b-${index}`, { shape: 'triangle', x: x + (rotation ? 0 : 50), y: y + (rotation ? 50 : 0), hue: 'red', size: 2, rotation: rotation + 180 })
       ])
     },
     fail: {
+      // The same fifteen shapes scattered, each on its own: repeated, but not grouped into units.
+      scattered: [
+        ['triangle',100,110,'blue-green',5],['circle',330,90,'red',3],['square',520,120,'yellow-orange',1],['triangle',730,110,'blue-green',5],['circle',920,80,'red',3],
+        ['square',90,300,'yellow-orange',1],['triangle',300,300,'blue-green',5],['circle',520,310,'red',3],['square',700,290,'yellow-orange',1],['triangle',900,320,'blue-green',5],
+        ['circle',110,510,'red',3],['square',290,520,'yellow-orange',1],['triangle',500,500,'blue-green',5],['circle',700,520,'red',3],['square',900,530,'yellow-orange',1]
+      ].map(([shape,x,y,hue,size],index)=>element(`rx-${index}`, { shape, x, y, hue, size })),
+      singleKind: [[120,180],[250,390],[390,150],[520,430],[650,210],[790,370],[900,120]].map(([x,y],index)=>element(`rs-${index}`, { x, y })),
       two: [element('r2-1', { x: 240 }), element('r2-2', { x: 650 })],
       inconsistent: ['circle', 'square', 'triangle', 'rectangle', 'semicircle'].map((shape, index) => element(`ri-${index}`, { shape, x: 130 + index * 180, hue: index % 2 ? 'red' : 'blue', size: (index % 5) + 1 }))
     }
   },
   gradation: {
+    // Gate 4: seven or more stages, two changes together, any path. Uses the gradation-only seven-step scale.
     pass: {
-      size: row('gs', [1, 2, 3, 4, 5], 'size'),
-      descending: row('gd', [5, 4, 3, 2, 1], 'size'),
-      nonEqual: row('gn', [1, 2, 4, 5], 'size'),
-      singlePeak: row('gpk', [1, 2, 3, 5, 4, 2, 1], 'size'),
-      singleValley: row('gvl', [5, 3, 1, 3, 5], 'size'),
-      unevenPeak: row('gup', [1, 2, 5, 4, 1], 'size'),
-      offCenterPeak: row('gop', [1, 3, 5, 4, 3, 2, 1], 'size'),
-      lightness: row('gl', [1, 2, 3, 4, 5], 'lightness'),
-      lightnessDescending: row('gld', [5, 4, 3, 2, 1], 'lightness'),
-      lightnessPeak: row('glp', [1, 2, 3, 5, 3, 2, 1], 'lightness'),
-      lightnessValley: row('glv', [5, 3, 1, 3, 5], 'lightness'),
-      lightnessUneven: row('glu', [1, 2, 3, 5, 3, 2], 'lightness'),
-      hueForward: row('ghf', ['red', 'red-orange', 'orange', 'yellow-orange', 'yellow'], 'hue'),
-      hueReverse: row('ghr', ['yellow', 'yellow-orange', 'orange', 'red-orange', 'red'], 'hue'),
-      hueReturn: row('ght', ['red', 'red-orange', 'orange', 'yellow-orange', 'yellow', 'yellow-orange', 'orange', 'red-orange', 'red'], 'hue'),
-      hueWrapForward: row('ghw', ['red-violet', 'red', 'red-orange', 'orange'], 'hue'),
-      spacing: row('gp', [3, 3, 3, 3, 3], 'size', [100, 210, 350, 520, 720]),
-      multiple: row('gm', [1, 2, 3, 4, 5], 'size', [100, 210, 350, 520, 720]),
-      sizeLightness: row('gml', [1, 2, 3, 4, 5], 'size').map((item, index) => ({ ...item, lightness: index + 1 })),
-      sizeHue: row('gmh', [1, 2, 3, 4, 5], 'size').map((item, index) => ({ ...item, hue: ['red', 'red-orange', 'orange', 'yellow-orange', 'yellow'][index] }))
+      sizeLightness: stepLine('gsl', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness']),
+      descending: stepLine('gde', [7, 6, 5, 4, 3, 2, 1], ['stepSize', 'stepLightness']),
+      singlePeak: stepLine('gpk', [1, 2, 3, 4, 3, 2, 1], ['stepSize', 'stepLightness']),
+      longPeak: stepLine('glp', [1, 2, 3, 4, 5, 4, 3, 2, 1], ['stepSize', 'stepLightness'], { dx: 105, x0: 70 }),
+      singleValley: stepLine('gvl', [4, 3, 2, 1, 2, 3, 4], ['stepSize', 'stepLightness']),
+      sizeHue: stepLine('gsh', [1, 2, 3, 4, 5, 6, 7], ['stepSize']).map((item, index) => ({ ...item, hue: GRADATION_HUES[index] })),
+      hueSpacing: [0, 40, 100, 180, 280, 400, 540].map((x, index) => stepElement(`ghs-${index}`, { x: 60 + x, stepSize: 1, hue: GRADATION_HUES[index] })),
+      threeChanges: stepLine('g3c', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness']).map((item, index) => ({ ...item, hue: GRADATION_HUES[index] })),
+      vertical: stepLine('gvt', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness'], { dx: 0, dy: 85, x0: 500, y0: 40 }),
+      diagonal: stepLine('gdg', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness'], { dx: 120, dy: 75, x0: 100, y0: 60 }),
+      arc: [0, 1, 2, 3, 4, 5, 6].map((index) => { const angle = Math.PI * (0.1 + (0.8 * index) / 6); return stepElement(`gar-${index}`, { x: Math.round(500 - 420 * Math.cos(angle)), y: Math.round(560 - 420 * Math.sin(angle)), stepSize: index + 1, stepLightness: index + 1 }); }),
+      sCurve: [[80, 120], [220, 90], [360, 140], [480, 280], [600, 430], [740, 480], [880, 450]].map(([x, y], index) => stepElement(`gsc-${index}`, { x, y, stepSize: index + 1, stepLightness: index + 1 })),
+      ring: [2, 3, 4, 5, 6, 7, 5, 3].map((value, index) => { const angle = (2 * Math.PI * index) / 8; return stepElement(`grg-${index}`, { x: Math.round(500 + 230 * Math.cos(angle)), y: Math.round(300 + 230 * Math.sin(angle)), stepSize: value, stepLightness: value }); })
     },
     fail: {
-      directionBreak: row('gb', [1, 3, 2, 5], 'size'),
-      randomSizes: row('grn', [1, 5, 2, 4, 1], 'size'),
-      multipleReversals: row('gmr', [1, 5, 1, 5, 1], 'size'),
-      lightnessOscillation: row('glo', [1, 5, 1, 5, 1], 'lightness'),
-      hueRandomJumps: row('ghj', ['red', 'blue', 'yellow', 'violet', 'green'], 'hue'),
-      hueAlternating: row('gha', ['red', 'yellow', 'red', 'yellow', 'red'], 'hue'),
-      hueDifferentNoSequence: row('ghn', ['green', 'red', 'blue-violet', 'yellow-orange', 'blue'], 'hue'),
-      tooSubtle: row('gts', [3, 3, 3, 3], 'size'),
-      tooFew: row('gf', [1, 5], 'size')
+      onlySize: stepLine('gos', [1, 2, 3, 4, 5, 6, 7], ['stepSize']),
+      stopsAtFourth: stepLine('gst', [1, 2, 3, 3, 5, 6, 7], ['stepSize', 'stepLightness']),
+      manyPeaks: stepLine('gmp', [1, 2, 1, 2, 1, 2, 1], ['stepSize', 'stepLightness']),
+      sixStages: stepLine('g6s', [1, 2, 3, 4, 5, 6], ['stepSize', 'stepLightness']),
+      decoration: [...stepLine('gdc', [1, 2, 3, 4, 5, 6, 7], ['stepSize', 'stepLightness']), stepElement('gdc-extra', { x: 500, y: 560, stepSize: 1 })],
+      scattered: [[100, 100], [800, 500], [300, 450], [600, 80], [900, 150], [150, 520], [500, 300]].map(([x, y], index) => stepElement(`gsx-${index}`, { x, y, stepSize: index + 1, stepLightness: index + 1 })),
+      hueJump: stepLine('ghj', [1, 2, 3, 4, 5, 6, 7], ['stepSize']).map((item, index) => ({ ...item, hue: ['red', 'red-orange', 'orange', 'green', 'blue-green', 'blue', 'blue-violet'][index] })),
+      ringBreak: [2, 3, 4, 4, 6, 7, 5, 3].map((value, index) => { const angle = (2 * Math.PI * index) / 8; return stepElement(`grb-${index}`, { x: Math.round(500 + 230 * Math.cos(angle)), y: Math.round(300 + 230 * Math.sin(angle)), stepSize: value, stepLightness: value }); })
     }
   },
   balance: {
@@ -168,36 +196,69 @@ export const phase6cFixtures = Object.freeze({
     }
   },
   symmetry: {
+    // Gate 4: colour is free; at least four shape + colour combinations among mirrored shapes.
     pass: {
-      vertical: [element('sv1',{shape:'triangle',x:300,y:220,rotation:45}),element('sv2',{shape:'triangle',x:700,y:220,rotation:315})],
-      horizontal: [element('sh1',{shape:'semicircle',x:360,y:180,rotation:0}),element('sh2',{shape:'semicircle',x:360,y:420,rotation:180})],
-      cross: [[300,180],[700,180],[300,420],[700,420]].map(([x,y],i)=>element('sc' + i,{x,y})),
-      axis: [element('sa',{shape:'circle',x:500,y:300})],
-      directional: [element('sd1',{shape:'triangle',x:300,y:220,rotation:45}),element('sd2',{shape:'triangle',x:700,y:220,rotation:315})]
+      vertical: [[260,120],[360,220],[300,360],[400,480]].flatMap(([x,y],i)=>[
+        element(`sv-l${i}`,{shape:'triangle',x,y,rotation:45,hue:SYMMETRY_HUES[i]}), element(`sv-r${i}`,{shape:'triangle',x:1000-x,y,rotation:315,hue:SYMMETRY_HUES[i]})
+      ]),
+      horizontal: [[180,140],[380,180],[620,120],[820,220]].flatMap(([x,y],i)=>[
+        element(`sh-t${i}`,{shape:'semicircle',x,y,rotation:0,hue:SYMMETRY_HUES[i]}), element(`sh-b${i}`,{shape:'semicircle',x,y:600-y,rotation:180,hue:SYMMETRY_HUES[i]})
+      ]),
+      // Teacher example: two four-way groups, each using two colours, already make four combinations.
+      cross: [[300,170],[390,240]].flatMap(([x,y],i)=>[[x,y],[1000-x,y],[x,600-y],[1000-x,600-y]].map(([px,py],j)=>element(`sc${i}-${j}`,{x:px,y:py,shape:i?'square':'circle',hue:SYMMETRY_HUES[i*2+(j===0||j===3?0:1)]}))),
+      directional: [[260,120],[360,220],[300,360],[400,480]].flatMap(([x,y],i)=>[
+        element(`sd-l${i}`,{shape:['triangle','rectangle','square','circle'][i],x,y,rotation:45}), element(`sd-r${i}`,{shape:['triangle','rectangle','square','circle'][i],x:1000-x,y,rotation:[315,135,45,45][i]})
+      ]),
+      colourFree: [[260,120],[360,220],[300,360],[400,480]].flatMap(([x,y],i)=>[
+        element(`sf-l${i}`,{shape:'circle',x,y,hue:'red'}), element(`sf-r${i}`,{shape:'circle',x:1000-x,y,hue:SYMMETRY_HUES[i]})
+      ]),
+      axisShapes: [...[[260,120],[360,220],[300,360],[400,480]].flatMap(([x,y],i)=>[
+        element(`sx-l${i}`,{shape:'circle',x,y,hue:SYMMETRY_HUES[i]}), element(`sx-r${i}`,{shape:'circle',x:1000-x,y,hue:SYMMETRY_HUES[i]})
+      ]), element('sx-a1',{shape:'triangle',x:500,y:120,rotation:0}), element('sx-a2',{shape:'triangle',x:500,y:480,rotation:180}), element('sx-a3',{shape:'square',x:500,y:300,rotation:45})],
+      // Teacher screenshot: left-right symmetric (5 pairs, 4 combinations) with two red rectangles on the centre line.
+      teacherLeftRight: [
+        element('tl-rt', { shape: 'rectangle', x: 500, y: 120, rotation: 90, hue: 'red' }), element('tl-rb', { shape: 'rectangle', x: 500, y: 460, rotation: 90, hue: 'red' }),
+        element('tl-c1', { x: 240, y: 220, hue: 'blue-green' }), element('tl-c2', { x: 760, y: 220, hue: 'blue-green' }),
+        element('tl-s1', { shape: 'square', x: 280, y: 260, hue: 'red' }), element('tl-s2', { shape: 'square', x: 720, y: 260, hue: 'red' }),
+        element('tl-u1', { shape: 'triangle', x: 400, y: 200, hue: 'red' }), element('tl-u2', { shape: 'triangle', x: 600, y: 200, hue: 'red' }),
+        element('tl-d1', { shape: 'triangle', x: 400, y: 380, rotation: 180, hue: 'red' }), element('tl-d2', { shape: 'triangle', x: 600, y: 380, rotation: 180, hue: 'red' }),
+        element('tl-o1', { shape: 'rectangle', x: 260, y: 360, hue: 'yellow-orange' }), element('tl-o2', { shape: 'rectangle', x: 740, y: 360, hue: 'yellow-orange' })
+      ]
     },
     fail: {
+      axis: [element('sa',{shape:'circle',x:500,y:300})],
       missing: [element('sm1',{x:300,y:220})],
       position: [element('sp1',{x:300,y:220}),element('sp2',{x:720,y:220})],
       attribute: [element('st1',{x:300,y:220}),element('st2',{shape:'square',x:700,y:220})],
-      crossIncomplete: [element('sx1',{x:300,y:220}),element('sx2',{x:700,y:220})]
+      crossIncomplete: [element('sx1',{x:300,y:220}),element('sx2',{x:700,y:220})],
+      oneColour: [[260,120],[360,220],[300,360],[400,480]].flatMap(([x,y],i)=>[
+        element(`so-l${i}`,{shape:'triangle',x,y,rotation:45}), element(`so-r${i}`,{shape:'triangle',x:1000-x,y,rotation:315})
+      ]),
+      diamond: [[260,120],[360,220],[300,360],[400,480]].flatMap(([x,y],i)=>[
+        element(`sq-l${i}`,{shape:'square',x,y,hue:SYMMETRY_HUES[i]}), element(`sq-r${i}`,{shape:'square',x:1000-x,y,hue:SYMMETRY_HUES[i],rotation:i===3?45:0})
+      ]),
+      tiltedOnAxis: [...[[260,120],[360,220],[300,360],[400,480]].flatMap(([x,y],i)=>[
+        element(`sb-l${i}`,{shape:'circle',x,y,hue:SYMMETRY_HUES[i]}), element(`sb-r${i}`,{shape:'circle',x:1000-x,y,hue:SYMMETRY_HUES[i]})
+      ]), element('sb-axis',{shape:'triangle',x:500,y:300,rotation:90,hue:'red'})],
+      crossAxisAlone: [...[[300,170],[390,240]].flatMap(([x,y],i)=>[[x,y],[1000-x,y],[x,600-y],[1000-x,600-y]].map(([px,py],j)=>element(`sk${i}-${j}`,{x:px,y:py,shape:i?'square':'circle',hue:SYMMETRY_HUES[i*2+(j===0||j===3?0:1)]}))),
+        element('sk-axis',{shape:'triangle',x:500,y:80,rotation:0,hue:'yellow'})]
     }
   },
   contrast: {
     pass: {
-      'contrast-two-elements-strong-size': [
-        element('ct-small', { x: 300, size: 1 }),
-        element('ct-large', { x: 700, size: 5 })
-      ],
-      size: [1,1,1,5].map((size,i)=>element('cz' + i,{x:180+i*180,size})),
-      color: ['blue','blue','blue','orange'].map((hue,i)=>element('cc' + i,{x:180+i*180,hue})),
-      shape: ['circle','circle','circle','triangle'].map((shape,i)=>element('cs' + i,{x:180+i*180,shape})),
-      multiple: [0,1,2,3].map((i)=>element('cm' + i,{x:180+i*180,size:i===3?5:1,hue:i===3?'orange':'blue'}))
+      dual: [0,1,2,3,4,5].map((i)=>element('cd' + i,{x:130+i*150,y:i%2?390:210,size:i<3?5:1,hue:i<3?'red':'blue'})),
+      multiple: [0,1,2,3,4,5].map((i)=>element('cm' + i,{x:130+i*150,y:i%2?390:210,size:i<3?5:1,hue:i<3?'red':'blue',shape:i<3?'triangle':'circle'}))
     },
     fail: {
+      tooFewDual: [0,1,2,3,4].map((i)=>element('ctf' + i,{x:150+i*170,size:i<2?5:1,hue:i<2?'red':'blue'})),
+      sizeOnly: [0,1,2,3,4,5].map((i)=>element('cso' + i,{x:130+i*150,size:i<3?5:1,hue:'blue'})),
+      colorOnly: [0,1,2,3,4,5].map((i)=>element('cco' + i,{x:130+i*150,size:3,hue:i<3?'red':'blue'})),
+      shapeOnly: [0,1,2,3,4,5].map((i)=>element('cho' + i,{x:130+i*150,shape:i<3?'triangle':'circle'})),
+      extremeWithNoise: [element('cen-a',{x:100,size:5,hue:'red'}),element('cen-b',{x:260,size:1,hue:'blue'}),...['square','triangle','rectangle','semicircle'].map((shape,i)=>element('cen-'+i,{x:420+i*140,shape,size:(i%3)+2,hue:['orange','yellow','green','violet'][i]}))],
       twoWeak: [element('ct-weak-a', { x: 300, size: 3 }), element('ct-weak-b', { x: 700, size: 4 })],
       identical: [element('ct-same-a', { x: 300, size: 3 }), element('ct-same-b', { x: 700, size: 3 })],
       weak: [3,3,3,4].map((size,i)=>element('cw' + i,{x:180+i*180,size})),
-      unrelated: ['circle','square','triangle','rectangle','semicircle'].map((shape,i)=>element('cu' + i,{x:100+i*190,shape,size:i+1,hue:['red','orange','yellow','green','blue'][i]}))
+      unrelated: ['circle','square','triangle','rectangle','semicircle','line'].map((shape,i)=>element('cu' + i,{x:80+i*165,shape,size:(i%5)+1,hue:['red','orange','yellow','green','blue','violet'][i]}))
     }
   },
   proportion: {
@@ -213,22 +274,25 @@ export const phase6cFixtures = Object.freeze({
   },
   unity: {
     pass: {
-      color: ['circle','square','triangle','rectangle','semicircle'].map((shape,i)=>element('uc'+i,{shape,x:140+i*175,y:220+(i%2)*150,hue:'blue',size:(i%3)+1})),
-      rotation: ['triangle','rectangle','semicircle','triangle'].map((shape,i)=>element('ur'+i,{shape,x:180+i*210,y:220+(i%2)*150,hue:['red','yellow','blue','green'][i],rotation:45})),
-      shapeFeature: ['square','triangle','rectangle','square'].map((shape,i)=>element('uf'+i,{shape,x:180+i*210,y:220+(i%2)*150,hue:['red','yellow','blue','green'][i],rotation:i*45})),
-      multiple: ['triangle','rectangle','semicircle','triangle'].map((shape,i)=>element('um'+i,{shape,x:180+i*210,y:220+(i%2)*150,hue:'red-orange',rotation:90}))
+      color: ['circle','square','triangle','rectangle','semicircle','circle','square'].map((shape,i)=>element('uc'+i,{shape,x:110+i*130,y:220+(i%2)*150,hue:'blue',size:(i%3)+1})),
+      rotation: ['triangle','rectangle','semicircle','triangle','rectangle','semicircle','triangle'].map((shape,i)=>element('ur'+i,{shape,x:110+i*130,y:220+(i%2)*150,hue:['red','yellow','blue','green','orange','violet','red'][i],rotation:45,size:(i%2)+2})),
+      shapeFeature: [1,2,3,4,5,2,3].map((size,i)=>element('uf'+i,{shape:'square',x:110+i*130,y:220+(i%2)*150,hue:i===6?'red':'blue',size})),
+      sixOfSeven: [0,1,2,3,4,5,6].map((i)=>element('us'+i,{shape:i===6?'triangle':'circle',x:110+i*130,y:220+(i%2)*150,hue:i%2?'blue':'red',size:(i%3)+1})),
+      multiple: [0,1,2,3,4,5,6].map((i)=>element('um'+i,{shape:'triangle',x:110+i*130,y:220+(i%2)*150,hue:'red-orange',rotation:i===6?90:45,size:(i%2)+2}))
     },
     fail: {
+      identical: [0,1,2,3,4,5,6].map((i)=>element('ui'+i,{x:110+i*130,y:220+(i%2)*150,shape:'circle',hue:'blue',size:3,rotation:0})),
+      fiveOfSeven: [0,1,2,3,4,5,6].map((i)=>element('u5'+i,{shape:i<5?'circle':i===5?'square':'triangle',x:110+i*130,hue:i<5?'blue':i===5?'red':'yellow',size:(i%3)+1,rotation:i*45})),
       weak: ['red','red','blue','green','yellow'].map((hue,i)=>element('uw'+i,{shape:['circle','square','triangle','rectangle','semicircle'][i],x:120+i*190,hue,rotation:i*45})),
       unrelated: ['circle','square','triangle','rectangle','semicircle'].map((shape,i)=>element('ux'+i,{shape,x:120+i*190,hue:['red','yellow','green','blue','violet'][i],rotation:i*45}))
     }
   },
   harmony: {
     pass: {
-      sameHueLightness: [1,2,3,4].map((lightness,i)=>element('hs'+i,{shape:['circle','square','triangle','rectangle'][i],x:170+i*210,hue:'blue-green',lightness})),
-      neighborHue: ['red','red-orange','red','red-orange'].map((hue,i)=>element('hn'+i,{shape:['circle','square','triangle','rectangle'][i],x:170+i*210,hue,lightness:3})),
-      wrapNeighbor: ['red','red-violet','red','red-violet'].map((hue,i)=>element('hw'+i,{shape:['circle','square','triangle','rectangle'][i],x:170+i*210,hue,lightness:3})),
-      mixed: [element('hm1',{x:180,hue:'blue',lightness:1}),element('hm2',{x:380,hue:'blue',lightness:3}),element('hm3',{x:580,hue:'blue',lightness:5}),element('hm4',{x:780,hue:'blue-violet',lightness:3})]
+      sameHueLightness: [1,2,3,4,5,3].map((lightness,i)=>element('hs'+i,{shape:['circle','square','triangle','rectangle','semicircle','circle'][i],x:120+i*150,hue:'blue-green',lightness})),
+      neighborHue: ['red','red-orange','red','red-orange','red','red-orange'].map((hue,i)=>element('hn'+i,{x:120+i*150,hue,lightness:3})),
+      wrapNeighbor: ['red','red-violet','red','red-violet','red','red-violet'].map((hue,i)=>element('hw'+i,{x:120+i*150,hue,lightness:3})),
+      mixed: [1,2,3,4,5,3].map((lightness,i)=>element('hm'+i,{x:120+i*150,hue:i===5?'blue-violet':'blue',lightness}))
     },
     fail: {
       far: ['red','yellow','green','blue-violet'].map((hue,i)=>element('hf'+i,{x:170+i*210,hue})),

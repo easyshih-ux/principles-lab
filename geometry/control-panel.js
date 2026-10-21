@@ -3,9 +3,10 @@ import {
   LIGHTNESS_LEVELS,
   PROPORTION_LEVELS,
   ROTATION_VALUES,
-  SIZE_LEVELS
-} from './config.js';
-import { HUE_LABELS, getDisplayColor } from './palette.js';
+  SIZE_LEVELS,
+  STEP_LEVELS
+} from './config.js?v=gate4-contrast-2';
+import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4-contrast-2';
 
 function nearestAllowed(value, allowedValues) {
   return allowedValues.reduce((nearest, candidate) => (
@@ -90,6 +91,9 @@ export class GeometryControlPanel {
       }));
     }
     if (showPrimary && this.engine.canUse('color')) controls.push(this.colorMarkup(element));
+    // Seven-step size and lightness sit in the right-hand panel so every button stays on screen on an iPad.
+    if (showSecondary && this.engine.canUse('stepSize')) controls.push(this.stepMarkup(element, 'stepSize'));
+    if (showSecondary && this.engine.canUse('stepLightness')) controls.push(this.stepMarkup(element, 'stepLightness'));
     if (showPrimary && this.engine.canUse('lightness')) {
       controls.push(scaleMarkup({
         property: 'lightness', label: '深淺', start: '深', end: '淺',
@@ -115,6 +119,28 @@ export class GeometryControlPanel {
   usableValues(property) {
     const constraint = this.engine.getControlConstraint(property);
     return constraint.allowedValues.filter((value) => !constraint.lockedValues.includes(value));
+  }
+
+  stepMarkup(element, property) {
+    const allowed = this.usableValues(property);
+    const current = element[property] ?? 4;
+    const isSize = property === 'stepSize';
+    return `
+      <section class="geometry-control geometry-step-control" data-control="${property}">
+        <h3>${isSize ? '大小' : '深淺'}</h3>
+        <div class="geometry-step-options">
+          ${STEP_LEVELS.map((value) => `
+            <button
+              type="button"
+              class="geometry-step ${current === value ? 'selected' : ''}"
+              data-property="${property}"
+              data-value="${value}"
+              ${allowed.includes(value) ? '' : 'disabled'}
+              aria-label="${isSize ? '大小' : '深淺'}第 ${value} 級"
+              aria-pressed="${current === value}"
+            ><i style="${isSize ? `--step-dot:${8 + value * 4}px` : `--step-swatch:${getStepColor(element.hue, value)}`}"></i></button>`).join('')}
+        </div>
+      </section>`;
   }
 
   colorMarkup(element) {

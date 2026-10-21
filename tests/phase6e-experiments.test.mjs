@@ -34,8 +34,8 @@ test('unity supports color rotation shapeFeature and multiple without requiring 
   }
   assert.ok(new Set(phase6cFixtures.unity.pass.color.map((item) => item.shape)).size > 1);
 });
-test('unity accepts exact shared shapes with different colors at the formal minimum', () => {
-  for (const [shape, count] of [['circle', 4], ['square', 5]]) {
+test('unity accepts seven exact shared shapes with visible variation', () => {
+  for (const [shape, count] of [['circle', 7], ['square', 7]]) {
     const elements = Array.from({ length: count }, (_, index) => ({
       ...phase6cFixtures.unity.pass.color[index % phase6cFixtures.unity.pass.color.length],
       id: `${shape}-${index}`,
@@ -49,16 +49,16 @@ test('unity accepts exact shared shapes with different colors at the formal mini
   }
 });
 
-test('unity applies minimum element and whole-composition coverage to shared direction', () => {
+test('unity applies seven-element minimum and six-of-seven coverage to shared direction', () => {
   const directionalShapes = ['triangle', 'rectangle', 'semicircle', 'line'];
-  const fourAligned = directionalShapes.map((shape, index) => ({
-    ...phase6cFixtures.unity.pass.rotation[index], id: `aligned-${index}`, shape, rotation: 45
-  }));
-  const alignedResult = validate('unity', fourAligned);
+  const sevenAligned = Array.from({length:7},(_, index) => ({
+    ...phase6cFixtures.unity.pass.rotation[index], id: `aligned-${index}`, rotation: 45
+  })).map((item,index)=>({...item,shape:directionalShapes[index%directionalShapes.length]}));
+  const alignedResult = validate('unity', sevenAligned);
   assert.equal(alignedResult.passed, true);
   assert.ok(alignedResult.detectedMethods.includes('rotation'));
 
-  assert.equal(validate('unity', fourAligned.slice(0, 3)).passed, false);
+  assert.equal(validate('unity', sevenAligned.slice(0, 6)).passed, false);
 
   const plainShapes = ['circle', 'square', 'circle', 'square', 'circle'];
   const hiddenMinority = [
@@ -66,13 +66,19 @@ test('unity applies minimum element and whole-composition coverage to shared dir
       ...phase6cFixtures.unity.pass.color[index], id: `plain-${index}`, shape,
       hue: ['red', 'yellow', 'green', 'blue', 'violet'][index]
     })),
-    ...fourAligned.slice(0, 3).map((item, index) => ({
+    ...sevenAligned.slice(0, 3).map((item, index) => ({
       ...item, id: `minority-${index}`, hue: ['red-orange', 'yellow-green', 'blue-violet'][index]
     }))
   ];
   const minorityResult = validate('unity', hiddenMinority);
   assert.equal(minorityResult.passed, false);
   assert.equal(minorityResult.metrics.directionCoverage, 3 / 8);
+});
+
+test('unity requires visible variation and accepts exactly six of seven shared features',()=>{
+  assert.equal(validate('unity',phase6cFixtures.unity.fail.identical).primaryDiagnosticCode,'NO_VISIBLE_VARIATION');
+  assert.equal(validate('unity',phase6cFixtures.unity.pass.sixOfSeven).passed,true);
+  assert.equal(validate('unity',phase6cFixtures.unity.fail.fiveOfSeven).passed,false);
 });
 
 test('unity rejects too few exact shapes, dispersed directions and insufficient color coverage', () => {
@@ -118,21 +124,21 @@ test('harmony supports same hue lightness neighboring hues ring wrap and mixed',
 test('harmony preserves cool warm wraparound and same-hue lightness teaching cases', () => {
   const makeHarmony = (hues, lightnesses = hues.map(() => 3)) => hues.map((hue, index) => ({
     ...phase6cFixtures.harmony.pass.neighborHue[index % 4],
-    id: `teaching-${hue}-${index}`, hue, lightness: lightnesses[index]
+    id: `teaching-${hue}-${index}`, x: 120 + index * 150, hue, lightness: lightnesses[index]
   }));
-  assert.equal(validate('harmony', makeHarmony(['blue', 'blue-green', 'green', 'blue-green'])).passed, true);
-  assert.equal(validate('harmony', makeHarmony(['red', 'red-orange', 'orange', 'yellow-orange'])).passed, true);
-  assert.equal(validate('harmony', makeHarmony(['red', 'red-violet', 'red', 'red-violet'])).passed, true);
-  assert.equal(validate('harmony', makeHarmony(['blue', 'blue', 'blue', 'blue'], [1, 2, 4, 5])).passed, true);
+  assert.equal(validate('harmony', makeHarmony(['blue', 'blue-green', 'green', 'blue-green','blue','green'])).passed, true);
+  assert.equal(validate('harmony', makeHarmony(['red', 'red-orange', 'orange', 'yellow-orange','red','orange'])).passed, true);
+  assert.equal(validate('harmony', makeHarmony(['red', 'red-violet', 'red', 'red-violet','red','red-violet'])).passed, true);
+  assert.equal(validate('harmony', makeHarmony(['blue', 'blue', 'blue', 'blue','blue','blue'], [1, 2, 4, 5,2,4])).passed, true);
 });
 
 test('harmony accepts analogous, monochromatic, and mixed family-lightness palettes while rejecting scattered hues', () => {
   const palette = (entries) => entries.map(([hue, lightness], index) => ({
-    ...phase6cFixtures.harmony.pass.neighborHue[index % 4], id: `family-${index}`, hue, lightness
+    ...phase6cFixtures.harmony.pass.neighborHue[index % 4], id: `family-${index}`, x: 120 + index * 150, hue, lightness
   }));
-  assert.equal(validate('harmony', palette([['red', 3], ['red-orange', 3], ['orange', 3], ['yellow-orange', 3]])).passed, true);
-  assert.equal(validate('harmony', palette([['red', 1], ['red', 2], ['red', 4], ['red', 5]])).passed, true);
-  const mixed = validate('harmony', palette([['red', 2], ['red-orange', 3], ['orange', 3], ['red', 5]]));
+  assert.equal(validate('harmony', palette([['red', 3], ['red-orange', 3], ['orange', 3], ['yellow-orange', 3],['red',3],['orange',3]])).passed, true);
+  assert.equal(validate('harmony', palette([['red', 1], ['red', 2], ['red', 4], ['red', 5],['red',2],['red',4]])).passed, true);
+  const mixed = validate('harmony', palette([['red', 2], ['red-orange', 3], ['orange', 3], ['red', 5],['red-orange',2],['red',4]]));
   assert.equal(mixed.passed, true);
   assert.deepEqual(mixed.detectedMethods, ['mixed']);
   assert.equal(validate('harmony', palette([['red', 2], ['yellow', 3], ['green', 4], ['blue-violet', 5]])).passed, false);
@@ -153,21 +159,23 @@ test('harmony accepts continuous short hue arcs including the reported warm artw
     };
   });
   const cases = [
-    ['blue', 'blue-green', 'green', 'blue-green'],
-    ['red', 'red-orange', 'orange', 'red-orange'],
-    ['red', 'red-orange', 'orange', 'yellow-orange'],
-    ['violet', 'red-violet', 'red', 'red-violet']
+    ['blue', 'blue-green', 'green', 'blue-green','blue','green'],
+    ['red', 'red-orange', 'orange', 'red-orange','red','orange'],
+    ['red', 'red-orange', 'orange', 'yellow-orange','red','orange'],
+    ['violet', 'red-violet', 'red', 'red-violet','violet','red']
   ];
   for (const hues of cases) assert.equal(validate('harmony', payload(hues)).passed, true, hues.join('/'));
 
-  const reportedArtwork = payload(['red', 'orange', 'yellow-orange', 'yellow']);
+  const reportedArtwork = payload(['red', 'orange', 'yellow-orange', 'yellow','red-orange','orange']);
   const result = validate('harmony', reportedArtwork);
   assert.equal(result.passed, true);
   assert.deepEqual(reportedArtwork.map(({ colorId, hueFamily, hueIndex, lightnessLevel }) => ({ colorId, hueFamily, hueIndex, lightnessLevel })), [
     { colorId: 'red-3', hueFamily: 'red', hueIndex: 0, lightnessLevel: 3 },
     { colorId: 'orange-3', hueFamily: 'orange', hueIndex: 2, lightnessLevel: 3 },
     { colorId: 'yellow-orange-3', hueFamily: 'yellow-orange', hueIndex: 3, lightnessLevel: 3 },
-    { colorId: 'yellow-3', hueFamily: 'yellow', hueIndex: 4, lightnessLevel: 3 }
+    { colorId: 'yellow-3', hueFamily: 'yellow', hueIndex: 4, lightnessLevel: 3 },
+    { colorId: 'red-orange-3', hueFamily: 'red-orange', hueIndex: 1, lightnessLevel: 3 },
+    { colorId: 'orange-3', hueFamily: 'orange', hueIndex: 2, lightnessLevel: 3 }
   ]);
   assert.equal(result.metrics.bestHueArc.coverage, 1);
   assert.equal(result.metrics.bestHueArc.span, 4);

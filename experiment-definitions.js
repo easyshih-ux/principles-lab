@@ -117,7 +117,7 @@ export const experimentDefinitions = Object.freeze([
     id: 'experiment-unity', principleId: 'unity', title: '統一實驗',
     task: '安排不同造形，讓它們因共同特徵看起來像同一家族。',
     studentConcept: '讓不同造形看起來像同一家族。',
-    allowedTools: { addShape: true, color: true, position: true, rotation: true, duplicate: true, delete: true },
+    allowedTools: { addShape: true, size: true, color: true, position: true, rotation: true, duplicate: true, delete: true },
     experimentOptions: { unityModes: ['color', 'rotation', 'shapeFeature', 'lineStyle'] },
     validatorId: experimentValidatorIds.unity,
     validationSpec: { allowedUnityModes: ['color', 'rotation', 'shapeFeature', 'lineStyle'], requiredUnityRatio: 0.75 },

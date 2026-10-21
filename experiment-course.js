@@ -1,17 +1,20 @@
-import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js?v=geometry-aspect-1';
-import { GeometryControlPanel } from './geometry/control-panel.js';
-import { ConstrainedGeometryEngine } from './geometry/constrained-engine.js';
-import { GEOMETRY_SHAPES } from './geometry/config.js';
-import { getExperimentState } from './experiment-session.js';
+import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js?v=gate4-contrast-2';
+import { GeometryControlPanel } from './geometry/control-panel.js?v=gate4-contrast-2';
+import { ConstrainedGeometryEngine } from './geometry/constrained-engine.js?v=gate4-contrast-2';
+import { GEOMETRY_SHAPES } from './geometry/config.js?v=gate4-contrast-2';
+import { getExperimentState } from './experiment-session.js?v=gate3-validation-1';
 import {
   advancePhase6c,
   canAdvancePhase6c,
+  invalidatePhase6cValidationIfChanged,
   resetPhase6cExperiment,
-  submitPhase6cExperiment
-} from './phase6c-course-state.js?v=balance-asymmetry-2';
-import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=balance-asymmetry-2';
+  selectPhase6cExperimentOption,
+  submitPhase6cExperiment,
+  updatePhase6cWorkingElements
+} from './phase6c-course-state.js?v=gate3-validation-1';
+import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4-contrast-2';
 import { phase6cFixtures } from './phase6c-fixtures.js';
-import { validatePhase6cExperiment } from './phase6c-validators.js?v=balance-asymmetry-2';
+import { validatePhase6cExperiment } from './phase6c-validators.js?v=gate4-contrast-2';
 import { resolveDiagnosticHint } from './experiment-hints.js';
 import { principles as principleMetadata } from './data.js';
 import { syncCourseCompletion } from './state.js';
@@ -55,15 +58,30 @@ export function nextHash(definition) {
   return next ? `#level/experiment/${next.principleId}` : '#level/experiment/complete';
 }
 
+function reminderMarkup(result) {
+  return result?.reminder ? `<p class="experiment-feedback-note"><strong>小提醒</strong>${result.reminder}</p>` : '';
+}
+
 export function feedbackMarkup(definition, feedback) {
-  if (!feedback) return '<p>完成構圖後，再按「檢查構圖」。</p>';
+  if (!feedback) {
+    return definition.creationTips
+      ? `<p class="experiment-feedback-label">創作提示</p><p>${definition.creationTips}</p>`
+      : '<p>完成構圖後，再按「檢查構圖」。</p>';
+  }
+  if (feedback.stale) return '<p class="experiment-feedback-label">作品已更新</p><p>作品有新的變化，請再按一次檢查。</p>';
   if (!feedback.result.passed) {
-    return `<p class="experiment-feedback-label">再觀察一下</p><p>${feedback.hint?.text ?? '再觀察構圖中的變化。'}</p>`;
+    // A specific description already names the shape and the next step, so it replaces the general hint.
+    const body = feedback.result.studentDetail
+      ? `<p class="experiment-feedback-detail">${feedback.result.studentDetail}</p>`
+      : `<p>${feedback.hint?.text ?? '再觀察構圖中的變化。'}</p>`;
+    return `<p class="experiment-feedback-label">再觀察一下</p>${body}${reminderMarkup(feedback.result)}`;
   }
   const methods = feedback.result.detectedMethods;
   const method = methods.includes('multiple') || methods.includes('mixed') ? methods[0] : methods[0];
   const success = definition.successFeedback.byMethod[method] ?? definition.successFeedback.general;
   const discovery = definition.discoveryFeedback[method] ?? definition.discoveryFeedback.general ?? '';
+  // A centre-line reminder replaces the discovery note so the success message still fits on an iPad.
+  if (feedback.result.reminder) return `<p class="experiment-feedback-label success">成功！</p><p>${success}</p>${reminderMarkup(feedback.result)}`;
   return `<p class="experiment-feedback-label success">成功！</p><p>${success}</p>${discovery ? `<p class="experiment-discovery"><strong>小發現</strong>${discovery}</p>` : ''}`;
 }
 
@@ -73,7 +91,7 @@ export function experimentActionsMarkup(course, definition, feedback) {
     const label = definition.principleId === 'simplicity' ? '完成視覺實驗室' : '下一個挑戰';
     return `${reset}<button type="button" class="primary-button" id="experiment-next">${label}</button>`;
   }
-  const label = feedback && !feedback.result.passed ? '再次檢查' : '檢查構圖';
+  const label = feedback?.stale || (feedback && !feedback.result.passed) ? '再次檢查' : '檢查構圖';
   return `${reset}<button type="button" class="primary-button" id="experiment-check">${label}</button>`;
 }
 
@@ -102,6 +120,7 @@ export function createExperimentCourseRenderers({ app, state, navigate, onCheckp
   function experiment(definition) {
     destroy();
     const experimentState = getExperimentState(state.experimentCourse, definition.id);
+    invalidatePhase6cValidationIfChanged(state.experimentCourse, definition);
     const feedback = state.experimentCourse.feedbackById[definition.id];
     const index = phase6cDefinitions.findIndex((item) => item.id === definition.id);
     const hasRightTools = definition.allowedTools.rotation || definition.allowedTools.duplicate || definition.allowedTools.delete || definition.allowedTools.grid || definition.principleId === 'symmetry';
@@ -137,19 +156,25 @@ export function createExperimentCourseRenderers({ app, state, navigate, onCheckp
       allowedTools: definition.allowedTools,
       grid: definition.initialState.gridConfig ?? undefined,
       nonDeletableElementIds: definition.initialState.nonDeletableElementIds ?? [],
-      toolConstraints: { rotation: { allowedValues: definition.principleId === 'symmetry' ? [0,45,90,135,180,225,270,315] : [0,45,90,135], defaultValue: 0 } }
+      toolConstraints: { rotation: { allowedValues: ['symmetry', 'repetition'].includes(definition.principleId) ? [0,45,90,135,180,225,270,315] : [0,45,90,135], defaultValue: 0 } }
     });
     let panels = [];
     const sync = () => {
-      experimentState.workingElements = engine.getState().elements;
+      const invalidated = updatePhase6cWorkingElements(state.experimentCourse, definition, engine.getState().elements);
       experimentState.historyRef = engine.history;
       panels.forEach((panel) => panel.render());
+      return invalidated;
     };
-    const canvas = new ConstrainedGeometryCanvas({ container: document.querySelector('#experiment-canvas'), engine, grid: definition.principleId === 'symmetry' ? { ...definition.initialState.gridConfig, axis: experimentState.selectedExperimentOption } : { enabled: false }, onStateChange: sync });
+    const refreshAfterStateChange = () => {
+      if (!sync()) return false;
+      experiment(definition);
+      return true;
+    };
+    const canvas = new ConstrainedGeometryCanvas({ container: document.querySelector('#experiment-canvas'), engine, grid: definition.principleId === 'symmetry' ? { ...definition.initialState.gridConfig, axis: experimentState.selectedExperimentOption } : { enabled: false }, onStateChange: refreshAfterStateChange });
     const panelOptions = {
       engine,
       onVisualChange: () => canvas.render(),
-      onStateChange: () => { sync(); canvas.render(); },
+      onStateChange: () => { if (!refreshAfterStateChange()) canvas.render(); },
       onActionResult: (result, action) => {
         if (action === 'delete' && result?.reason === 'protected-element') {
           document.querySelector('#experiment-feedback').innerHTML = '<p class="experiment-feedback-label">保留重要元素</p><p>這是構圖的重要元素，要想辦法保留下來。</p>';
@@ -162,10 +187,13 @@ export function createExperimentCourseRenderers({ app, state, navigate, onCheckp
     ];
     active = { canvas, engine, panels };
 
-    document.querySelectorAll('[data-symmetry-mode]').forEach((button) => button.addEventListener('click', () => { experimentState.selectedExperimentOption = button.dataset.symmetryMode; experiment(definition); }));
+    document.querySelectorAll('[data-symmetry-mode]').forEach((button) => button.addEventListener('click', () => {
+      selectPhase6cExperimentOption(state.experimentCourse, definition, button.dataset.symmetryMode);
+      experiment(definition);
+    }));
     document.querySelectorAll('[data-add-shape]').forEach((button) => button.addEventListener('click', () => {
       engine.add(button.dataset.addShape, { x: 500, y: 300 });
-      sync(); canvas.render();
+      if (!refreshAfterStateChange()) canvas.render();
     }));
     document.querySelector('#experiment-back').addEventListener('click', () => navigate('#principles'));
     document.querySelector('#experiment-reset').addEventListener('click', () => {

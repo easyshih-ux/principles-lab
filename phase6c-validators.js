@@ -1,5 +1,6 @@
-import { getLogicalSize } from './geometry/palette.js';
-import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js';
+import { getLogicalSize } from './geometry/palette.js?v=gate4-contrast-2';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4-contrast-2';
+import { auditComposition } from './composition-audit.js';
 
 function response(passed, code, metrics, detectedMethods = []) {
   const fulfilledConditions = passed ? ['指定形式原理已成立'] : [];
@@ -13,123 +14,334 @@ function response(passed, code, metrics, detectedMethods = []) {
   };
 }
 
-function signature(element, fields) {
-  return fields.map((field) => `${field}:${element[field]}`).join('|');
+// Gate 4 repetition: students design a unit (two or more different shapes,
+// overlapping allowed) and repeat it at least five times. Every unit must have
+// the same shapes, colours, sizes and arrangement (turning or flipping the
+// whole unit still counts), and every shape on the canvas must belong to a unit.
+const UNIT_ROTATION_PERIOD = Object.freeze({ circle: 0, square: 90, rectangle: 180, line: 180, triangle: 360, semicircle: 360 });
+const UNIT_SHAPE_LABELS = Object.freeze({ circle: '圓形', square: '正方形', triangle: '三角形', rectangle: '長方形', semicircle: '半圓', line: '線條' });
+const UNIT_HUE_LABELS = Object.freeze({
+  red: '紅色', 'red-orange': '紅橙色', orange: '橙色', 'yellow-orange': '橘色', yellow: '黃色', 'yellow-green': '黃綠色',
+  green: '綠色', 'blue-green': '藍綠色', blue: '藍色', 'blue-violet': '藍紫色', violet: '紫色', 'red-violet': '紅紫色'
+});
+const UNIT_TRANSFORMS = Object.freeze([0, 45, 90, 135, 180, 225, 270, 315].flatMap((angle) => [{ angle, flip: false }, { angle, flip: true }]));
+const unitKind = (item) => `${item.shape}|${item.size}|${item.hue}|${item.lightness}`;
+const unitPeriod = (item) => UNIT_ROTATION_PERIOD[item.shape] ?? 360;
+const unitVisibleRotation = (item, rotation = item.rotation ?? 0) => {
+  const period = unitPeriod(item);
+  return period === 0 ? null : ((rotation % period) + period) % period;
+};
+const unitLook = (item) => `${unitKind(item)}@${unitVisibleRotation(item)}`;
+function unitGap(first, second) {
+  const radius = (item) => getLogicalSize(item.size) / 2;
+  return Math.hypot(second.x - first.x, second.y - first.y) - radius(first) - radius(second);
 }
-
-export function validateFormalRepetition({ elements = [], spec = {} }) {
-  const fields = spec.signatureFields ?? ['shape', 'size', 'hue', 'lightness', 'rotation'];
-  const required = spec.minimumOccurrences ?? 3;
-  const counts = new Map();
-  elements.forEach((item) => counts.set(signature(item, fields), (counts.get(signature(item, fields)) ?? 0) + 1));
-  const maximumSingle = Math.max(0, ...counts.values());
-  const pairPatterns = new Map();
-  if (spec.allowGroupUnit !== false) {
-    for (let firstIndex = 0; firstIndex < elements.length; firstIndex += 1) {
-      for (let secondIndex = firstIndex + 1; secondIndex < elements.length; secondIndex += 1) {
-        let first = elements[firstIndex];
-        let second = elements[secondIndex];
-        const firstSignature = signature(first, fields);
-        const secondSignature = signature(second, fields);
-        if (firstSignature === secondSignature) continue;
-        if (firstSignature > secondSignature) [first, second] = [second, first];
-        const distance = Math.hypot(second.x - first.x, second.y - first.y);
-        if (distance > (spec.groupDistance ?? 180)) continue;
-        const tolerance = spec.groupOffsetTolerance ?? 20;
-        const dx = Math.round((second.x - first.x) / tolerance);
-        const dy = Math.round((second.y - first.y) / tolerance);
-        const key = `${signature(first, fields)}+${signature(second, fields)}@${dx},${dy}`;
-        const groups = pairPatterns.get(key) ?? [];
-        groups.push([first.id, second.id]);
-        pairPatterns.set(key, groups);
-      }
+function clustersAt(elements, linkGap) {
+  const parent = new Map(elements.map((item) => [item.id, item.id]));
+  const find = (id) => (parent.get(id) === id ? id : find(parent.get(id)));
+  for (let i = 0; i < elements.length; i += 1) {
+    for (let j = i + 1; j < elements.length; j += 1) {
+      if (unitGap(elements[i], elements[j]) <= linkGap) parent.set(find(elements[i].id), find(elements[j].id));
     }
   }
-  const maximumGroup = Math.max(0, ...[...pairPatterns.values()].map((groups) => groups.length));
-  const metrics = { requiredOccurrences: required, maximumSingle, maximumGroup };
-  if (maximumGroup >= required) return response(true, 'valid', metrics, ['group']);
-  if (maximumSingle >= required) return response(true, 'valid', metrics, ['single']);
-  const nearRepeat = Math.max(maximumSingle, maximumGroup);
-  const code = nearRepeat === 2 ? 'NOT_ENOUGH_REPETITION'
-    : elements.length >= 4 ? 'INCONSISTENT_REPEAT' : 'NO_REPEAT_UNIT';
-  return response(false, code, metrics);
+  const groups = new Map();
+  elements.forEach((item) => { const root = find(item.id); groups.set(root, [...(groups.get(root) ?? []), item]); });
+  return [...groups.values()];
 }
-
-function trendFromDifferences(differences) {
-  if (!differences.length) return { direction: null, turnCount: 0 };
-  const signs = differences.map(Math.sign);
-  if (signs.some((sign) => sign === 0)) return { direction: null, turnCount: 0 };
-  const runs = signs.filter((sign, index) => index === 0 || sign !== signs[index - 1]);
-  const turnCount = Math.max(0, runs.length - 1);
-  if (runs.length === 1) {
-    return { direction: runs[0] > 0 ? 'ascending' : 'descending', turnCount };
-  }
-  if (runs.length === 2) {
-    return { direction: runs[0] > 0 ? 'single-peak' : 'single-valley', turnCount };
-  }
-  return { direction: null, turnCount };
-}
-
-function gradationTrend(values) {
-  if (values.length < 2) return { direction: null, turnCount: 0 };
-  return trendFromDifferences(values.slice(1).map((value, index) => value - values[index]));
-}
-
-function hueGradationTrend(hues, maximumStep = 1) {
-  const indexes = hues.map((hue) => HUE_FAMILIES.indexOf(hue));
-  if (indexes.length < 2 || indexes.some((index) => index < 0)) {
-    return { direction: null, turnCount: 0, steps: [], range: 0 };
-  }
-  const count = HUE_FAMILIES.length;
-  const steps = indexes.slice(1).map((index, position) => {
-    const raw = index - indexes[position];
-    return ((raw + count / 2) % count + count) % count - count / 2;
+const centroid = (items) => ({ x: items.reduce((sum, item) => sum + item.x, 0) / items.length, y: items.reduce((sum, item) => sum + item.y, 0) / items.length });
+function sameUnit(template, candidate, tolerance) {
+  if (template.length !== candidate.length) return false;
+  const templateCenter = centroid(template);
+  const candidateCenter = centroid(candidate);
+  return UNIT_TRANSFORMS.some(({ angle, flip }) => {
+    const radians = (angle * Math.PI) / 180;
+    const used = new Set();
+    return template.every((item) => {
+      const dx = (flip ? -1 : 1) * (item.x - templateCenter.x);
+      const dy = item.y - templateCenter.y;
+      const expected = { x: candidateCenter.x + dx * Math.cos(radians) - dy * Math.sin(radians), y: candidateCenter.y + dx * Math.sin(radians) + dy * Math.cos(radians) };
+      const rotation = unitVisibleRotation(item, (flip ? -(item.rotation ?? 0) : (item.rotation ?? 0)) + angle);
+      const match = candidate.find((other) => !used.has(other.id) && unitKind(other) === unitKind(item)
+        && unitVisibleRotation(other) === rotation
+        && Math.hypot(other.x - expected.x, other.y - expected.y) <= tolerance);
+      if (!match) return false;
+      used.add(match.id);
+      return true;
+    });
   });
-  if (steps.some((step) => step === 0 || Math.abs(step) > maximumStep)) {
-    return { direction: null, turnCount: 0, steps, range: 0 };
+}
+function unitClasses(clusters, tolerance) {
+  const classes = [];
+  for (const cluster of clusters) {
+    const home = classes.find((group) => sameUnit(group[0], cluster, tolerance));
+    if (home) home.push(cluster); else classes.push([cluster]);
   }
-  const trend = trendFromDifferences(steps);
-  const cumulative = steps.reduce((positions, step) => [...positions, positions.at(-1) + step], [0]);
-  return { ...trend, steps, range: range(cumulative) };
+  return classes;
+}
+const isUnitCandidate = (cluster) => new Set(cluster.map(unitLook)).size >= 2;
+function unitPosition(point, spec) {
+  const width = spec.canvasWidth ?? 1000;
+  const height = spec.canvasHeight ?? 600;
+  const column = point.x < width / 3 ? 0 : point.x > (width * 2) / 3 ? 2 : 1;
+  const row = point.y < height / 3 ? 0 : point.y > (height * 2) / 3 ? 2 : 1;
+  return [['左上角', '上方', '右上角'], ['左邊', '中間', '右邊'], ['左下角', '下方', '右下角']][row][column];
+}
+function unitShapeName(item, elements) {
+  const sameLook = elements.filter((other) => other.shape === item.shape && other.hue === item.hue);
+  const sizeWord = new Set(sameLook.map((other) => other.size)).size > 1 ? (item.size >= 4 ? '大' : item.size <= 2 ? '小' : '中型') : '';
+  const lightWord = item.lightness <= 2 ? '深' : item.lightness >= 4 ? '淺' : '';
+  return `${sizeWord}${lightWord}${UNIT_HUE_LABELS[item.hue] ?? ''}${UNIT_SHAPE_LABELS[item.shape] ?? '造形'}`;
+}
+function kindDifference(template, cluster) {
+  const remaining = [...cluster];
+  const missing = [];
+  template.forEach((item) => {
+    const index = remaining.findIndex((other) => unitKind(other) === unitKind(item));
+    if (index >= 0) remaining.splice(index, 1); else missing.push(item);
+  });
+  return { missing, extra: remaining };
+}
+const listNames = (items, elements) => [...new Set(items.map((item) => unitShapeName(item, elements)))].join('和');
+
+export function validateFormalRepetition({ elements = [], spec = {} }) {
+  const requiredUnits = spec.minimumUnits ?? 5;
+  const tolerance = spec.unitPositionTolerance ?? 24;
+  const linkGaps = spec.unitLinkGaps ?? [0, 10, 20, 30, 40];
+  const layouts = linkGaps.map((linkGap) => {
+    const clusters = clustersAt(elements, linkGap);
+    const classes = unitClasses(clusters, tolerance).sort((a, b) => b.length - a.length);
+    const main = classes.find((group) => isUnitCandidate(group[0])) ?? null;
+    return { linkGap, clusters, classes, main };
+  });
+  const passing = layouts.find(({ clusters, classes, main }) => main && classes.length === 1 && main.length === clusters.length && main.length >= requiredUnits);
+  const best = passing ?? [...layouts].sort((a, b) => (b.main?.length ?? 0) - (a.main?.length ?? 0) || a.linkGap - b.linkGap)[0];
+  const metrics = { requiredUnits, unitCount: best?.main?.length ?? 0, unitSize: best?.main?.[0]?.length ?? 0, linkGap: best?.linkGap ?? null, clusterCount: best?.clusters.length ?? 0, elementCount: elements.length };
+  if (passing) return response(true, 'valid', metrics, ['unit']);
+  const fail = (code, studentDetail) => ({ ...response(false, code, metrics), studentDetail });
+  const where = (items) => unitPosition(centroid(items), spec);
+  const name = (item) => unitShapeName(item, elements);
+
+  if (!elements.length) return fail('NO_REPEAT_UNIT', '先設計一個單元：把兩種以上的造形組合在一起。');
+  const { clusters, main } = best;
+  if (!main || main.length < 2) {
+    const candidates = clusters.filter(isUnitCandidate);
+    if (candidates.length === 1 && clusters.length === 1 && candidates[0].length >= 4
+      && [...new Set(candidates[0].map(unitLook))].every((look) => candidates[0].filter((item) => unitLook(item) === look).length >= 2)) {
+      return fail('UNITS_TOUCHING', '單元和單元黏在一起了，看不出每個單元在哪裡。在單元和單元之間留一點空隙。');
+    }
+    if (main && main.length === 1 && clusters.length === 1) return fail('NOT_ENOUGH_REPETITION', `目前有 1 個單元，再做 ${requiredUnits - 1} 個就完成了。`);
+    const looks = elements.map(unitLook);
+    if (looks.some((look, index) => looks.indexOf(look) !== index)) return fail('NOT_GROUPED_INTO_UNITS', '你的造形已經反覆出現了！下一步：把它們組成一個單元，讓每個單元都一樣，就能完成這一關。');
+    return fail('NO_REPEAT_UNIT', '先設計一個單元：把兩種以上的造形組合在一起，再讓這個單元反覆出現。');
+  }
+  const template = main[0];
+  const others = clusters.filter((cluster) => !main.includes(cluster));
+  const single = others.find((cluster) => cluster.length === 1);
+  if (single) return fail('OUTSIDE_UNIT', `${where(single)}有一個${name(single[0])}不屬於任何單元。可以刪除它，或把它加進單元裡。`);
+  const merged = others.find((cluster) => cluster.length >= template.length * 2 && kindDifference(template, cluster).missing.length === 0);
+  if (merged) return fail('UNITS_TOUCHING', `${where(merged)}有單元黏在一起了。在單元和單元之間留一點空隙，讓每個單元都看得出來。`);
+  for (const cluster of others) {
+    const { missing, extra } = kindDifference(template, cluster);
+    if (missing.length && !extra.length) return fail('UNIT_MISSING_SHAPE', `${where(cluster)}有一個單元少了${listNames(missing, elements)}。補上之後，讓它和其他單元一樣。`);
+    if (extra.length && !missing.length) return fail('UNIT_EXTRA_SHAPE', `${where(cluster)}有一個單元多了${listNames(extra, elements)}。拿掉它，讓這個單元和其他單元一樣。`);
+  }
+  const shapesOnly = (items) => items.map((item) => item.shape).sort().join('+');
+  for (const cluster of others) {
+    if (shapesOnly(cluster) === shapesOnly(template) && kindDifference(template, cluster).missing.length) {
+      return fail('UNIT_COLOR_SIZE_DIFFERENT', `${where(cluster)}那個單元的顏色或大小，和其他單元不一樣。調整之後，讓它和其他單元一樣。`);
+    }
+    if (!kindDifference(template, cluster).missing.length) {
+      return fail('UNIT_ARRANGEMENT_DIFFERENT', `${where(cluster)}那個單元的排法和其他單元不一樣。試著排得和其他單元一樣；整組轉方向或翻過來都可以。`);
+    }
+  }
+  if (others.length) return fail('UNIT_DIFFERENT', `${where(others[0])}那組造形和其他單元不一樣。試著把它改成和其他單元一樣。`);
+  return fail('NOT_ENOUGH_REPETITION', `目前有 ${main.length} 個單元，再做 ${requiredUnits - main.length} 個就完成了。`);
 }
 
 function range(values) {
   return values.length ? Math.max(...values) - Math.min(...values) : 0;
 }
 
-export function validateFormalGradation({ elements = [], spec = {} }) {
-  const ordered = [...elements].sort((a, b) => a.x - b.x || a.y - b.y);
-  const minimumStages = spec.minimumStages ?? 4;
-  const values = {
-    size: ordered.map((item) => item.size),
-    lightness: ordered.map((item) => item.lightness),
-    hue: ordered.map((item) => item.hueFamily ?? item.hue),
-    spacing: ordered.slice(1).map((item, index) => item.x - ordered[index].x)
-  };
-  const thresholds = {
-    size: spec.minimumSizeRange ?? 2,
-    lightness: spec.minimumLightnessRange ?? 2,
-    hue: spec.minimumHueRange ?? 2,
-    spacing: spec.minimumSpacingRange ?? 35
-  };
-  const modes = {};
-  for (const mode of spec.allowedModes ?? ['size', 'lightness', 'hue', 'spacing']) {
-    const enough = ordered.length >= minimumStages && (mode !== 'spacing' || values.spacing.length >= minimumStages - 1);
-    const trend = mode === 'hue'
-      ? hueGradationTrend(values.hue, spec.maximumHueStep ?? 1)
-      : gradationTrend(values[mode]);
-    const modeRange = mode === 'hue' ? trend.range : range(values[mode]);
-    modes[mode] = { values: values[mode], ...trend, range: modeRange, enough };
-    modes[mode].passed = enough && Boolean(modes[mode].direction) && modes[mode].range >= thresholds[mode];
+// Gate 4 gradation: at least seven stages (counted by position along the
+// arrangement) with at least two changes happening together. Each change may
+// run one way, or rise then fall (one peak) / fall then rise; more ups and downs
+// are rhythm, not gradation. Any path works: row, column, diagonal, arc, S-curve,
+// or a ring that can be cut somewhere into a valid gradation. No decorations.
+const GRADATION_CHANNEL_LABELS = Object.freeze({ size: '大小', lightness: '深淺', hue: '色相', spacing: '間距' });
+const GRADATION_SHAPE_LABELS = Object.freeze({ circle: '圓形', square: '正方形', triangle: '三角形', rectangle: '長方形', semicircle: '半圓', line: '線條' });
+const GRADATION_HUE_LABELS = Object.freeze({
+  red: '紅色', 'red-orange': '紅橙色', orange: '橙色', 'yellow-orange': '黃橙色', yellow: '黃色', 'yellow-green': '黃綠色',
+  green: '綠色', 'blue-green': '藍綠色', blue: '藍色', 'blue-violet': '藍紫色', violet: '紫色', 'red-violet': '紅紫色'
+});
+const gradationSize = (item) => item.stepSize ?? item.size;
+const gradationLightness = (item) => item.stepLightness ?? item.lightness;
+const gradationRadius = (item) => (Number.isFinite(item.logicalSize) ? item.logicalSize : getLogicalSize(item.size)) / 2;
+const pointDistance = (first, second) => Math.hypot(second.x - first.x, second.y - first.y);
+
+function greedyPath(elements, start) {
+  const path = [start];
+  const left = new Set(elements.filter((item) => item !== start));
+  while (left.size) {
+    const last = path.at(-1);
+    const next = [...left].sort((a, b) => pointDistance(last, a) - pointDistance(last, b))[0];
+    path.push(next); left.delete(next);
   }
-  const detected = Object.entries(modes).filter(([, data]) => data.passed).map(([mode]) => mode);
-  const metrics = { modes, stageCount: ordered.length };
-  if (detected.length) return response(true, 'valid', metrics, detected.length > 1 ? ['multiple', ...detected] : detected);
-  if (ordered.length < minimumStages) return response(false, 'TOO_FEW_STAGES', metrics);
-  const changing = Object.values(modes).filter((data) => new Set(data.values).size > 1);
-  if (changing.some((data) => !data.direction)) return response(false, 'DIRECTION_BREAK', metrics);
-  if (changing.some((data) => data.direction && data.range > 0)) return response(false, 'CHANGE_TOO_SUBTLE', metrics);
-  return response(false, 'NO_CLEAR_GRADATION', metrics);
+  return path;
+}
+// A walk is a believable line when it never suddenly hops much further than the step before
+// (a stray decoration) and never makes a hairpin turn (shapes scattered around the canvas).
+function smoothWalk(path) {
+  const steps = path.slice(1).map((item, index) => pointDistance(path[index], item));
+  for (let index = 1; index < steps.length; index += 1) {
+    const ratio = Math.max(steps[index], 1) / Math.max(steps[index - 1], 1);
+    if (ratio > 2.6 || ratio < 1 / 2.6) return false;
+    const [a, b, c] = [path[index - 1], path[index], path[index + 1]];
+    const cosine = ((b.x - a.x) * (c.x - b.x) + (b.y - a.y) * (c.y - b.y)) / (Math.max(steps[index - 1], 1) * Math.max(steps[index], 1));
+    if (cosine < -0.2) return false;
+  }
+  return true;
+}
+function plausiblePaths(elements) {
+  const seen = new Set();
+  const paths = [];
+  for (const start of elements) {
+    const path = greedyPath(elements, start);
+    const steps = path.slice(1).map((item, index) => pointDistance(path[index], item));
+    if (!smoothWalk(path)) continue;
+    const key = path.map((item) => item.id).join('>');
+    const reverse = [...path].reverse().map((item) => item.id).join('>');
+    if (seen.has(key) || seen.has(reverse)) continue;
+    seen.add(key); paths.push(path);
+  }
+  // Keep only the shortest walks: a walk that doubles back is never the arrangement a student sees.
+  const lengthOf = (path) => path.slice(1).reduce((sum, item, index) => sum + pointDistance(path[index], item), 0);
+  const shortest = Math.min(...paths.map(lengthOf));
+  paths.splice(0, paths.length, ...paths.filter((path) => lengthOf(path) <= shortest * 1.1 + 1));
+  const ring = paths.length > 0 && (() => {
+    const path = paths[0];
+    const steps = path.slice(1).map((item, index) => pointDistance(path[index], item));
+    return elements.length >= 5 && pointDistance(path[0], path.at(-1)) <= Math.max(...steps) * 1.5;
+  })();
+  return { paths, ring };
+}
+
+// One change along the path: every step must move (no pauses), and the direction may turn at most once.
+function channelShape(values, { hue = false, maximumHueStep = 1 } = {}) {
+  let steps;
+  if (hue) {
+    const count = HUE_FAMILIES.length;
+    const indexes = values.map((value) => HUE_FAMILIES.indexOf(value));
+    if (indexes.some((index) => index < 0)) return { changing: false };
+    steps = indexes.slice(1).map((index, position) => (((index - indexes[position]) + count / 2) % count + count) % count - count / 2);
+  } else {
+    steps = values.slice(1).map((value, index) => value - values[index]);
+  }
+  const changing = steps.some((step) => step !== 0);
+  const pauseAt = steps.findIndex((step) => step === 0);
+  const jumpAt = hue ? steps.findIndex((step) => Math.abs(step) > maximumHueStep) : -1;
+  const signs = steps.map(Math.sign).filter(Boolean);
+  const turns = signs.filter((sign, index) => index > 0 && sign !== signs[index - 1]).length;
+  const cumulative = steps.reduce((positions, step) => [...positions, positions.at(-1) + step], [0]);
+  return { changing, steps, pauseAt, jumpAt, turns, range: range(hue ? cumulative : values), valid: changing && pauseAt < 0 && jumpAt < 0 && turns <= 1 };
+}
+
+function evaluatePath(path, spec) {
+  const thresholds = { size: spec.minimumSizeRange ?? 2, lightness: spec.minimumLightnessRange ?? 2, hue: spec.minimumHueRange ?? 2, spacing: spec.minimumSpacingRange ?? 60 };
+  const channels = {
+    size: channelShape(path.map(gradationSize)),
+    lightness: channelShape(path.map(gradationLightness)),
+    hue: channelShape(path.map((item) => item.hueFamily ?? item.hue), { hue: true, maximumHueStep: spec.maximumHueStep ?? 1 })
+  };
+  const centres = path.slice(1).map((item, index) => pointDistance(path[index], item));
+  const gaps = path.slice(1).map((item, index) => centres[index] - gradationRadius(item) - gradationRadius(path[index]));
+  // Spacing is read in grid-sized steps so small differences from placing shapes by hand are ignored.
+  const centreShape = channelShape(centres.map((value) => Math.round(value / 20)));
+  const gapShape = channelShape(gaps.map((value) => Math.round(value / 20)));
+  const disagreeAt = centreShape.steps.findIndex((step, index) => Math.sign(step) !== Math.sign(gapShape.steps[index]));
+  // Spacing counts only when the gaps between shapes really change, so resizing alone never counts twice.
+  channels.spacing = { ...centreShape, changing: centreShape.changing && gapShape.changing && range(centres) >= (spec.minimumSpacingRange ?? 60), disagreeAt, valid: centreShape.valid && gapShape.valid && disagreeAt < 0, range: range(centres) };
+  for (const [name, channel] of Object.entries(channels)) channel.passed = channel.valid && channel.range >= thresholds[name];
+  const passed = Object.entries(channels).filter(([, channel]) => channel.passed).map(([name]) => name);
+  return { path, channels, passed };
+}
+
+function describeShape(item) {
+  return `${GRADATION_HUE_LABELS[item.hueFamily ?? item.hue] ?? ''}${GRADATION_SHAPE_LABELS[item.shape] ?? '造形'}`;
+}
+function positionName(item, spec) {
+  const width = spec.canvasWidth ?? 1000; const height = spec.canvasHeight ?? 600;
+  const column = item.x < width / 3 ? 0 : item.x > (width * 2) / 3 ? 2 : 1;
+  const row = item.y < height / 3 ? 0 : item.y > (height * 2) / 3 ? 2 : 1;
+  return [['左上角', '上方', '右上角'], ['左邊', '中間', '右邊'], ['左下角', '下方', '右下角']][row][column];
+}
+// Count stages from the end a student would read first, and name that end.
+function orientPath(path) {
+  const [first, last] = [path[0], path.at(-1)];
+  const dx = last.x - first.x; const dy = last.y - first.y;
+  if (Math.abs(dx) >= Math.abs(dy) * 2) return dx >= 0 ? { path, from: '左邊' } : { path: [...path].reverse(), from: '左邊' };
+  if (Math.abs(dy) >= Math.abs(dx) * 2) return dy >= 0 ? { path, from: '上面' } : { path: [...path].reverse(), from: '上面' };
+  const start = first.x <= last.x ? first : last;
+  const ordered = start === first ? path : [...path].reverse();
+  const end = ordered.at(-1);
+  return { path: ordered, from: `${start.y <= end.y ? '左上' : '左下'}那一端` };
+}
+
+export function validateFormalGradation({ elements = [], spec = {} }) {
+  const minimumStages = spec.minimumStages ?? 7;
+  const requiredChannels = spec.minimumChannels ?? 2;
+  const metrics = { stageCount: elements.length, minimumStages, requiredChannels };
+  const fail = (code, studentDetail, extra = {}) => ({ ...response(false, code, { ...metrics, ...extra }), studentDetail });
+  if (!elements.length) return fail('TOO_FEW_STAGES', '先放入造形，再讓它們一個接一個慢慢改變。');
+  if (elements.length < minimumStages) return fail('TOO_FEW_STAGES', `目前有 ${elements.length} 個階段，再增加 ${minimumStages - elements.length} 個，讓漸層有 ${minimumStages} 個階段。`);
+
+  const { paths, ring } = plausiblePaths(elements);
+  if (!paths.length) {
+    for (const item of elements) {
+      const rest = elements.filter((other) => other !== item);
+      if (rest.length >= minimumStages && plausiblePaths(rest).paths.length) {
+        return fail('NOT_ON_PATH', `${positionName(item, spec)}的${describeShape(item)}不在漸層的路線上。漸層裡的每個造形都是一個階段，把它排進路線，或刪除它。`);
+      }
+    }
+    return fail('NO_CLEAR_PATH', '造形的排列看不出一條路線。把造形排成一條線，直線、斜線或弧線都可以，讓變化一個接一個看下去。');
+  }
+  const candidates = [];
+  for (const path of paths) {
+    const cuts = ring ? path.map((_, index) => [...path.slice(index), ...path.slice(0, index)]) : [path];
+    for (const cut of cuts) candidates.push(evaluatePath(cut, spec));
+  }
+  const best = candidates.sort((a, b) => b.passed.length - a.passed.length)[0];
+  const passedMetrics = { ring, channels: Object.fromEntries(Object.entries(best.channels).map(([name, channel]) => [name, { passed: channel.passed, turns: channel.turns, range: channel.range }])) };
+  if (best.passed.length >= requiredChannels) {
+    return { ...response(true, 'valid', { ...metrics, ...passedMetrics }, ['multiple', ...best.passed]) };
+  }
+
+  const { path: ordered, from } = orientPath(best.path);
+  const reversed = ordered[0] !== best.path[0];
+  const oriented = reversed ? evaluatePath(ordered, spec) : best;
+  const label = (name) => GRADATION_CHANNEL_LABELS[name];
+  const broken = Object.entries(oriented.channels).filter(([, channel]) => channel.changing && !channel.passed);
+  const ringBreak = (name) => (ring ? `圓環上有一處${label(name)}的變化斷掉了。找到那一處，讓變化接得上。` : null);
+  // One message at a time: size, lightness and hue first, spacing last.
+  for (const [name, channel] of broken) {
+    if (channel.turns > 1) {
+      const wave = name === 'lightness' ? '變深又變淺' : name === 'hue' ? '顏色來回變了' : name === 'spacing' ? '間距變大又變小' : '變大又變小';
+      return fail('TOO_MANY_PEAKS', `你的作品${wave}好幾次，像好幾座山連在一起，這比較像律動。漸層只能有一座山喔！`, passedMetrics);
+    }
+    if (name === 'spacing') {
+      const at = channel.pauseAt >= 0 ? channel.pauseAt : channel.disagreeAt;
+      if (at >= 0) return fail('CHANGE_STOPS', ringBreak(name) ?? `從${from}數來第 ${at + 2} 個和第 ${at + 3} 個之間，間距的變化停住了。讓造形之間的空隙繼續變大或變小。`, passedMetrics);
+      continue;
+    }
+    if (channel.pauseAt >= 0) return fail('CHANGE_STOPS', ringBreak(name) ?? `從${from}數來第 ${channel.pauseAt + 2} 個，${label(name)}的變化停住了。`, passedMetrics);
+    if (channel.jumpAt >= 0) return fail('HUE_JUMP', ringBreak(name) ?? `從${from}數來第 ${channel.jumpAt + 2} 個，顏色一下子跳太遠了。換成色相環上相鄰的顏色。`, passedMetrics);
+    if (channel.valid) return fail('CHANGE_TOO_SMALL', `${label(name)}的變化太小了，讓頭尾兩端的差別再大一點。`, passedMetrics);
+  }
+  if (best.passed.length === 1) {
+    const used = best.passed[0];
+    const ideas = ['size', 'lightness', 'spacing', 'hue'].filter((name) => name !== used).slice(0, 2).map(label).join('或');
+    return fail('ONLY_ONE_CHANGE', `目前只有${label(used)}在變化，再加入第二種變化，例如${ideas}。`, passedMetrics);
+  }
+  return fail('NO_CLEAR_GRADATION', '目前看不出一步一步的變化。選兩種變化，例如大小和深淺，從第 1 級到第 7 級一路改變。', passedMetrics);
 }
 
 function area(element) {
@@ -241,7 +453,16 @@ export function validateFormalRhythm({ elements = [], spec = {} }) {
 }
 
 
-const directionalPeriods = Object.freeze({ triangle: 360, semicircle: 360, rectangle: 180, line: 180 });
+// Gate 4 symmetry: mirrored shapes must match in position, shape, size and mirrored direction
+// (colour is free), keep the original pair counts, and show at least four different
+// shape + colour combinations. Shapes on an axis do not count as combinations but must
+// themselves be symmetric about that axis (and, in cross mode, be mirrored on the other axis).
+const directionalPeriods = Object.freeze({ square: 90, triangle: 360, semicircle: 360, rectangle: 180, line: 180 });
+const SYMMETRY_SHAPE_LABELS = Object.freeze({ circle: '圓形', square: '正方形', triangle: '三角形', rectangle: '長方形', semicircle: '半圓', line: '線條' });
+const SYMMETRY_HUE_LABELS = Object.freeze({
+  red: '紅色', 'red-orange': '紅橙色', orange: '橙色', 'yellow-orange': '黃橙色', yellow: '黃色', 'yellow-green': '黃綠色',
+  green: '綠色', 'blue-green': '藍綠色', blue: '藍色', 'blue-violet': '藍紫色', violet: '紫色', 'red-violet': '紅紫色'
+});
 const normalizeAngle = (angle, period = 360) => ((angle % period) + period) % period;
 function mirrorRotation(element, axis) {
   const period = directionalPeriods[element.shape];
@@ -254,34 +475,258 @@ function attributesMatch(source, target, axis) {
   const expected = mirrorRotation(source, axis);
   return expected == null || normalizeAngle(target.rotation ?? 0, directionalPeriods[source.shape]) === expected;
 }
+function attributesMatchAcrossAxes(source, target, axes) {
+  if (source.shape !== target.shape || source.size !== target.size) return false;
+  const period = directionalPeriods[source.shape];
+  if (!period) return true;
+  let reflected = { ...source };
+  for (const axis of axes) reflected.rotation = mirrorRotation(reflected, axis);
+  return normalizeAngle(target.rotation ?? 0, period) === normalizeAngle(reflected.rotation ?? 0, period);
+}
+// A shape sitting on an axis is its own mirror image only if it is symmetric about that axis.
+const selfSymmetric = (item, axis) => attributesMatch(item, item, axis);
+const symmetryName = (item) => `${SYMMETRY_HUE_LABELS[item.hue] ?? ''}${SYMMETRY_SHAPE_LABELS[item.shape] ?? '造形'}`;
+function symmetryPlace(item, spec) {
+  const width = (spec.axisX ?? 500) * 2; const height = (spec.axisY ?? 300) * 2;
+  const column = item.x < width / 3 ? 0 : item.x > (width * 2) / 3 ? 2 : 1;
+  const row = item.y < height / 3 ? 0 : item.y > (height * 2) / 3 ? 2 : 1;
+  return [['左上角', '上方', '右上角'], ['左邊', '中間', '右邊'], ['左下角', '下方', '右下角']][row][column];
+}
+
 function axisAudit(elements, axis, spec) {
   const tolerance = spec.positionTolerance ?? 1;
   const axisX = spec.axisX ?? 500;
   const axisY = spec.axisY ?? 300;
-  let positionMismatch = false;
-  let attributeMismatch = false;
-  let missing = false;
-  for (const source of elements) {
+  const isOnAxis = (item) => axis === 'vertical' ? Math.abs(item.x - axisX) <= tolerance : Math.abs(item.y - axisY) <= tolerance;
+  const onAxis = elements.filter(isOnAxis);
+  const participants = elements.filter((item) => !isOnAxis(item));
+  const sources = participants.filter((item) => axis === 'vertical' ? item.x < axisX : item.y < axisY);
+  const targets = participants.filter((item) => axis === 'vertical' ? item.x > axisX : item.y > axisY);
+  let positionMismatch = null; let attributeMismatch = null; let missing = null;
+  const candidates = sources.map((source) => {
     const expected = axis === 'vertical' ? { x: 2 * axisX - source.x, y: source.y } : { x: source.x, y: 2 * axisY - source.y };
-    const atPosition = elements.filter((target) => Math.abs(target.x - expected.x) <= tolerance && Math.abs(target.y - expected.y) <= tolerance);
-    if (atPosition.some((target) => attributesMatch(source, target, axis))) continue;
-    if (atPosition.length) { attributeMismatch = true; continue; }
-    const correctAttributeElsewhere = elements.some((target) => target.id !== source.id && attributesMatch(source, target, axis));
-    if (correctAttributeElsewhere) positionMismatch = true;
-    else missing = true;
-  }
-  return { passed: !positionMismatch && !attributeMismatch && !missing, positionMismatch, attributeMismatch, missing };
+    const atPosition = targets.map((target, index) => ({ target, index })).filter(({ target }) => Math.abs(target.x - expected.x) <= tolerance && Math.abs(target.y - expected.y) <= tolerance);
+    const matching = atPosition.filter(({ target }) => target.id !== source.id && attributesMatch(source, target, axis)).map(({ index }) => index);
+    if (!matching.length) {
+      if (atPosition.length) attributeMismatch ??= { source, target: atPosition[0].target, axes: [axis] };
+      else if (targets.some((target) => target.id !== source.id && attributesMatch(source, target, axis))) positionMismatch ??= source;
+      else missing ??= source;
+    }
+    return matching;
+  });
+  const assignment = new Array(candidates.length).fill(-1);
+  const match = (sourceIndex, used) => sourceIndex === candidates.length || candidates[sourceIndex].some((targetIndex) => {
+    if (used.has(targetIndex)) return false;
+    used.add(targetIndex); assignment[sourceIndex] = targetIndex;
+    if (match(sourceIndex + 1, used)) return true;
+    used.delete(targetIndex);
+    return false;
+  });
+  const oneToOne = sources.length === targets.length && match(0, new Set());
+  if (!oneToOne && !positionMismatch && !attributeMismatch) missing ??= (targets.length > sources.length ? targets[sources.length] ?? targets[0] : sources[0]) ?? null;
+  const axisBreaker = onAxis.find((item) => !selfSymmetric(item, axis)) ?? null;
+  const passed = oneToOne && !positionMismatch && !attributeMismatch && !missing && !axisBreaker;
+  const mirrored = oneToOne ? [...sources, ...assignment.map((index) => targets[index])] : [];
+  return { passed, positionMismatch, attributeMismatch, missing, axisBreaker, pairCount: oneToOne ? sources.length : 0, mirrored, participantCount: participants.length, axisElementCount: onAxis.length };
 }
+
+function crossOrbitAudit(elements, spec) {
+  const tolerance = spec.positionTolerance ?? 1;
+  const axisX = spec.axisX ?? 500;
+  const axisY = spec.axisY ?? 300;
+  const onVertical = (item) => Math.abs(item.x - axisX) <= tolerance;
+  const onHorizontal = (item) => Math.abs(item.y - axisY) <= tolerance;
+  const participants = elements.filter((item) => !onVertical(item) && !onHorizontal(item));
+  const seeds = participants.filter((item) => item.x < axisX && item.y < axisY);
+  const used = new Set();
+  let positionMismatch = null; let attributeMismatch = null; let missing = null;
+  let orbitCount = 0;
+  const mirrored = [];
+  const at = (pool, x, y) => pool.filter((item) => !used.has(item.id) && Math.abs(item.x - x) <= tolerance && Math.abs(item.y - y) <= tolerance);
+  for (const source of seeds) {
+    if (used.has(source.id)) continue;
+    const expected = [
+      { x: 2 * axisX - source.x, y: source.y, axes: ['vertical'] },
+      { x: source.x, y: 2 * axisY - source.y, axes: ['horizontal'] },
+      { x: 2 * axisX - source.x, y: 2 * axisY - source.y, axes: ['vertical', 'horizontal'] }
+    ];
+    const orbit = [source];
+    for (const point of expected) {
+      const positioned = at(participants, point.x, point.y);
+      const matching = positioned.find((target) => attributesMatchAcrossAxes(source, target, point.axes));
+      if (matching) orbit.push(matching);
+      else if (positioned.length) attributeMismatch ??= { source, target: positioned[0], axes: point.axes };
+      else if (participants.some((target) => target.id !== source.id && target.shape === source.shape && target.size === source.size)) positionMismatch ??= source;
+      else missing ??= source;
+    }
+    if (orbit.length === 4 && new Set(orbit.map((item) => item.id)).size === 4) {
+      orbit.forEach((item) => used.add(item.id));
+      mirrored.push(...orbit);
+      orbitCount += 1;
+    }
+  }
+  if (used.size !== participants.length) missing ??= participants.find((item) => !used.has(item.id)) ?? null;
+  // Shapes on one axis must be symmetric about that axis and mirrored across the other one;
+  // a shape at the centre must be symmetric about both axes.
+  let axisBreaker = null; let axisUnpaired = null;
+  const axisUsed = new Set();
+  for (const item of elements.filter((element) => onVertical(element) || onHorizontal(element))) {
+    if (onVertical(item) && onHorizontal(item)) {
+      if (!selfSymmetric(item, 'vertical') || !selfSymmetric(item, 'horizontal')) axisBreaker ??= item;
+      continue;
+    }
+    const ownAxis = onVertical(item) ? 'vertical' : 'horizontal';
+    const otherAxis = ownAxis === 'vertical' ? 'horizontal' : 'vertical';
+    if (!selfSymmetric(item, ownAxis)) { axisBreaker ??= item; continue; }
+    if (axisUsed.has(item.id)) continue;
+    const partner = elements.find((other) => other.id !== item.id && !axisUsed.has(other.id)
+      && Math.abs(other.x - (otherAxis === 'vertical' ? 2 * axisX - item.x : item.x)) <= tolerance
+      && Math.abs(other.y - (otherAxis === 'horizontal' ? 2 * axisY - item.y : item.y)) <= tolerance
+      && attributesMatch(item, other, otherAxis));
+    if (partner) { axisUsed.add(item.id); axisUsed.add(partner.id); } else axisUnpaired ??= item;
+  }
+  return { passed: !positionMismatch && !attributeMismatch && !missing && !axisBreaker && !axisUnpaired, positionMismatch, attributeMismatch, missing, axisBreaker, axisUnpaired, orbitCount, mirrored, participantCount: participants.length, axisElementCount: elements.length - participants.length };
+}
+
+// Finds the first shape that has no mirror partner across one axis and says why, in the order a
+// student should fix things: a missing partner first, then a partner a few squares off, then one that differs.
+const gridWord = (steps) => (steps === 1 ? '一格' : steps === 2 ? '兩格' : `${steps} 格`);
+function mirrorScan(elements, axis, spec) {
+  const tolerance = spec.positionTolerance ?? 1;
+  const grid = spec.gridStep ?? 20;
+  const axisX = spec.axisX ?? 500; const axisY = spec.axisY ?? 300;
+  const onThisAxis = (item) => (axis === 'vertical' ? Math.abs(item.x - axisX) <= tolerance : Math.abs(item.y - axisY) <= tolerance);
+  const mirrorPoint = (item) => (axis === 'vertical' ? { x: 2 * axisX - item.x, y: item.y } : { x: item.x, y: 2 * axisY - item.y });
+  const distance = (item) => (axis === 'vertical' ? Math.abs(item.x - axisX) : Math.abs(item.y - axisY));
+  const along = (item) => (axis === 'vertical' ? item.y : item.x);
+  const opposite = (item, other) => (axis === 'vertical' ? Math.sign(item.x - axisX) !== Math.sign(other.x - axisX) : Math.sign(item.y - axisY) !== Math.sign(other.y - axisY));
+  const found = { missing: null, near: null, attribute: null };
+  const ordered = elements.filter((item) => !onThisAxis(item)).sort((a, b) => a.y - b.y || a.x - b.x);
+  for (const item of ordered) {
+    const expected = mirrorPoint(item);
+    const atSpot = elements.filter((other) => other.id !== item.id && Math.abs(other.x - expected.x) <= tolerance && Math.abs(other.y - expected.y) <= tolerance);
+    if (atSpot.some((other) => attributesMatch(item, other, axis))) continue;
+    if (atSpot.length) { found.attribute ??= { item, target: atSpot[0], expected }; continue; }
+    const near = elements
+      .filter((other) => other.id !== item.id && !onThisAxis(other) && opposite(item, other) && other.shape === item.shape && other.size === item.size
+        && Math.abs(distance(other) - distance(item)) <= grid * 3 && Math.abs(along(other) - along(item)) <= grid * 3)
+      .sort((a, b) => Math.hypot(a.x - expected.x, a.y - expected.y) - Math.hypot(b.x - expected.x, b.y - expected.y))[0];
+    if (near) {
+      found.near ??= { item, target: near, expected, closer: Math.round((distance(item) - distance(near)) / grid), shift: Math.round((along(near) - along(item)) / grid) };
+      continue;
+    }
+    found.missing ??= { item, expected };
+  }
+  return found.missing ? { type: 'missing', ...found.missing } : found.near ? { type: 'near', ...found.near } : found.attribute ? { type: 'attribute', ...found.attribute } : null;
+}
+
+function quadrantName(point, spec) {
+  const axisX = spec.axisX ?? 500; const axisY = spec.axisY ?? 300;
+  if (Math.abs(point.x - axisX) <= 1) return `${point.y < axisY ? '上方' : '下方'}中線上`;
+  if (Math.abs(point.y - axisY) <= 1) return `${point.x < axisX ? '左邊' : '右邊'}中線上`;
+  return `${point.x < axisX ? '左' : '右'}${point.y < axisY ? '上' : '下'}`;
+}
+function describeMirrorIssue(issue, axis, mode, spec) {
+  const where = (point) => (mode === 'cross' ? quadrantName(point, spec) : symmetryPlace(point, spec));
+  const line = mode === 'cross' ? (axis === 'vertical' ? '中間的直線' : '中間的橫線') : '中線';
+  const name = symmetryName;
+  if (issue.type === 'missing') {
+    const there = mode === 'cross' ? quadrantName(issue.expected, spec)
+      : axis === 'vertical' ? (issue.item.x < (spec.axisX ?? 500) ? '右邊' : '左邊') : (issue.item.y < (spec.axisY ?? 300) ? '下面' : '上面');
+    return `${where(issue.item)}的${name(issue.item)}，在${there}找不到對應的造形。`;
+  }
+  if (issue.type === 'near') {
+    const parts = [];
+    if (issue.closer > 0) parts.push(`離${line}近了${gridWord(issue.closer)}`);
+    if (issue.closer < 0) parts.push(`離${line}遠了${gridWord(-issue.closer)}`);
+    if (issue.shift !== 0) parts.push(axis === 'vertical' ? `${issue.shift > 0 ? '低了' : '高了'}${gridWord(Math.abs(issue.shift))}` : `${issue.shift > 0 ? '偏右' : '偏左'}${gridWord(Math.abs(issue.shift))}`);
+    return `${where(issue.target)}的${name(issue.target)}${parts.join('，')}。`;
+  }
+  const { item, target } = issue;
+  const pair = axis === 'vertical' ? '左右' : '上下';
+  if (item.shape !== target.shape) return `${where(item)}的${name(item)}，在${pair}對應的位置上是${SYMMETRY_SHAPE_LABELS[target.shape] ?? '別的造形'}，兩邊的造形不一樣。`;
+  if (item.size !== target.size) return `${pair}兩邊的${SYMMETRY_SHAPE_LABELS[item.shape] ?? '造形'}大小不一樣。`;
+  return `${pair}兩邊的${SYMMETRY_SHAPE_LABELS[item.shape] ?? '造形'}方向沒有對應。把其中一個轉成像照鏡子一樣的方向。`;
+}
+const ISSUE_CODES = Object.freeze({ missing: 'NO_SYMMETRY_PAIR', near: 'POSITION_MISMATCH', attribute: 'ATTRIBUTE_MISMATCH' });
+
 export function validateFormalSymmetry({ elements = [], spec = {}, selectedSymmetryMode = 'vertical' }) {
   const vertical = axisAudit(elements, 'vertical', spec);
   const horizontal = axisAudit(elements, 'horizontal', spec);
-  const required = selectedSymmetryMode === 'cross' ? [vertical, horizontal] : [selectedSymmetryMode === 'horizontal' ? horizontal : vertical];
-  const metrics = { selectedSymmetryMode, vertical, horizontal, elementCount: elements.length };
-  if (elements.length && required.every((audit) => audit.passed)) return response(true, 'valid', metrics, [selectedSymmetryMode]);
-  if (selectedSymmetryMode === 'cross' && vertical.passed !== horizontal.passed) return response(false, 'CROSS_INCOMPLETE', metrics);
-  if (required.some((audit) => audit.attributeMismatch)) return response(false, 'ATTRIBUTE_MISMATCH', metrics);
-  if (required.some((audit) => audit.positionMismatch)) return response(false, 'POSITION_MISMATCH', metrics);
-  return response(false, 'NO_SYMMETRY_PAIR', metrics);
+  const cross = crossOrbitAudit(elements, spec);
+  const required = selectedSymmetryMode === 'cross' ? cross : selectedSymmetryMode === 'horizontal' ? horizontal : vertical;
+  const minimum = selectedSymmetryMode === 'cross' ? (spec.minimumCrossOrbits ?? 2) : (spec.minimumMirrorPairs ?? 4);
+  const count = selectedSymmetryMode === 'cross' ? required.orbitCount : required.pairCount;
+  const combinations = [...new Set(required.mirrored.map((item) => `${item.shape}|${item.hue}`))];
+  const requiredCombinations = spec.minimumCombinations ?? 4;
+  const strip = ({ mirrored, positionMismatch, attributeMismatch, missing, axisBreaker, axisUnpaired, ...rest }) => ({ ...rest, positionMismatch: Boolean(positionMismatch), attributeMismatch: Boolean(attributeMismatch), missing: Boolean(missing), axisBreaker: Boolean(axisBreaker), axisUnpaired: Boolean(axisUnpaired) });
+  const metrics = { selectedSymmetryMode, vertical: strip(vertical), horizontal: strip(horizontal), cross: strip(cross), requiredCount: minimum, matchedCount: count, combinationCount: combinations.length, requiredCombinations, elementCount: elements.length };
+  // Shapes on the centre line are allowed but never count; whenever there is one, remind students of that.
+  const onCentreLine = (item) => (selectedSymmetryMode !== 'horizontal' && Math.abs(item.x - (spec.axisX ?? 500)) <= 1)
+    || (selectedSymmetryMode !== 'vertical' && Math.abs(item.y - (spec.axisY ?? 300)) <= 1);
+  const reminder = elements.some(onCentreLine) ? '中線上的造形可以放，但不算在 4 種裡。' : null;
+  // Skip the reminder when the message already covers the centre line, or when it suggests switching modes
+  // (the student sees the reminder on the next check, and the feedback stays one thing at a time).
+  const withReminder = (result) => {
+    const detail = String(result.studentDetail ?? '');
+    return reminder && !detail.includes('中線上的造形') && !detail.includes('也可以改選') ? { ...result, reminder } : result;
+  };
+  const fail = (code, studentDetail) => withReminder({ ...response(false, code, metrics), studentDetail });
+  const place = (item) => symmetryPlace(item, spec);
+  const axisWord = selectedSymmetryMode === 'horizontal' ? '上下' : '左右';
+  const unit = selectedSymmetryMode === 'cross' ? '組上下左右的對應' : '對';
+  const otherSide = (item) => selectedSymmetryMode === 'horizontal'
+    ? (item.y < (spec.axisY ?? 300) ? '下面' : '上面')
+    : (item.x < (spec.axisX ?? 500) ? '右邊' : '左邊');
+
+  if (required.passed && count >= minimum && combinations.length >= requiredCombinations) return withReminder(response(true, 'valid', metrics, [selectedSymmetryMode]));
+  if (!elements.length) return fail('NO_SYMMETRY_PAIR', '先放一個造形，再在對稱軸的另一邊放它的對應造形。');
+  if (required.axisBreaker) {
+    const item = required.axisBreaker;
+    const centre = selectedSymmetryMode === 'cross' && Math.abs(item.x - (spec.axisX ?? 500)) <= 1 && Math.abs(item.y - (spec.axisY ?? 300)) <= 1;
+    const side = centre ? '上下左右都' : selectedSymmetryMode === 'cross' ? (Math.abs(item.x - (spec.axisX ?? 500)) <= 1 ? '左右' : '上下') : axisWord;
+    const tilted = ['triangle', 'rectangle', 'semicircle', 'line'].includes(item.shape) ? `，斜放的${SYMMETRY_SHAPE_LABELS[item.shape]}不行` : '';
+    return fail('AXIS_SHAPE_NOT_SYMMETRIC', `放在${centre ? '正中心' : '中線上'}的造形要${side}對稱${tilted}。轉動它，或把它移開中線。`);
+  }
+  const comboCount = (audit) => new Set(audit.mirrored.map((item) => `${item.shape}|${item.hue}`)).size;
+  const fullyDone = (audit) => audit.passed && audit.pairCount >= (spec.minimumMirrorPairs ?? 4) && comboCount(audit) >= requiredCombinations;
+  if (selectedSymmetryMode === 'cross' && !cross.passed) {
+    const axis = vertical.passed && !horizontal.passed ? 'horizontal' : horizontal.passed && !vertical.passed ? 'vertical' : !vertical.passed ? 'vertical' : 'horizontal';
+    const issue = mirrorScan(elements, axis, spec);
+    if (issue) {
+      const lead = vertical.passed && !horizontal.passed ? '十字對稱需要上下也對稱。' : horizontal.passed && !vertical.passed ? '十字對稱需要左右也對稱。' : '十字對稱需要左右和上下都對稱。';
+      const nudge = fullyDone(vertical) && !horizontal.passed ? '你的作品已經左右對稱了！也可以改選『左右對稱』試試看。'
+        : fullyDone(horizontal) && !vertical.passed ? '你的作品已經上下對稱了！也可以改選『上下對稱』試試看。' : '';
+      return fail('CROSS_INCOMPLETE', `${lead}${describeMirrorIssue(issue, axis, 'cross', spec)}${nudge}`);
+    }
+  }
+  if (selectedSymmetryMode !== 'cross' && !required.passed) {
+    const issue = mirrorScan(elements, selectedSymmetryMode, spec);
+    if (issue) return fail(ISSUE_CODES[issue.type], describeMirrorIssue(issue, selectedSymmetryMode, selectedSymmetryMode, spec));
+  }
+  if (selectedSymmetryMode === 'cross' && required.axisUnpaired) return fail('CROSS_INCOMPLETE', `${quadrantName(required.axisUnpaired, spec)}的${symmetryName(required.axisUnpaired)}，在對面找不到相同的造形。`);
+  if (selectedSymmetryMode === 'cross' && vertical.passed !== horizontal.passed) {
+    const done = vertical.passed ? '左右' : '上下'; const todo = vertical.passed ? '上下' : '左右';
+    return fail('CROSS_INCOMPLETE', `${done}已經對應了，${todo}還沒有。十字對稱要同時${done}和${todo}都對應，再補上${todo}方向的造形。`);
+  }
+  if (required.attributeMismatch) {
+    const { source, target, axes } = required.attributeMismatch;
+    const pair = axes.length === 2 ? '斜對角' : axes[0] === 'vertical' ? '左右' : '上下';
+    if (source.shape !== target.shape) return fail('ATTRIBUTE_MISMATCH', `${place(source)}的${symmetryName(source)}，在${pair}對應的位置上是${SYMMETRY_SHAPE_LABELS[target.shape] ?? '別的造形'}，兩邊的造形不一樣。`);
+    if (source.size !== target.size) return fail('ATTRIBUTE_MISMATCH', `${pair}兩邊的${SYMMETRY_SHAPE_LABELS[source.shape] ?? '造形'}大小不一樣。`);
+    return fail('ATTRIBUTE_MISMATCH', `${pair}兩邊的${SYMMETRY_SHAPE_LABELS[source.shape] ?? '造形'}方向沒有對應。把其中一個轉成像照鏡子一樣的方向。`);
+  }
+  if (required.positionMismatch) return fail('POSITION_MISMATCH', `${place(required.positionMismatch)}的${symmetryName(required.positionMismatch)}，和另一邊相同的造形離中線不一樣遠。利用方格對齊。`);
+  if (required.missing) {
+    return selectedSymmetryMode === 'cross'
+      ? fail('CROSS_INCOMPLETE', `${place(required.missing)}的${symmetryName(required.missing)}在上下左右四個位置還沒有都放好相同的造形。`)
+      : fail('NO_SYMMETRY_PAIR', `${place(required.missing)}的${symmetryName(required.missing)}，在${otherSide(required.missing)}找不到對應的造形。`);
+  }
+  if (count < minimum) return fail('NOT_ENOUGH_SYMMETRY', `目前有 ${count} ${unit}，再做 ${minimum - count} ${unit}就完成了。`);
+  const missingKinds = requiredCombinations - combinations.length;
+  const centreKinds = elements.filter(onCentreLine).map((item) => `${item.shape}|${item.hue}`).filter((kind) => !combinations.includes(kind));
+  if (centreKinds.length) return fail('NOT_ENOUGH_VARIETY', `中線上的造形不算在 4 種裡，兩側再加 ${missingKinds} 種對應的造形或顏色。`);
+  return fail('NOT_ENOUGH_VARIETY', `目前只有 ${combinations.length} 種造形和顏色的組合，再加 ${missingKinds} 種。可以換造形，也可以換顏色。`);
 }
 
 function valueCounts(elements, key) {
@@ -296,27 +741,76 @@ function clearTwoGroup(counts, total, coverage) {
 }
 const hueOrder = HUE_FAMILIES;
 const shapeFamily = (shape) => shape === 'circle' || shape === 'semicircle' ? 'rounded' : shape === 'triangle' ? 'pointed' : 'angular';
+// Gate 4 contrast: at least six shapes in two clearly separate groups, which differ strongly in
+// size (unchanged rule) AND colour: hues at least 4 steps apart on the 12-step wheel (complements
+// included), or lightness at least 3 levels apart. Neighbouring hues such as red and orange do not count.
+const CONTRAST_SHAPE_LABELS = Object.freeze({ circle: '圓形', square: '正方形', triangle: '三角形', rectangle: '長方形', semicircle: '半圓', line: '線條' });
+const CONTRAST_HUE_LABELS = Object.freeze({
+  red: '紅色', 'red-orange': '紅橙色', orange: '橙色', 'yellow-orange': '黃橙色', yellow: '黃色', 'yellow-green': '黃綠色',
+  green: '綠色', 'blue-green': '藍綠色', blue: '藍色', 'blue-violet': '藍紫色', violet: '紫色', 'red-violet': '紅紫色'
+});
+const contrastKey = (item) => `${item.size}|${item.hue}|${item.lightness ?? 3}`;
+function contrastPlace(item, spec) {
+  const width = spec.canvasWidth ?? 1000; const height = spec.canvasHeight ?? 600;
+  const column = item.x < width / 3 ? 0 : item.x > (width * 2) / 3 ? 2 : 1;
+  const row = item.y < height / 3 ? 0 : item.y > (height * 2) / 3 ? 2 : 1;
+  return [['左上角', '上方', '右上角'], ['左邊', '中間', '右邊'], ['左下角', '下方', '右下角']][row][column];
+}
 export function validateFormalContrast({ elements = [], spec = {} }) {
-  const coverage = spec.comparisonCoverage ?? 0.75;
-  const sizeGroups = clearTwoGroup(valueCounts(elements, (item) => item.size), elements.length, coverage);
-  const colorGroups = clearTwoGroup(valueCounts(elements, (item) => item.hue + ':' + item.lightness), elements.length, coverage);
-  const shapeGroups = clearTwoGroup(valueCounts(elements, (item) => item.shape), elements.length, coverage);
-  const methods = [];
-  if (sizeGroups && Math.abs(Number(sizeGroups[0][0]) - Number(sizeGroups[1][0])) >= (spec.minimumSizeDifference ?? 3)) methods.push('size');
-  if (colorGroups) {
-    const parse = ([key]) => { const [hue, lightness] = key.split(':'); return { hue, lightness: Number(lightness) }; };
-    const [a, b] = colorGroups.map(parse);
-    const ai = hueOrder.indexOf(a.hue); const bi = hueOrder.indexOf(b.hue);
-    const hueDistance = ai < 0 || bi < 0 ? 0 : Math.min(Math.abs(ai - bi), hueOrder.length - Math.abs(ai - bi));
-    if (hueDistance >= (spec.minimumHueDistance ?? 2) || Math.abs(a.lightness - b.lightness) >= (spec.minimumLightnessDifference ?? 3)) methods.push('color');
+  const minimumElements = spec.minimumElements ?? 6;
+  // Gate 4: every shape must belong to one of the two groups (no odd one out).
+  const coverage = spec.groupCoverage ?? 1;
+  const shapeCoverage = spec.comparisonCoverage ?? 0.8;
+  const minimumGroupSize = spec.minimumGroupSize ?? 2;
+  const jointGroups = [...valueCounts(elements, contrastKey).entries()].sort((a, b) => b[1] - a[1]);
+  const primaryGroups = jointGroups.slice(0, 2);
+  const covered = primaryGroups.reduce((sum, [, count]) => sum + count, 0);
+  const requiredCovered = Math.ceil(elements.length * coverage);
+  const coherent = primaryGroups.length === 2 && primaryGroups.every(([, count]) => count >= minimumGroupSize) && covered >= requiredCovered;
+  const parse = ([key]) => { const [size, hue, lightness] = key.split('|'); return { size: Number(size), hue, lightness: Number(lightness) }; };
+  const [first, second] = primaryGroups.length === 2 ? primaryGroups.map(parse) : [{ size: 0, hue: '', lightness: 3 }, { size: 0, hue: '', lightness: 3 }];
+  const sizePassed = coherent && Math.abs(first.size - second.size) >= (spec.minimumSizeDifference ?? 3);
+  const ai = hueOrder.indexOf(first.hue); const bi = hueOrder.indexOf(second.hue);
+  const hueDistance = ai < 0 || bi < 0 ? 0 : Math.min(Math.abs(ai - bi), hueOrder.length - Math.abs(ai - bi));
+  const lightnessDistance = Math.abs(first.lightness - second.lightness);
+  const colorPassed = coherent && (hueDistance >= (spec.minimumHueDistance ?? 4) || lightnessDistance >= (spec.minimumLightnessDistance ?? 3));
+  const primaryElements = elements.filter((item) => primaryGroups.some(([key]) => key === contrastKey(item)));
+  const shapeGroups = clearTwoGroup(valueCounts(primaryElements, (item) => item.shape), primaryElements.length, shapeCoverage);
+  const shapePassed = shapeGroups && shapeFamily(shapeGroups[0][0]) !== shapeFamily(shapeGroups[1][0]);
+  const metrics = { primaryGroups, covered, requiredCovered, coherent, sizePassed, colorPassed, hueDistance, lightnessDistance, shapePassed, elementCount: elements.length };
+  const fail = (code, studentDetail) => ({ ...response(false, code, metrics), studentDetail });
+  const hueName = (hue) => CONTRAST_HUE_LABELS[hue] ?? '這個顏色';
+  const describe = (item) => `${contrastPlace(item, spec)}的${hueName(item.hue)}${CONTRAST_SHAPE_LABELS[item.shape] ?? '圖形'}`;
+
+  if (elements.length < minimumElements) return fail('TOO_FEW_ELEMENTS', `目前有 ${elements.length} 個圖形，至少要 ${minimumElements} 個，分成兩組。`);
+  if (coherent && sizePassed && colorPassed) return response(true, 'valid', metrics, shapePassed ? ['multiple', 'size', 'color', 'shape'] : ['multiple', 'size', 'color']);
+  if (coherent && colorPassed && !sizePassed) return fail('SIZE_CONTRAST_REQUIRED', '兩組圖形的大小差不多，讓一組更大、一組更小。');
+  if (coherent && sizePassed && !colorPassed) {
+    return first.hue === second.hue
+      ? fail('COLOR_CONTRAST_REQUIRED', `兩組都是${hueName(first.hue)}，換一個色環上距離很遠的顏色，例如紅配藍。`)
+      : fail('COLOR_CONTRAST_REQUIRED', `${hueName(first.hue)}和${hueName(second.hue)}太接近了，換一個色環上距離更遠的顏色。`);
   }
-  if (shapeGroups && shapeFamily(shapeGroups[0][0]) !== shapeFamily(shapeGroups[1][0])) methods.push('shape');
-  const metrics = { sizeGroups, colorGroups, shapeGroups, methods, elementCount: elements.length };
-  if (methods.length) return response(true, 'valid', metrics, methods.length > 1 ? ['multiple', ...methods] : methods);
+  if (coherent && !sizePassed && !colorPassed) return fail('DIFFERENCE_TOO_SMALL', '兩組圖形的大小和顏色都太接近了。讓一組更大、一組更小，顏色也選色環上距離很遠的。');
+  if (jointGroups.length === 1) {
+    return new Set(elements.map((item) => item.shape)).size > 1
+      ? fail('NO_CLEAR_CONTRAST', '目前只有造形不同。讓一組更大、一組更小，顏色也要差很多。')
+      : fail('NO_CLEAR_CONTRAST', '目前所有圖形都一樣。分成兩組：一組大、一組小，顏色也要差很多。');
+  }
+  // Two groups are there but not clear yet: a group with only one shape, or shapes that belong to neither group.
+  const lonelyGroup = primaryGroups.find(([, count]) => count < minimumGroupSize);
+  if (primaryGroups.length === 2 && covered >= requiredCovered && lonelyGroup) {
+    const item = elements.find((element) => contrastKey(element) === lonelyGroup[0]);
+    return fail('GROUP_TOO_SMALL', `${describe(item)}自己一組，每組至少要 2 個圖形。`);
+  }
   const diversity = ['size', 'hue', 'shape'].filter((key) => new Set(elements.map((item) => item[key])).size >= Math.min(4, elements.length)).length;
-  if (elements.length >= 4 && diversity >= 2) return response(false, 'TOO_MANY_UNRELATED_DIFFERENCES', metrics);
-  if (sizeGroups || colorGroups || shapeGroups) return response(false, 'DIFFERENCE_TOO_SMALL', metrics);
-  return response(false, 'NO_CLEAR_CONTRAST', metrics);
+  if (elements.length >= 4 && diversity >= 2 && jointGroups.length > 3) return fail('TOO_MANY_UNRELATED_DIFFERENCES', '畫面裡有太多不同的大小和顏色。只留下兩組：一組大、一組小，顏色也要差很多。');
+  const strays = elements.filter((item) => !primaryElements.includes(item));
+  if (strays.length) {
+    return strays.length === 1
+      ? fail('OUTSIDE_GROUPS', `有一個圖形看不出屬於哪一組：${describe(strays[0])}。讓它的大小和顏色跟其中一組一樣。`)
+      : fail('OUTSIDE_GROUPS', `有 ${strays.length} 個圖形看不出屬於哪一組，例如${describe(strays[0])}。讓它們的大小和顏色跟其中一組一樣。`);
+  }
+  return fail('NO_CLEAR_CONTRAST', '還看不出兩組。分成兩組：一組大、一組小，顏色也要差很多。');
 }
 
 export function validateFormalProportion({ elements = [], spec = {} }) {
@@ -351,20 +845,27 @@ export function validateFormalUnity({ elements = [], spec = {} }) {
   elements.forEach((item) => getShapeMetadata(item.shape).shapeFeature.filter((feature) => meaningfulFeatures.has(feature)).forEach((feature) => featureCounts.set(feature, (featureCounts.get(feature) ?? 0) + 1)));
   const [feature, featureCount] = [...featureCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
   const shapeFeature = { value: feature, count: featureCount, ratio: elements.length ? featureCount / elements.length : 0 };
-  const lineStyle = dominantGroup(elements, (item) => item.lineStyle ?? 'solid');
+  const variations = {
+    size: new Set(elements.map((item) => item.size)).size >= 2,
+    color: new Set(elements.map((item) => item.hueFamily ?? item.hue)).size >= 2,
+    shape: new Set(elements.map((item) => item.shape)).size >= 2,
+    rotation: new Set(directional.map((item) => item.rotation ?? 0)).size >= 2
+  };
   const methods = [];
-  if (elements.length >= minimumElements && color.ratio >= requiredRatio) methods.push('color');
+  if (elements.length >= minimumElements && color.ratio >= requiredRatio && (variations.size || variations.shape || variations.rotation)) methods.push('color');
   if (elements.length >= minimumElements
     && directional.length >= (spec.minimumDirectionalElements ?? 3)
     && rotation.ratio >= requiredRatio
-    && directionCoverage >= requiredRatio) methods.push('rotation');
+    && directionCoverage >= requiredRatio
+    && (variations.size || variations.color || variations.shape)) methods.push('rotation');
   const sharedExactShape = exactShape.ratio >= requiredRatio;
   const sharedShapeFeature = new Set(elements.map((item) => item.shape)).size >= 2 && shapeFeature.ratio >= requiredRatio;
-  if (elements.length >= minimumElements && (sharedExactShape || sharedShapeFeature)) methods.push('shapeFeature');
-  if (spec.lineStyleEnabled === true && elements.length >= minimumElements && lineStyle.ratio >= requiredRatio) methods.push('lineStyle');
-  const metrics = { elementCount: elements.length, requiredRatio, color, exactShape, directionalCount: directional.length, rotation, directionCoverage, shapeFeature, lineStyle };
+  if (elements.length >= minimumElements && (sharedExactShape || sharedShapeFeature) && (variations.size || variations.color || variations.rotation)) methods.push('shapeFeature');
+  const metrics = { elementCount: elements.length, requiredRatio, color, exactShape, directionalCount: directional.length, rotation, directionCoverage, shapeFeature, variations };
   if (methods.length) return response(true, 'valid', metrics, methods.length > 1 ? ['multiple', ...methods] : methods);
   const strongest = Math.max(color.ratio, exactShape.ratio, directionCoverage, shapeFeature.ratio);
+  const hasCommonFeature = elements.length >= minimumElements && strongest >= requiredRatio;
+  if (hasCommonFeature && !Object.values(variations).some(Boolean)) return response(false, 'NO_VISIBLE_VARIATION', metrics);
   return response(false, strongest >= 0.4 ? 'UNITY_TOO_WEAK' : 'NO_CLEAR_UNITY', metrics);
 }
 
@@ -486,10 +987,29 @@ export const phase6cValidators = Object.freeze({
 export function validatePhase6cExperiment(definition, state) {
   const validator = phase6cValidators[definition.principleId];
   if (!validator) throw new Error(`No Phase 6C validator for ${definition.principleId}`);
-  return validator({
-    elements: state.workingElements ?? [],
+  const audit = auditComposition(state.workingElements ?? [], {
+    preserveElementIds: definition.principleId === 'simplicity'
+      ? (state.coreElementIds ?? definition.validationSpec.coreElementIds ?? [])
+      : []
+  });
+  const result = validator({
+    elements: audit.effectiveElements,
     beforeState: state.beforeState ?? definition.initialState.beforeState ?? [],
     spec: definition.validationSpec,
     selectedSymmetryMode: state.selectedExperimentOption ?? definition.initialState.selectedSymmetryMode
   });
+  const metrics = {
+    ...result.metrics,
+    compositionAudit: {
+      rawElementCount: audit.rawElementCount,
+      effectiveElementCount: audit.effectiveElementCount,
+      duplicateElementIds: audit.duplicateElementIds,
+      overlapGroups: audit.overlapGroups,
+      largestOverlapGroup: audit.largestOverlapGroup,
+      hasObviousPadding: audit.hasObviousPadding
+    }
+  };
+  return audit.hasObviousPadding
+    ? response(false, 'EXCESSIVE_OVERLAP', metrics)
+    : { ...result, metrics };
 }

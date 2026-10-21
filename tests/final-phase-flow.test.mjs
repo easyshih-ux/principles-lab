@@ -11,8 +11,9 @@ import {
   finalCompletionMarkup,
   nextHash
 } from '../experiment-course.js';
-import { createPhase6cCourseState, advancePhase6c } from '../phase6c-course-state.js';
+import { createPhase6cCourseState, advancePhase6c, submitPhase6cExperiment } from '../phase6c-course-state.js';
 import { phase6cDefinitions } from '../phase6c-definitions.js';
+import { phase6cFixtures } from '../phase6c-fixtures.js';
 import { getExperimentState } from '../experiment-session.js';
 import { createAppState, syncCourseCompletion } from '../state.js';
 import { resolveRoute } from '../router.js';
@@ -103,7 +104,8 @@ test('FLOW D preserves the formal ten-experiment sequence and explicit final act
   const course = createPhase6cCourseState(phase6cDefinitions);
   const simplicity = phase6cDefinitions.at(-1);
   assert.doesNotMatch(experimentActionsMarkup(course, simplicity, null), /experiment-next/);
-  getExperimentState(course, simplicity.id).completed = true;
+  getExperimentState(course, simplicity.id).workingElements = structuredClone(phase6cFixtures.simplicity.pass.reduce);
+  submitPhase6cExperiment(course, simplicity);
   assert.match(experimentActionsMarkup(course, simplicity, { result: { passed: true } }), /完成視覺實驗室/);
   assert.doesNotMatch(experimentActionsMarkup(course, simplicity, { result: { passed: true } }), />下一個挑戰</);
 });
@@ -111,7 +113,10 @@ test('FLOW D preserves the formal ten-experiment sequence and explicit final act
 test('third course completion state is set only after explicit final advance', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
   phase6cDefinitions.forEach((definition) => {
-    getExperimentState(course, definition.id).completed = true;
+    const state = getExperimentState(course, definition.id);
+    state.workingElements = structuredClone(Object.values(phase6cFixtures[definition.principleId].pass)[0]);
+    if (definition.principleId === 'symmetry') state.selectedExperimentOption = 'vertical';
+    submitPhase6cExperiment(course, definition);
     advancePhase6c(course, definition);
   });
   assert.equal(course.completed, true);
@@ -166,13 +171,13 @@ test('accessibility and Final Phase cache markers remain scoped', () => {
   assert.doesNotMatch(indexSource, /<main[^>]*aria-live/);
   assert.match(recognizeSource, /aria-live="polite"/);
   assert.match(experimentSource, /id="experiment-feedback" aria-live="polite"/);
-  assert.ok(indexSource.includes('app.js?v=teacher-gate2-1'));
+  assert.ok(indexSource.includes('app.js?v=gate4-contrast-2'));
   assert.ok(indexSource.includes('classroom-control.css?v=classroom-control-1'));
-  assert.ok(indexSource.includes('phase6c.css?v=final-phase-1'));
+  assert.ok(indexSource.includes('phase6c.css?v=gate4-contrast-2'));
   assert.ok(appSource.includes('recognize-course.js?v=v2-b2-checkpoints-1'));
   assert.ok(appSource.includes('discover-course.js?v=v2-b2-checkpoints-1'));
   assert.ok(appSource.includes('classroom-unlocks.js?v=classroom-control-1'));
-  assert.ok(appSource.includes('experiment-course.js?v=v2-b2-checkpoints-1'));
+  assert.ok(appSource.includes('experiment-course.js?v=gate4-contrast-2'));
   assert.ok(appSource.includes("heading.setAttribute('tabindex', '-1')"));
   assert.ok(appSource.includes('heading.focus({ preventScroll: true })'));
   assert.ok(recognizeSource.includes("document.querySelector('#recognize-next')?.focus()"));

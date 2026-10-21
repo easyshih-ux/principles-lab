@@ -5,8 +5,9 @@ import {
   LIGHTNESS_LEVELS,
   PROPORTION_LEVELS,
   ROTATION_VALUES,
-  SIZE_LEVELS
-} from './config.js';
+  SIZE_LEVELS,
+  STEP_LEVELS
+} from './config.js?v=gate4-contrast-2';
 
 let idSequence = 0;
 
@@ -51,6 +52,8 @@ export function assertGeometryElement(element) {
   assertAllowedValue('lightness', element.lightness, LIGHTNESS_LEVELS);
   assertAllowedValue('rotation', element.rotation, ROTATION_VALUES);
   assertAllowedValue('proportion', element.proportion, PROPORTION_LEVELS);
+  if (element.stepSize != null) assertAllowedValue('stepSize', element.stepSize, STEP_LEVELS);
+  if (element.stepLightness != null) assertAllowedValue('stepLightness', element.stepLightness, STEP_LEVELS);
   return element;
 }
 

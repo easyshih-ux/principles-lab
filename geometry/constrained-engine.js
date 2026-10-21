@@ -1,5 +1,7 @@
-import { GeometryEngine } from './engine.js';
-import { engineToolsFor, logicalSizeForRatio, normalizeAllowedTools } from './constrained-tools.js';
+import { GeometryEngine } from './engine.js?v=gate4-contrast-2';
+import { engineToolsFor, logicalSizeForRatio, normalizeAllowedTools } from './constrained-tools.js?v=gate4-contrast-2';
+import { STEP_SIZE_TO_LOGICAL } from './config.js?v=gate4-contrast-2';
+import { snapAndClampElementPosition } from './bounds.js?v=gate4-contrast-2';
 
 export class ConstrainedGeometryEngine extends GeometryEngine {
   constructor({ allowedTools = {}, ...options } = {}) {
@@ -23,9 +25,15 @@ export class ConstrainedGeometryEngine extends GeometryEngine {
 
   add(shape, values = {}) {
     const ratioLevel = values.ratioLevel ?? values.proportion ?? 1;
+    const stepValues = {};
+    if (this.constrainedAllowedTools.stepSize) {
+      stepValues.stepSize = values.stepSize ?? 4;
+      stepValues.logicalSize = STEP_SIZE_TO_LOGICAL[stepValues.stepSize];
+    }
+    if (this.constrainedAllowedTools.stepLightness) stepValues.stepLightness = values.stepLightness ?? 4;
     const result = super.add(shape, this.constrainedAllowedTools.ratioSize
       ? { ...values, ratioLevel, proportion: ratioLevel, logicalSize: logicalSizeForRatio(ratioLevel) }
-      : values);
+      : { ...values, ...stepValues });
     return result;
   }
 
@@ -43,6 +51,10 @@ export class ConstrainedGeometryEngine extends GeometryEngine {
       element.ratioLevel = value;
       element.proportion = value;
       element.logicalSize = logicalSizeForRatio(value);
+    }
+    if (property === 'stepSize' && this.constrainedAllowedTools.stepSize) {
+      element.logicalSize = STEP_SIZE_TO_LOGICAL[value];
+      Object.assign(element, snapAndClampElementPosition(element, element, this.canvas, this.grid.step));
     }
   }
 

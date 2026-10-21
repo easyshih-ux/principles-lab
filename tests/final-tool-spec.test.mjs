@@ -10,13 +10,13 @@ import { addShapeControlsMarkup } from '../experiment-course.js';
 const enabled = (id) => Object.entries(phase6cDefinitionsById[`experiment-${id}`].allowedTools).filter(([,on])=>on).map(([tool])=>tool).sort();
 const expected = {
  repetition:['addShape','color','delete','duplicate','position','rotation','size'],
- gradation:['addShape','color','delete','duplicate','lightness','position','size'],
+ gradation:['addShape','color','delete','duplicate','position','stepLightness','stepSize'],
  balance:['addShape','delete','duplicate','position','size'],
  rhythm:['addShape','delete','duplicate','position','rotation','size'],
- symmetry:['addShape','delete','duplicate','grid','position','rotation','size'],
+ symmetry:['addShape','color','delete','duplicate','grid','position','rotation','size'],
  contrast:['addShape','color','delete','duplicate','position','size'],
  proportion:['addShape','delete','duplicate','position','ratioSize'],
- unity:['addShape','color','delete','duplicate','position','rotation'],
+ unity:['addShape','color','delete','duplicate','position','rotation','size'],
  harmony:['addShape','color','delete','duplicate','lightness','position','size'],
  simplicity:['color','delete','position','size']
 };
@@ -27,26 +27,34 @@ test('all ten experiments exactly match the Final Tool Table',()=>{
 
 test('addShape is independent from shape mutation and color is independent from lightness',()=>{
  const grad=phase6cDefinitionsById['experiment-gradation'].allowedTools;
- assert.equal(grad.addShape,true); assert.equal(grad.shape,false); assert.equal(grad.color,true); assert.equal(grad.lightness,true);
+ assert.equal(grad.addShape,true); assert.equal(grad.shape,false); assert.equal(grad.color,true); assert.equal(grad.stepLightness,true); assert.equal(grad.lightness,false);
  const repetition=phase6cDefinitionsById['experiment-repetition'].allowedTools;
  assert.equal(repetition.color,true); assert.equal(repetition.lightness,false);
 });
 
-test('gradation starts blank and can add duplicate resize recolor relight and move',()=>{
+test('gradation starts blank and can add duplicate resize recolor relight and move on the seven-step scale',()=>{
  const def=phase6cDefinitionsById['experiment-gradation']; assert.deepEqual(def.initialState.elements,[]);
  const engine=new ConstrainedGeometryEngine({allowedTools:def.allowedTools,elements:[]});
  assert.equal(engine.add('circle',{x:300,y:300}).changed,true);
  assert.equal(engine.duplicate().changed,true);
- assert.equal(engine.setProperty('size',5).changed,true);
+ assert.equal(engine.setProperty('stepSize',7).changed,true); assert.equal(engine.getSelectedElement().logicalSize,140);
  assert.equal(engine.setProperty('hue','green').changed,true);
- assert.equal(engine.setProperty('lightness',5).changed,true);
+ assert.equal(engine.setProperty('stepLightness',7).changed,true);
+ assert.equal(engine.setProperty('size',5).changed,false);
  assert.equal(engine.move(engine.selectedId,{x:500,y:300}).changed,true);
 });
 
 test('limited-tool exclusions remain intentional',()=>{
- for(const id of ['balance','rhythm','symmetry','proportion']) assert.equal(phase6cDefinitionsById[`experiment-${id}`].allowedTools.color,false,id);
+ for(const id of ['balance','rhythm','proportion']) assert.equal(phase6cDefinitionsById[`experiment-${id}`].allowedTools.color,false,id);
+ assert.equal(phase6cDefinitionsById['experiment-symmetry'].allowedTools.color,true);
  assert.equal(phase6cDefinitionsById['experiment-proportion'].allowedTools.ratioSize,true);
  assert.equal(phase6cDefinitionsById['experiment-proportion'].allowedTools.size,false);
+});
+
+test('size is newly available only where the V2 unity task needs it',()=>{
+ assert.equal(phase6cDefinitionsById['experiment-unity'].allowedTools.size,true);
+ assert.equal(phase6cDefinitionsById['experiment-proportion'].allowedTools.size,false);
+ assert.equal(phase6cDefinitionsById['experiment-symmetry'].allowedTools.size,true);
 });
 
 test('simplicity cannot add or duplicate and protected core still cannot be deleted',()=>{

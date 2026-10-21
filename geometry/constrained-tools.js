@@ -1,4 +1,4 @@
-import { GEOMETRY_CANVAS } from './config.js';
+import { GEOMETRY_CANVAS } from './config.js?v=gate4-contrast-2';
 import { snapPoint } from './grid.js';
 
 function shapeMetadata(id, shapeType, directional, features) {
@@ -105,12 +105,14 @@ export function snapLogicalPoint(point, grid = createGridConfig()) {
 
 export const ALLOWED_TOOL_DEFAULTS = Object.freeze({
   addShape: false, shape: false, size: false, ratioSize: false, color: false, lightness: false,
-  position: false, rotation: false, duplicate: false, delete: false, grid: false
+  position: false, rotation: false, duplicate: false, delete: false, grid: false,
+  stepSize: false, stepLightness: false
 });
 
 const ENGINE_TOOL_MAP = Object.freeze({
   addShape: ['add'], shape: [], size: ['size'], ratioSize: ['proportion'], color: ['color'], lightness: ['lightness'],
-  position: ['move'], rotation: ['rotation'], duplicate: ['duplicate'], delete: ['delete'], grid: []
+  position: ['move'], rotation: ['rotation'], duplicate: ['duplicate'], delete: ['delete'], grid: [],
+  stepSize: ['stepSize'], stepLightness: ['stepLightness']
 });
 
 export function normalizeAllowedTools(allowedTools = {}) {

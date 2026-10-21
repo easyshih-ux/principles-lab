@@ -3,15 +3,18 @@ import {
   LIGHTNESS_LEVELS,
   PROPORTION_LEVELS,
   ROTATION_VALUES,
-  SIZE_LEVELS
-} from './config.js';
+  SIZE_LEVELS,
+  STEP_LEVELS
+} from './config.js?v=gate4-contrast-2';
 
 export const CONTROL_DEFINITIONS = Object.freeze({
   size: Object.freeze({ tool: 'size', values: SIZE_LEVELS, defaultValue: 3 }),
   hue: Object.freeze({ tool: 'color', values: HUE_IDS, defaultValue: 'red' }),
   lightness: Object.freeze({ tool: 'lightness', values: LIGHTNESS_LEVELS, defaultValue: 3 }),
   rotation: Object.freeze({ tool: 'rotation', values: ROTATION_VALUES, defaultValue: 0 }),
-  proportion: Object.freeze({ tool: 'proportion', values: PROPORTION_LEVELS, defaultValue: 1 })
+  proportion: Object.freeze({ tool: 'proportion', values: PROPORTION_LEVELS, defaultValue: 1 }),
+  stepSize: Object.freeze({ tool: 'stepSize', values: STEP_LEVELS, defaultValue: 4 }),
+  stepLightness: Object.freeze({ tool: 'stepLightness', values: STEP_LEVELS, defaultValue: 4 })
 });
 
 export function normalizeToolConstraints(constraints = {}) {

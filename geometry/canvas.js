@@ -1,11 +1,11 @@
-import { getShapeDimensions } from './bounds.js';
-import { GEOMETRY_TOOLS } from './config.js';
+import { getShapeDimensions } from './bounds.js?v=gate4-contrast-2';
+import { GEOMETRY_TOOLS } from './config.js?v=gate4-contrast-2';
 import {
   logicalScaleToScreen,
   logicalToScreen,
   screenToLogical
 } from './coordinates.js?v=geometry-aspect-1';
-import { getDisplayColor } from './palette.js';
+import { getElementColor } from './palette.js?v=gate4-contrast-2';
 
 export class GeometryCanvas {
   constructor({ container, engine, onStateChange = () => {} }) {
@@ -80,7 +80,7 @@ export class GeometryCanvas {
     node.style.width = `${width}px`;
     node.style.height = `${height}px`;
     node.style.transform = `translate(${screen.x - width / 2}px, ${screen.y - height / 2}px) rotate(${element.rotation}deg)`;
-    node.style.setProperty('--geometry-color', getDisplayColor(element.hue, element.lightness));
+    node.style.setProperty('--geometry-color', getElementColor(element));
     node.setAttribute('aria-label', `${element.shape}，位置 ${element.x}, ${element.y}`);
   }
 

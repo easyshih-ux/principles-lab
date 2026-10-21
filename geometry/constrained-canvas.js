@@ -1,5 +1,5 @@
-import { GeometryCanvas } from './canvas.js?v=geometry-aspect-1';
-import { createGridConfig } from './constrained-tools.js';
+import { GeometryCanvas } from './canvas.js?v=gate4-contrast-2';
+import { createGridConfig } from './constrained-tools.js?v=gate4-contrast-2';
 
 export class ConstrainedGeometryCanvas extends GeometryCanvas {
   constructor(options) {

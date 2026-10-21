@@ -41,82 +41,57 @@ test('formal routes resolve ten experiments, completion and dev lab', () => {
   assert.equal(resolveRoute('#level/experiment/emphasis', stages, principles, recognizeQuestions).isFallback, true);
 });
 
-test('single repetition passes without equal spacing', () => {
-  const result = validate('repetition', phase6cFixtures.repetition.pass.single);
-  assert.equal(result.passed, true);
-  assert.deepEqual(result.detectedMethods, ['single']);
+test('Gate 4: shapes repeated on their own no longer count as repetition', () => {
+  const result = validate('repetition', phase6cFixtures.repetition.fail.singleKind);
+  assert.equal(result.passed, false);
+  assert.equal(result.primaryDiagnosticCode, 'NOT_GROUPED_INTO_UNITS');
 });
 
-test('group repetition passes and is detected before its component singles', () => {
+test('unit repetition passes with five identical units', () => {
   const result = validate('repetition', phase6cFixtures.repetition.pass.group);
   assert.equal(result.passed, true);
-  assert.deepEqual(result.detectedMethods, ['group']);
+  assert.deepEqual(result.detectedMethods, ['unit']);
 });
 
-test('two occurrences and inconsistent collections fail with specific diagnostics', () => {
-  assert.equal(validate('repetition', phase6cFixtures.repetition.fail.two).primaryDiagnosticCode, 'NOT_ENOUGH_REPETITION');
-  assert.equal(validate('repetition', phase6cFixtures.repetition.fail.inconsistent).primaryDiagnosticCode, 'INCONSISTENT_REPEAT');
+test('Gate 4 repetition enforces five units', () => {
+  assert.equal(validate('repetition', phase6cFixtures.repetition.pass.group.slice(0, 12)).passed, false);
 });
 
-for (const fixture of ['size', 'descending', 'nonEqual', 'singlePeak', 'singleValley', 'unevenPeak', 'offCenterPeak', 'lightness', 'lightnessDescending', 'lightnessPeak', 'lightnessValley', 'lightnessUneven', 'hueForward', 'hueReverse', 'hueReturn', 'hueWrapForward', 'spacing']) {
-  test(`${fixture} gradation path passes`, () => {
+test('two identical shapes and unrelated collections fail with specific diagnostics', () => {
+  assert.equal(validate('repetition', phase6cFixtures.repetition.fail.two).primaryDiagnosticCode, 'NOT_GROUPED_INTO_UNITS');
+  assert.equal(validate('repetition', phase6cFixtures.repetition.fail.inconsistent).primaryDiagnosticCode, 'NO_REPEAT_UNIT');
+});
+
+for (const fixture of Object.keys(phase6cFixtures.gradation.pass)) {
+  test(`Gate 4 ${fixture} gradation passes`, () => {
     assert.equal(validate('gradation', phase6cFixtures.gradation.pass[fixture]).passed, true);
   });
 }
 
-test('multiple gradation paths are reported together', () => {
+test('Gate 4 gradation reports every change that passed together', () => {
   for (const [fixture, methods] of [
-    ['multiple', ['size', 'spacing']],
     ['sizeLightness', ['size', 'lightness']],
-    ['sizeHue', ['size', 'hue']]
+    ['sizeHue', ['size', 'hue']],
+    ['hueSpacing', ['hue', 'spacing']],
+    ['threeChanges', ['size', 'lightness', 'hue']]
   ]) {
     const result = validate('gradation', phase6cFixtures.gradation.pass[fixture]);
     assert.equal(result.passed, true);
     assert.equal(result.detectedMethods[0], 'multiple');
-    for (const method of methods) assert.ok(result.detectedMethods.includes(method));
+    for (const method of methods) assert.ok(result.detectedMethods.includes(method), `${fixture} ${method}`);
   }
 });
 
-test('single-peak and single-valley gradations report one valid direction reversal', () => {
-  const peak = validate('gradation', phase6cFixtures.gradation.pass.singlePeak);
-  const valley = validate('gradation', phase6cFixtures.gradation.pass.singleValley);
-  assert.equal(peak.passed, true);
-  assert.equal(peak.metrics.modes.size.direction, 'single-peak');
-  assert.equal(peak.metrics.modes.size.turnCount, 1);
-  assert.equal(valley.passed, true);
-  assert.equal(valley.metrics.modes.size.direction, 'single-valley');
-  assert.equal(valley.metrics.modes.size.turnCount, 1);
+test('Gate 4 gradation failures get their own diagnosis', () => {
+  for (const [fixture, code] of [
+    ['onlySize', 'ONLY_ONE_CHANGE'], ['stopsAtFourth', 'CHANGE_STOPS'], ['manyPeaks', 'TOO_MANY_PEAKS'], ['sixStages', 'TOO_FEW_STAGES'],
+    ['decoration', 'NOT_ON_PATH'], ['scattered', 'NO_CLEAR_PATH'], ['hueJump', 'HUE_JUMP'], ['ringBreak', 'CHANGE_STOPS']
+  ]) assert.equal(validate('gradation', phase6cFixtures.gradation.fail[fixture]).primaryDiagnosticCode, code, fixture);
 });
 
-test('lightness and hue use the shared zero-or-one-turn trend rule', () => {
-  const lightnessPeak = validate('gradation', phase6cFixtures.gradation.pass.lightnessPeak);
-  const hueReturn = validate('gradation', phase6cFixtures.gradation.pass.hueReturn);
-  assert.equal(lightnessPeak.metrics.modes.lightness.direction, 'single-peak');
-  assert.equal(lightnessPeak.metrics.modes.lightness.turnCount, 1);
-  assert.equal(hueReturn.metrics.modes.hue.direction, 'single-peak');
-  assert.equal(hueReturn.metrics.modes.hue.turnCount, 1);
-  assert.deepEqual(hueReturn.metrics.modes.hue.steps, [1, 1, 1, 1, -1, -1, -1, -1]);
-});
-
-test('gradation rejects subtle, random, repeatedly reversing and two-stage sequences', () => {
-  assert.equal(validate('gradation', phase6cFixtures.gradation.fail.tooSubtle).passed, false);
-  for (const fixture of [
-    'directionBreak', 'randomSizes', 'multipleReversals', 'lightnessOscillation',
-    'hueRandomJumps', 'hueAlternating', 'hueDifferentNoSequence'
-  ]) {
-    assert.equal(validate('gradation', phase6cFixtures.gradation.fail[fixture]).primaryDiagnosticCode, 'DIRECTION_BREAK');
-  }
-  assert.equal(validate('gradation', phase6cFixtures.gradation.fail.tooFew).primaryDiagnosticCode, 'TOO_FEW_STAGES');
-});
-
-test('gradation exposes student-facing feedback for size lightness hue and multiple', () => {
-  const feedback = definition('gradation').successFeedback.byMethod;
-  assert.match(feedback.size, /大小/);
-  assert.match(feedback.lightness, /深淺/);
-  assert.match(feedback.hue, /色相/);
-  assert.match(feedback.multiple, /不只一種/);
-  for (const text of Object.values(feedback)) {
-    assert.doesNotMatch(text, /monotonic|single-turn|distance|tolerance|threshold/i);
+test('gradation success feedback stays student-facing', () => {
+  for (const text of [...Object.values(definition('gradation').successFeedback.byMethod), ...Object.values(definition('gradation').discoveryFeedback)]) {
+    assert.doesNotMatch(text, /monotonic|single-turn|distance|tolerance|threshold|轉折/i);
   }
 });
 
@@ -201,14 +176,14 @@ test('diagnostic codes resolve observe, think and action hints', () => {
   assert.equal(first.hint.level, 'observe');
   assert.equal(second.hint.level, 'think');
   assert.equal(third.hint.level, 'action');
-  assert.equal(third.result.primaryDiagnosticCode, 'NOT_ENOUGH_REPETITION');
+  assert.equal(third.result.primaryDiagnosticCode, 'NOT_GROUPED_INTO_UNITS');
 });
 
 test('four course states stay isolated and reset affects only the current experiment', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
   const repetition = definition('repetition');
   const gradation = definition('gradation');
-  getExperimentState(course, repetition.id).workingElements = phase6cFixtures.repetition.pass.single;
+  getExperimentState(course, repetition.id).workingElements = phase6cFixtures.repetition.pass.group;
   submitPhase6cExperiment(course, repetition);
   getExperimentState(course, gradation.id).attemptCount = 2;
   resetPhase6cExperiment(course, repetition);
@@ -219,7 +194,7 @@ test('four course states stay isolated and reset affects only the current experi
 test('success never advances automatically and requires explicit advance', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
   const repetition = definition('repetition');
-  getExperimentState(course, repetition.id).workingElements = phase6cFixtures.repetition.pass.single;
+  getExperimentState(course, repetition.id).workingElements = phase6cFixtures.repetition.pass.group;
   submitPhase6cExperiment(course, repetition);
   assert.equal(course.currentIndex, 0);
   assert.equal(course.currentExperimentId, null);

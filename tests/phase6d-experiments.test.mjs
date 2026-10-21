@@ -15,9 +15,16 @@ test('symmetry vertical horizontal and cross fixtures pass',()=>{
  assert.equal(validate('symmetry',phase6cFixtures.symmetry.pass.horizontal,'horizontal').passed,true);
  assert.equal(validate('symmetry',phase6cFixtures.symmetry.pass.cross,'cross').passed,true);
 });
-test('symmetry axis and directional mirror are handled',()=>{
- assert.equal(validate('symmetry',phase6cFixtures.symmetry.pass.axis,'vertical').passed,true);
+test('symmetry axis elements do not count and directional mirrors are handled',()=>{
+ assert.equal(validate('symmetry',phase6cFixtures.symmetry.fail.axis,'vertical').passed,false);
  assert.equal(validate('symmetry',phase6cFixtures.symmetry.pass.directional,'vertical').passed,true);
+});
+test('symmetry requires four pairs or two complete four-way orbits',()=>{
+ assert.equal(validate('symmetry',phase6cFixtures.symmetry.pass.vertical.slice(0,6),'vertical').primaryDiagnosticCode,'NOT_ENOUGH_SYMMETRY');
+ assert.equal(validate('symmetry',phase6cFixtures.symmetry.pass.horizontal.slice(0,6),'horizontal').primaryDiagnosticCode,'NOT_ENOUGH_SYMMETRY');
+ assert.equal(validate('symmetry',phase6cFixtures.symmetry.pass.cross.slice(0,4),'cross').primaryDiagnosticCode,'NOT_ENOUGH_SYMMETRY');
+ const withAxis=[...phase6cFixtures.symmetry.pass.vertical.slice(0,6),...phase6cFixtures.symmetry.fail.axis];
+ assert.equal(validate('symmetry',withAxis,'vertical').passed,false);
 });
 test('symmetry failures report specific diagnostics',()=>{
  assert.equal(validate('symmetry',phase6cFixtures.symmetry.fail.missing,'vertical').primaryDiagnosticCode,'NO_SYMMETRY_PAIR');
@@ -25,19 +32,21 @@ test('symmetry failures report specific diagnostics',()=>{
  assert.equal(validate('symmetry',phase6cFixtures.symmetry.fail.attribute,'vertical').primaryDiagnosticCode,'ATTRIBUTE_MISMATCH');
  assert.equal(validate('symmetry',phase6cFixtures.symmetry.fail.crossIncomplete,'cross').primaryDiagnosticCode,'CROSS_INCOMPLETE');
 });
-test('contrast size color shape and multiple paths pass',()=>{
- for(const mode of ['size','color','shape','multiple']) assert.equal(validate('contrast',phase6cFixtures.contrast.pass[mode]).passed,true);
+test('contrast requires coherent size and hue groups while retaining optional shape contrast',()=>{
+ for(const mode of ['dual','multiple']) assert.equal(validate('contrast',phase6cFixtures.contrast.pass[mode]).passed,true);
  assert.deepEqual(validate('contrast',phase6cFixtures.contrast.pass.multiple).detectedMethods.slice(0,1),['multiple']);
 });
-test('two elements with a strong size difference form a contrast relationship',()=>{
- const result=validate('contrast',phase6cFixtures.contrast.pass['contrast-two-elements-strong-size']);
- assert.equal(result.passed,true);
- assert.deepEqual(result.detectedMethods,['size']);
+test('contrast rejects too few, single-channel, shape-only, and extreme-plus-noise shortcuts',()=>{
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.tooFewDual).primaryDiagnosticCode,'TOO_FEW_ELEMENTS');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.sizeOnly).primaryDiagnosticCode,'COLOR_CONTRAST_REQUIRED');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.colorOnly).primaryDiagnosticCode,'SIZE_CONTRAST_REQUIRED');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.shapeOnly).passed,false);
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.extremeWithNoise).passed,false);
 });
 test('contrast weak and unrelated diversity fail',()=>{
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.twoWeak).primaryDiagnosticCode,'DIFFERENCE_TOO_SMALL');
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.identical).primaryDiagnosticCode,'NO_CLEAR_CONTRAST');
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.weak).primaryDiagnosticCode,'DIFFERENCE_TOO_SMALL');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.twoWeak).primaryDiagnosticCode,'TOO_FEW_ELEMENTS');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.identical).primaryDiagnosticCode,'TOO_FEW_ELEMENTS');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.weak).primaryDiagnosticCode,'TOO_FEW_ELEMENTS');
  assert.equal(validate('contrast',phase6cFixtures.contrast.fail.unrelated).primaryDiagnosticCode,'TOO_MANY_UNRELATED_DIFFERENCES');
 });
 test('proportion passes ordered unordered and mixed shapes without gradation rules',()=>{

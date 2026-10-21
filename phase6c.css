@@ -172,3 +172,13 @@
 .final-principle-list li{padding:8px 6px;border:1px solid var(--line);background:var(--surface);font-weight:900;text-align:center}
 @media(max-width:900px){.final-completion{grid-template-columns:minmax(0,68%) minmax(0,32%);padding-block:22px}.final-completion h1{font-size:clamp(42px,6vw,62px)}.final-completion-art{height:390px}.final-learning-summary{margin:14px 0}.final-learning-summary strong{padding:8px;font-size:15px}.final-principle-list{margin:14px 0 18px}}
 @media(orientation:portrait) and (max-width:900px){.final-completion{grid-template-columns:1fr;align-content:start;min-height:100svh;padding-block:28px}.final-completion-art{min-height:230px;height:32svh}.final-learning-summary{grid-template-columns:1fr}.final-principle-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Gate 4: gradation-only seven-step size and lightness buttons (48px finger targets, four per row) */
+.geometry-step-options{display:grid;grid-template-columns:repeat(auto-fill,48px);gap:8px}
+.geometry-step{width:48px;height:48px;border:2px solid var(--line);border-radius:10px;background:var(--surface);display:grid;place-items:center;padding:0;cursor:pointer}
+.geometry-step i{display:block;width:var(--step-dot,30px);height:var(--step-dot,30px);border-radius:50%;background:var(--step-swatch,var(--black))}
+.geometry-step-control[data-control="stepLightness"] .geometry-step i{width:30px;height:30px;border-radius:6px}
+.geometry-step.selected{border-color:var(--black);background:var(--yellow)}
+.geometry-step:disabled{opacity:.25;cursor:not-allowed}
+.geometry-step:focus-visible{outline:3px solid var(--black);outline-offset:2px}
+.experiment-feedback-note{margin:4px 0 0;color:var(--text-secondary)}.experiment-feedback-note strong{margin-right:6px;color:var(--text-primary)}

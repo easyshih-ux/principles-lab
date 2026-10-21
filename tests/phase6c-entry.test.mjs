@@ -5,7 +5,8 @@ import { principles, stages } from '../data.js';
 import { recognizeQuestions } from '../recognize-questions.js';
 import { resolveRoute } from '../router.js';
 import { phase6cDefinitions } from '../phase6c-definitions.js';
-import { advancePhase6c, createPhase6cCourseState } from '../phase6c-course-state.js';
+import { phase6cFixtures } from '../phase6c-fixtures.js';
+import { advancePhase6c, createPhase6cCourseState, submitPhase6cExperiment } from '../phase6c-course-state.js';
 import { getExperimentState } from '../experiment-session.js';
 import { classroomCourseCardsMarkup } from '../renderers.js';
 
@@ -60,16 +61,19 @@ test('experiment start and the complete ten-experiment route chain resolve safel
 });
 
 test('entry release uses a fresh application cache marker', () => {
-  assert.match(indexSource, /app\.js\?v=teacher-gate2-1/);
+  assert.match(indexSource, /app\.js\?v=gate4-contrast-2/);
   assert.match(indexSource, /classroom-control\.css\?v=classroom-control-1/);
-  assert.match(indexSource, /phase6c\.css\?v=final-phase-1/);
+  assert.match(indexSource, /phase6c\.css\?v=gate4-contrast-2/);
 });
 test('explicit completion advances through all ten experiments and then completion', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
   const expectedNextIds = ['experiment-gradation', 'experiment-balance', 'experiment-rhythm', 'experiment-symmetry', 'experiment-contrast', 'experiment-proportion', 'experiment-unity', 'experiment-harmony', 'experiment-simplicity', null];
 
   phase6cDefinitions.forEach((definition, index) => {
-    getExperimentState(course, definition.id).completed = true;
+    const state = getExperimentState(course, definition.id);
+    state.workingElements = structuredClone(Object.values(phase6cFixtures[definition.principleId].pass)[0]);
+    if (definition.principleId === 'symmetry') state.selectedExperimentOption = 'vertical';
+    submitPhase6cExperiment(course, definition);
     assert.equal(advancePhase6c(course, definition), expectedNextIds[index]);
   });
 

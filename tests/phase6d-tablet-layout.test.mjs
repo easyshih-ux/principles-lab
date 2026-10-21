@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { phase6cDefinitionsById } from '../phase6c-definitions.js';
+import { phase6cFixtures } from '../phase6c-fixtures.js';
 import { experimentActionsMarkup, feedbackMarkup } from '../experiment-course.js';
-import { createPhase6cCourseState } from '../phase6c-course-state.js';
+import { createPhase6cCourseState, submitPhase6cExperiment } from '../phase6c-course-state.js';
 import { getExperimentState } from '../experiment-session.js';
 
 const css=fs.readFileSync(new URL('../phase6c.css',import.meta.url),'utf8');
@@ -39,7 +40,8 @@ test('allowed tools are split by one reusable primary secondary panel renderer',
 test('formal review and success actions remain directly below the canvas',()=>{
  const definition=phase6cDefinitionsById['experiment-proportion']; const course=createPhase6cCourseState([definition]);
  assert.match(experimentActionsMarkup(course,definition,null),/id="experiment-check"/);
- getExperimentState(course,definition.id).completed=true;
+  getExperimentState(course,definition.id).workingElements=structuredClone(phase6cFixtures.proportion.pass.ordered);
+  submitPhase6cExperiment(course,definition);
  assert.match(experimentActionsMarkup(course,definition,{result:{passed:true}}),/id="experiment-next"/);
  const canvas=source.indexOf('experiment-canvas-wrap'); const footer=source.indexOf('experiment-footer'); const right=source.indexOf('experiment-tool-panel-right');
  assert.ok(canvas>=0 && footer>canvas && right>footer);

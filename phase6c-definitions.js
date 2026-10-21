@@ -1,4 +1,11 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
+import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4-contrast-2';
+
+const overlapHint = Object.freeze({
+  observe: '有些圖形完全疊在一起了，看起來像只剩下一個圖形。',
+  think: '每個圖形都需要被看見，才會讓形式關係更清楚。',
+  action: '試著把完全疊在一起的圖形移開一點，讓每個圖形都看得見。'
+});
 
 
 function formal(principleId, overrides) {
@@ -8,7 +15,7 @@ function formal(principleId, overrides) {
     ...overrides,
     initialState: Object.freeze({ ...base.initialState, ...overrides.initialState }),
     validationSpec: Object.freeze({ ...base.validationSpec, ...overrides.validationSpec }),
-    diagnosticHints: Object.freeze(overrides.diagnosticHints),
+    diagnosticHints: Object.freeze({ ...overrides.diagnosticHints, EXCESSIVE_OVERLAP: overlapHint }),
     successFeedback: Object.freeze(overrides.successFeedback),
     discoveryFeedback: Object.freeze(overrides.discoveryFeedback),
     status: 'phase6c-formal'
@@ -18,30 +25,45 @@ function formal(principleId, overrides) {
 export const phase6cDefinitions = Object.freeze([
   formal('repetition', {
     title: '挑戰｜做出「反覆」',
-    task: '運用畫面中的造形，讓某個造形或組合有「再次出現」的感覺。怎麼安排，由你決定。',
+    task: '設計一個單元，讓它反覆出現。過關：①至少 5 個單元 ②每個單元都一樣 ③每個造形都屬於某個單元',
+    creationTips: '可以先用兩種造形組成一個單元，造形可以重疊；單元和單元之間留一點空隙，會更清楚。',
     initialState: { elements: [] },
-    validationSpec: { minimumOccurrences: 3, signatureFields: ['shape', 'size', 'hue', 'lightness', 'rotation'], allowGroupUnit: true, groupDistance: 180, groupOffsetTolerance: 20 },
+    validationSpec: { minimumUnits: 5, unitPositionTolerance: 24, unitLinkGaps: [0, 10, 20, 30, 40], canvasWidth: 1000, canvasHeight: 600 },
     diagnosticHints: {
-      NO_REPEAT_UNIT: { observe: '找找看，畫面裡有沒有哪個造形或組合，讓人有「又看到它了」的感覺？', think: '哪個造形或組合，可以成為畫面中一直出現的角色？', action: '選一個造形或一組造形，試著讓它再次出現。' },
-      NOT_ENOUGH_REPETITION: { observe: '已經開始有「再次出現」的感覺了，但反覆還不太明顯。你覺得還能怎麼加強？', think: '你剛才使用的造形或組合，還能再出現一次嗎？', action: '讓同樣的造形或組合再明確出現一次，再檢查看看。' },
-      INCONSISTENT_REPEAT: { observe: '畫面裡有很多造形，但哪一部分是「相同的東西再次出現」呢？', think: '試著找出一個你想反覆使用的造形或組合。', action: '讓同一個造形或組合保留比較明顯的共同特徵。' }
+      NO_REPEAT_UNIT: { observe: '畫面裡還沒有單元。', think: '單元由兩種以上的造形組成。', action: '把兩種以上的造形組合在一起。' },
+      NOT_GROUPED_INTO_UNITS: { observe: '造形已經反覆出現了，但還沒有組成單元。', think: '把幾個造形組合起來，就是一個單元。', action: '組成一個單元，再讓每個單元都一樣。' },
+      NOT_ENOUGH_REPETITION: { observe: '單元已經反覆出現了，但數量還不夠。', think: '同一個單元至少要出現 5 次。', action: '複製單元，放到畫面其他地方。' },
+      OUTSIDE_UNIT: { observe: '有造形不屬於任何單元。', think: '畫面裡每個造形，都要是某個單元的一部分。', action: '刪除多出來的造形，或把它加進單元裡。' },
+      UNITS_TOUCHING: { observe: '有單元黏在一起了。', think: '單元和單元之間留一點空隙，才看得出每個單元。', action: '把黏在一起的單元分開一點。' },
+      UNIT_MISSING_SHAPE: { observe: '有一個單元少了造形。', think: '每個單元的組成都要一樣。', action: '補上少掉的造形。' },
+      UNIT_EXTRA_SHAPE: { observe: '有一個單元多了造形。', think: '每個單元的組成都要一樣。', action: '拿掉多出來的造形。' },
+      UNIT_COLOR_SIZE_DIFFERENT: { observe: '有一個單元的顏色或大小不一樣。', think: '每個單元的顏色和大小都要一樣。', action: '調整那個單元的顏色或大小。' },
+      UNIT_ARRANGEMENT_DIFFERENT: { observe: '有一個單元的排法不一樣。', think: '每個單元裡，造形的相對位置要一樣；整組轉方向或翻過來也算一樣。', action: '調整那個單元裡造形的位置或方向。' },
+      UNIT_DIFFERENT: { observe: '有一組造形和其他單元不一樣。', think: '每個單元都要一樣。', action: '把那組造形改成和其他單元一樣。' }
     },
-    successFeedback: { general: '成功！畫面已形成反覆。', byMethod: { single: '成功！你讓相同的造形再次出現，形成了「反覆」。', group: '成功！你反覆使用的不是單一造形，而是一組造形。這也是「反覆」！' } },
-    discoveryFeedback: { single: '反覆不一定要排得整整齊齊，重要的是讓相同的視覺元素再次出現。', group: '反覆不一定要排得整整齊齊，重要的是讓相同的視覺元素再次出現。' }
+    successFeedback: { general: '成功！同一個單元反覆出現，形成了「反覆」。', byMethod: { unit: '成功！你讓同一個單元反覆出現，形成了「反覆」。' } },
+    discoveryFeedback: { unit: '反覆不一定要排得整整齊齊；單元轉個方向，也還是同一個單元。' }
   }),
   formal('gradation', {
     title: '挑戰｜做出「漸層」',
-    task: '運用造形的變化，讓畫面產生「一步一步改變」的感覺。怎麼變化，由你決定。',
+    task: '用兩種變化做出 7 個階段的漸層。可以一路變大，也可以先變大再變小。',
+    creationTips: '選兩種變化，例如大小和深淺，從第 1 級到第 7 級一路改變。',
+    allowedTools: normalizeAllowedTools({ addShape: true, stepSize: true, color: true, stepLightness: true, position: true, duplicate: true, delete: true }),
     initialState: { elements: [] },
-    validationSpec: { minimumStages: 4, allowedModes: ['size', 'lightness', 'hue', 'spacing'], minimumSizeRange: 2, minimumLightnessRange: 2, minimumHueRange: 2, maximumHueStep: 1, minimumSpacingRange: 35 },
+    validationSpec: { minimumStages: 7, minimumChannels: 2, minimumSizeRange: 2, minimumLightnessRange: 2, minimumHueRange: 2, maximumHueStep: 1, minimumSpacingRange: 60, canvasWidth: 1000, canvasHeight: 600 },
     diagnosticHints: {
-      NO_CLEAR_GRADATION: { observe: '你的畫面有變化了，但哪一種變化有「一步一步」的感覺呢？', think: '看看大小、顏色深淺或間距，有沒有一項可以慢慢改變？', action: '選一種變化，試著讓它一步一步朝同一個方向前進。' },
-      TOO_FEW_STAGES: { observe: '已經看得到變化了！但它比較像一下子從這裡跳到那裡。怎麼讓變化更有「過程」？', think: '可以在兩個差異之間，再加入一些變化嗎？', action: '讓中間多出幾個逐步改變的階段，再檢查看看。' },
-      DIRECTION_BREAK: { observe: '畫面裡有變化，但方向來回改變了好幾次。你找得到哪些地方打斷了漸變嗎？', think: '漸層可以前進後返回一次；如果一直來回，會更像反覆或律動。', action: '保留一個清楚的前進方向，或只留下峰值／谷值的一次轉折。' },
-      CHANGE_TOO_SUBTLE: { observe: '仔細看有變化，但如果不靠近看，還能發現嗎？', think: '試著讓每一步的差異再明顯一點。', action: '把正在使用的變化稍微拉開，再檢查看看。' }
+      TOO_FEW_STAGES: { observe: '階段還不夠多。', think: '漸層要有 7 個階段。', action: '再增加造形，讓變化多走幾步。' },
+      ONLY_ONE_CHANGE: { observe: '目前只有一種變化。', think: '漸層要同時有兩種變化。', action: '再加入第二種變化，例如深淺或間距。' },
+      CHANGE_STOPS: { observe: '有一個地方的變化停住了。', think: '每一步都要繼續改變。', action: '找到停住的地方，讓它往同一個方向再變一級。' },
+      HUE_JUMP: { observe: '有一個地方的顏色跳太遠了。', think: '色相漸層要沿著色相環一格一格走。', action: '換成相鄰的顏色。' },
+      TOO_MANY_PEAKS: { observe: '變化起起伏伏好幾次。', think: '漸層只能有一座山；起伏好幾次比較像律動。', action: '只保留一次變大再變小，或一路改變。' },
+      CHANGE_TOO_SMALL: { observe: '變化的差別太小了。', think: '頭尾兩端要看得出明顯不同。', action: '讓第一個和最後一個差多一點。' },
+      NOT_ON_PATH: { observe: '有造形不在漸層的路線上。', think: '漸層裡的每個造形都是一個階段。', action: '把它排進路線，或刪除它。' },
+      NO_CLEAR_PATH: { observe: '看不出造形的排列路線。', think: '漸層要讓變化一個接一個看下去。', action: '把造形排成一條線、斜線或弧線。' },
+      NO_CLEAR_GRADATION: { observe: '還看不出一步一步的變化。', think: '選兩種變化，一步一步改變。', action: '從第 1 級到第 7 級慢慢調整。' }
     },
-    successFeedback: { general: '成功！畫面已形成漸層。', byMethod: { size: '你利用大小的變化，做出了清楚的漸層。', lightness: '你利用深淺的變化，做出了清楚的漸層。', hue: '你讓色彩一步一步改變，形成了色相的漸變。', spacing: '成功！即使造形沒有變，改變它們之間的距離，也能形成「漸層」。', multiple: '你同時用了不只一種變化方式來形成漸層。' } },
-    discoveryFeedback: { size: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', lightness: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', hue: '色相沿著色相環一步一步移動，也能形成清楚的漸變。', spacing: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。', multiple: '漸層不只可以改變大小，色彩深淺、色相、間距等視覺特徵，也能產生一步一步的變化。' }
+    successFeedback: { general: '成功！畫面已形成漸層。', byMethod: { multiple: '成功！你讓兩種變化一起一步一步改變，形成了「漸層」。' } },
+    discoveryFeedback: { multiple: '漸層可以一路改變，也可以先變大再變小；只要只有一座山，就不會變成律動。' }
   }),
   formal('balance', {
     title: '挑戰｜做出「不對稱的均衡」',
@@ -74,27 +96,38 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('symmetry', {
     title: '挑戰｜做出「對稱」',
-    task: '選擇一種對稱方式，利用方格和對稱軸安排造形，讓兩側彼此對應。',
+    task: '做出對稱的畫面，用至少 4 種不同的造形或顏色。<br>左右、上下對稱要有 4 對互相對應的造形；十字對稱要有 2 組（每組上下左右 4 個）。',
+    creationTips: '造形要對稱，色彩可以自由變化。中線上也可以放造形，但不算在 4 種裡。',
+    allowedTools: normalizeAllowedTools({ addShape: true, size: true, color: true, position: true, rotation: true, duplicate: true, delete: true, grid: true }),
     initialState: { elements: [], selectedSymmetryMode: 'vertical', gridConfig: { enabled: true, visible: true, step: 20, axis: 'vertical' } },
-    validationSpec: { allowedSymmetryModes: ['vertical', 'horizontal', 'cross'], axisX: 500, axisY: 300, gridStep: 20, positionTolerance: 1, directionAwareShapes: true },
+    validationSpec: { allowedSymmetryModes: ['vertical', 'horizontal', 'cross'], axisX: 500, axisY: 300, gridStep: 20, positionTolerance: 1, minimumMirrorPairs: 4, minimumCrossOrbits: 2, minimumCombinations: 4, directionAwareShapes: true },
     diagnosticHints: {
-      NO_SYMMETRY_PAIR: { observe: '沿著對稱軸看看，這個造形在另一邊有找到它的「對應夥伴」嗎？', think: '如果把畫面沿著對稱軸對折，哪些造形還找不到彼此？', action: '找一個沒有對應的造形，在對稱軸另一側安排它的對應造形。' },
-      POSITION_MISMATCH: { observe: '兩邊好像有相同造形，但如果沿著中線對折，它們真的會碰在一起嗎？', think: '看看它們離對稱軸的距離是不是一樣。', action: '利用方格調整位置，讓兩邊距離對稱軸相同。' },
-      ATTRIBUTE_MISMATCH: { observe: '位置已經很接近了，再看看兩邊造形本身有沒有哪裡不同？', think: '造形、大小或方向，有沒有一項沒有彼此對應？', action: '調整兩側造形的大小、種類或方向，再檢查看看。' },
-      CROSS_INCOMPLETE: { observe: '一個方向看起來已經很像了，那另一個方向呢？', think: '十字對稱要同時觀察左右和上下兩個方向。', action: '再沿另一條對稱軸檢查一次，補上還沒有對應的部分。' }
+      NO_SYMMETRY_PAIR: { observe: '有造形在對稱軸另一邊還找不到對應夥伴。', think: '沿著對稱軸對折，兩邊的造形要碰在一起。', action: '在另一邊放一個對應的造形。' },
+      POSITION_MISMATCH: { observe: '兩邊有相同的造形，但位置對不上。', think: '兩邊離對稱軸的距離要一樣。', action: '利用方格調整位置。' },
+      ATTRIBUTE_MISMATCH: { observe: '對應位置上的造形不一樣。', think: '造形、大小和方向都要互相對應；顏色可以不同。', action: '調整造形、大小或方向。' },
+      CROSS_INCOMPLETE: { observe: '十字對稱還不完整。', think: '上下左右四個位置都要有相同的造形。', action: '補上還缺的方向。' },
+      NOT_ENOUGH_SYMMETRY: { observe: '對應的造形還不夠多。', think: '左右或上下要 4 對，十字要 2 組。', action: '再多做幾對對應的造形。' },
+      NOT_ENOUGH_VARIETY: { observe: '對稱已經做好了，但造形和顏色的組合還不夠多。', think: '要有 4 種不同的造形和顏色的組合。', action: '換一種造形，或換一種顏色。' },
+      AXIS_SHAPE_NOT_SYMMETRIC: { observe: '中線上的造形本身不對稱。', think: '放在中線上的造形，要自己左右（或上下）對稱。', action: '轉動它，或把它移開中線。' }
     },
     successFeedback: { general: '成功！造形已沿對稱軸彼此對應。', byMethod: { vertical: '成功！你讓造形沿著垂直中軸彼此對應，形成了左右對稱。', horizontal: '成功！你讓造形沿著水平中軸彼此對應，形成了上下對稱。', cross: '成功！你的構圖同時沿著水平與垂直方向彼此對應，形成了十字對稱。' } },
     discoveryFeedback: { vertical: '對稱不只有左右。改變對稱軸，也能形成上下或更多方向的對稱關係。', horizontal: '對稱不只有左右。改變對稱軸，也能形成上下或更多方向的對稱關係。', cross: '對稱不只有左右。改變對稱軸，也能形成上下或更多方向的對稱關係。' }
   }),
   formal('contrast', {
     title: '挑戰｜做出「對比」',
-    task: '利用造形之間的差異，讓某種不同變得明顯。你可以從大小、色彩或造形開始。',
+    task: '做出兩組對比強烈的圖形：大小要差很多，顏色也要差很多。至少 6 個圖形。',
+    creationTips: '顏色可以選色環上距離很遠的，例如紅配藍、黃配紫。',
     initialState: { elements: [] },
-    validationSpec: { minimumElements: 3, minimumSizeDifference: 3, minimumHueDistance: 2, minimumLightnessDifference: 3, comparisonCoverage: 0.75 },
+    validationSpec: { minimumElements: 6, minimumGroupSize: 2, minimumSizeDifference: 3, minimumHueDistance: 4, minimumLightnessDistance: 3, groupCoverage: 1, comparisonCoverage: 0.8, canvasWidth: 1000, canvasHeight: 600 },
     diagnosticHints: {
-      NO_CLEAR_CONTRAST: { observe: '第一眼看過去，哪一種「不同」最明顯？', think: '大小、色彩或造形之中，有沒有一種差異可以再清楚一點？', action: '選一種差異，把兩邊的不同拉得更明顯，再檢查看看。' },
-      DIFFERENCE_TOO_SMALL: { observe: '看得出它們有一點不同，但這個差異第一眼就能發現嗎？', think: '如果想讓這個不同更有力量，可以把差距再拉開嗎？', action: '把你正在使用的大小或色彩差異再加強一些。' },
-      TOO_MANY_UNRELATED_DIFFERENCES: { observe: '畫面裡有很多不同，但你最想讓大家看到的是哪一組差異？', think: '對比不是「全部都不一樣」，而是讓某個差異變得特別清楚。', action: '保留一個主要的比較關係，減少會搶走注意力的其他變化。' }
+      NO_CLEAR_CONTRAST: { observe: '還看不出兩組。', think: '對比要有兩組，大小和顏色都差很多。', action: '做一組大的、一組小的，顏色也選差很遠的。' },
+      DIFFERENCE_TOO_SMALL: { observe: '兩組的差別還不夠明顯。', think: '大小和顏色都要一眼就看得出不同。', action: '把大小差距拉開，顏色選色環上距離很遠的。' },
+      TOO_MANY_UNRELATED_DIFFERENCES: { observe: '畫面裡有太多不同。', think: '對比不是全部都不一樣，而是兩組清楚的差別。', action: '只留下兩組，其他的改成跟其中一組一樣。' },
+      TOO_FEW_ELEMENTS: { observe: '圖形的數量還不夠。', think: '至少要 6 個圖形，分成兩組。', action: '再加幾個圖形到兩組裡。' },
+      SIZE_CONTRAST_REQUIRED: { observe: '兩組的大小差不多。', think: '大小要差很多才看得出對比。', action: '讓一組更大、一組更小。' },
+      COLOR_CONTRAST_REQUIRED: { observe: '兩組的顏色太接近了。', think: '顏色要選色環上距離很遠的。', action: '例如紅配藍、黃配紫。' },
+      GROUP_TOO_SMALL: { observe: '有一組只有一個圖形。', think: '每組至少要 2 個圖形。', action: '再放一個一樣的圖形到那一組。' },
+      OUTSIDE_GROUPS: { observe: '有圖形看不出屬於哪一組。', think: '每個圖形都要像其中一組。', action: '讓它的大小和顏色跟其中一組一樣。' }
     },
     successFeedback: { general: '成功！畫面已形成明顯對比。', byMethod: { size: '成功！你利用明顯的大小差異形成了「對比」。', color: '成功！你利用明顯的色彩差異形成了「對比」。', shape: '成功！不同的造形特徵形成了清楚的「對比」。', multiple: '成功！你同時運用了不只一種差異，讓對比更加明顯。' } },
     discoveryFeedback: { size: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', color: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', shape: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', multiple: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。' }
@@ -114,12 +147,13 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('unity', {
     title: '挑戰｜做出「統一」',
-    task: '讓畫面中的造形彼此有共同的特徵，看起來像是同一個整體。',
+    task: '使用至少 7 個造形，讓大部分圖形有共同特色，同時保留一些看得見的變化。',
     initialState: { elements: [] },
-    validationSpec: { minimumElements: 4, requiredUnityRatio: 0.75, minimumDirectionalElements: 3, allowedUnityModes: ['color', 'rotation', 'shapeFeature', 'lineStyle'] },
+    validationSpec: { minimumElements: 7, requiredUnityRatio: 0.857142857, minimumDirectionalElements: 6, allowedUnityModes: ['color', 'rotation', 'shapeFeature'] },
     diagnosticHints: {
       NO_CLEAR_UNITY: { observe: '看看整張畫面，這些造形有沒有共同的色彩、造形或方向？', think: '從共同色彩、共同造形或共同方向中選一種，哪一種最適合延伸到整張畫面？', action: '選一種共同特徵，讓更多元素彼此呼應。' },
-      UNITY_TOO_WEAK: { observe: '有一些造形已經像一家人了，但共同特徵有延伸到主要元素嗎？', think: '共同色彩、共同造形或共同方向，只要選一種方法做得更清楚。', action: '把你選擇的共同特徵延伸到更多元素，再檢查看看。' }
+      UNITY_TOO_WEAK: { observe: '有一些造形已經像一家人了，但共同特徵有延伸到主要元素嗎？', think: '共同色彩、共同造形或共同方向，只要選一種方法做得更清楚。', action: '把你選擇的共同特徵延伸到更多元素，再檢查看看。' },
+      NO_VISIBLE_VARIATION: { observe: '這些圖形很一致，但目前看起來幾乎完全相同。', think: '保留共同特色的同時，還能加入哪一種看得見的變化？', action: '試著改變部分圖形的大小、造形、顏色或方向。' }
     },
     successFeedback: { general: '成功！畫面已形成統一。', byMethod: { color: '成功！共同的色彩讓不同造形看起來屬於同一個整體。', rotation: '成功！相似的方向讓畫面產生了一致感。', shapeFeature: '成功！共同的造形或造形特色，讓畫面形成了「統一」。', lineStyle: '成功！共同的線條特色讓畫面產生了一致感。', multiple: '成功！你用了不只一種共同特徵，讓整個畫面更有一致感。' } },
     discoveryFeedback: { general: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', color: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', rotation: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', shapeFeature: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', lineStyle: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。', multiple: '統一不是全部一模一樣，而是讓不同的元素之間找到共同點。' }
@@ -128,7 +162,7 @@ export const phase6cDefinitions = Object.freeze([
     title: '挑戰｜做出「調和」',
     task: '利用彼此接近、能互相呼應的色彩，讓畫面看起來協調。',
     initialState: { elements: [] },
-    validationSpec: { minimumElements: 4, harmonyCoverage: 0.75, minimumLightnessLevels: 2, allowedHarmonyModes: ['sameHueLightness', 'neighborHue', 'mixed'] },
+    validationSpec: { minimumElements: 6, harmonyCoverage: 0.75, minimumLightnessLevels: 2, allowedHarmonyModes: ['sameHueLightness', 'neighborHue', 'mixed'] },
     diagnosticHints: {
       NO_CLEAR_HARMONY: { observe: '看看這些顏色，它們彼此有沒有「靠近」的感覺？', think: '可以從同色系的深淺，或色相環上相近的顏色開始找關係。', action: '選一個主要色系，再加入它的深淺變化或相近顏色。' },
       COLORS_TOO_FAR_APART: { observe: '有些顏色彼此差得很遠，哪一些最不像同一組？', think: '如果想讓色彩更協調，可以把距離很遠的顏色換成相近色嗎？', action: '保留一個主要色系，將其中差異最大的顏色換成它附近的顏色。' },
