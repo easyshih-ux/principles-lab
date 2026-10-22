@@ -8,7 +8,7 @@ import {
 import {
   createTeacherDashboardController,
   TEACHER_PROGRESS_ITEMS
-} from './teacher-progress-dashboard.js?v=teacher-pending-1';
+} from './teacher-progress-dashboard.js?v=teacher-segments-1';
 import { formatSeatNumber } from './classroom-config.js';
 import { changeDraftMaximum, createTeacherClassSettingsController, toggleDraftSeat } from './teacher-class-settings.js?v=v2-d3-1';
 import { createAcademicYearManagementController } from './teacher-academic-year-management.js?v=v2-d3-1-1';
@@ -27,6 +27,28 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+// 10/22: free practice in three parts (01–03, 04–06, 07–10), each with its own seats.
+function seatChips(seats, pending = false) {
+  return `<div class="teacher-seat-chips${pending ? ' teacher-seat-chips-pending' : ''}">${seats.map((seatNo) => `<span>${formatSeatNumber(seatNo)}</span>`).join('')}</div>`;
+}
+function freeReviewSegmentsMarkup(summary, expandedCheckpoints) {
+  const segments = summary?.segments ?? [];
+  if (!segments.length) return '';
+  return `<div class="teacher-completed-seats teacher-free-segments">
+    <h4>分段進度</h4>
+    ${segments.map((segment) => {
+      const open = expandedCheckpoints.has(segment.key);
+      return `<div class="teacher-free-segment">
+        <button class="teacher-seats-toggle teacher-segment-toggle" type="button" data-completed-seats-toggle="${segment.key}" aria-expanded="${open}"><strong>${segment.label}</strong> ${segment.names}　<b>${segment.completedSeats.length}</b> 人完成 ${open ? '▴' : `（未完成 ${segment.pendingSeats.length} 人）▾`}</button>
+        ${open ? `<div class="teacher-segment-seats">
+          <p class="teacher-segment-heading">未完成</p>${segment.pendingSeats.length ? seatChips(segment.pendingSeats, true) : '<p>全部完成</p>'}
+          <p class="teacher-segment-heading">已完成</p>${segment.completedSeats.length ? seatChips(segment.completedSeats) : '<p>尚無完成紀錄</p>'}
+        </div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
@@ -66,6 +88,7 @@ function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
                   ? `<div class="teacher-completed-seats-row"><div class="teacher-seat-chips teacher-seat-chips-pending">${pendingSeats.map((seatNo) => `<span>${formatSeatNumber(seatNo)}</span>`).join('')}</div><p>共 ${pendingSeats.length} 人</p></div>`
                   : '<p>全部完成</p>'}
               </div>
+              ${key === 'freeReviewComplete' ? freeReviewSegmentsMarkup(summary, expandedCheckpoints) : ''}
               <div class="teacher-completed-seats">
                 <h4>已完成座號</h4>
                 ${completedSeats.length

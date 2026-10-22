@@ -1,5 +1,5 @@
 import { principles, stages } from './data.js';
-import { createRenderers } from './renderers.js?v=explore-1';
+import { createRenderers } from './renderers.js?v=free-principles-1';
 import { resolveRoute } from './router.js?v=v2-entry-1';
 import { createAppState, setCurrentRoute } from './state.js?v=v2-b2-checkpoints-1';
 import { renderGeometryPlayground } from './geometry/playground.js';
@@ -8,17 +8,17 @@ import { recognizeQuestions } from './recognize-questions.js';
 import { createRecognizeCourseRenderers } from './recognize-course.js?v=v2-b2-checkpoints-1';
 import { discoverQuestions } from './discover-questions.js';
 import { createDiscoverCourseRenderers } from './discover-course.js?v=v2-b2-checkpoints-1';
-import { createExperimentCourseRenderers } from './experiment-course.js?v=gate4c-pending-1';
+import { createExperimentCourseRenderers } from './experiment-course.js?v=gate4c-principles-1';
 import { createPhase6cCourseState } from './phase6c-course-state.js?v=gate3-validation-1';
-import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-pending-1';
+import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-principles-1';
 import { createLockedClassroomUnlocks, isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { fallbackClassConfigs, loadClassConfigs } from './class-config-service.js?v=v2-d3-1';
 import { isAcademicYearNetworkError, loadActiveAcademicYear } from './academic-year-service.js?v=v2-d3-1-1';
 import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d3-1-1';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d3-1';
-import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
-import { renderTeacherPage, signOutTeacherFromTeachingMode } from './teacher-page.js?v=teacher-pending-1';
+import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=free-principles-1';
+import { renderTeacherPage, signOutTeacherFromTeachingMode } from './teacher-page.js?v=teacher-segments-1';
 import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
 import { createCheckpointTracker, shouldStartFresh } from './student-handoff.js?v=handoff-1';
 

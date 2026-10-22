@@ -9,6 +9,16 @@ export const STUDENT_PROGRESS_CHECKPOINTS = Object.freeze([
   'level3Complete'
 ]);
 
+// 10/22: one mark per free-practice principle (01-10), written as soon as that principle is
+// finished, so a student who works across sessions is still counted. Needs the matching
+// Firestore rules; until they are deployed these writes are refused and simply skipped.
+export const FREE_REVIEW_PRINCIPLE_IDS = Object.freeze([
+  'repetition', 'gradation', 'symmetry', 'balance', 'contrast',
+  'rhythm', 'proportion', 'unity', 'harmony', 'simplicity'
+]);
+export const FREE_REVIEW_PRINCIPLE_CHECKPOINTS = Object.freeze(FREE_REVIEW_PRINCIPLE_IDS.map((id) => `freeReview_${id}`));
+const ALL_CHECKPOINTS = Object.freeze([...STUDENT_PROGRESS_CHECKPOINTS, ...FREE_REVIEW_PRINCIPLE_CHECKPOINTS]);
+
 export function studentProgressDocumentId(identity) {
   return createStudentIdentity(identity?.classId, identity?.seatNo, identity?.academicYear)?.studentKey ?? null;
 }
@@ -16,7 +26,7 @@ export function studentProgressDocumentId(identity) {
 export function buildCheckpointData(identity, checkpointName, updatedAt) {
   const student = createStudentIdentity(identity?.classId, identity?.seatNo, identity?.academicYear);
   if (!student) throw new TypeError('Invalid student identity');
-  if (!STUDENT_PROGRESS_CHECKPOINTS.includes(checkpointName)) throw new TypeError('Invalid student progress checkpoint');
+  if (!ALL_CHECKPOINTS.includes(checkpointName)) throw new TypeError('Invalid student progress checkpoint');
   return {
     academicYear: student.academicYear,
     classId: student.classId,
@@ -29,7 +39,7 @@ export function buildCheckpointData(identity, checkpointName, updatedAt) {
 
 export async function writeStudentProgressCheckpoint(identity, checkpointName, dependencies = {}) {
   try {
-    if (!STUDENT_PROGRESS_CHECKPOINTS.includes(checkpointName)) throw new TypeError('Invalid student progress checkpoint');
+    if (!ALL_CHECKPOINTS.includes(checkpointName)) throw new TypeError('Invalid student progress checkpoint');
     const client = dependencies.client ?? await getFirebaseClient();
     const user = await ensureAnonymousAuth(client);
     const documentId = studentProgressDocumentId(identity);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { firebaseConfig, isFirebaseConfigured } from '../firebase-config.js';
-import { buildCheckpointData, STUDENT_PROGRESS_CHECKPOINTS, studentProgressDocumentId, writeStudentProgressCheckpoint } from '../student-progress-cloud.js';
+import { buildCheckpointData, FREE_REVIEW_PRINCIPLE_CHECKPOINTS, STUDENT_PROGRESS_CHECKPOINTS, studentProgressDocumentId, writeStudentProgressCheckpoint } from '../student-progress-cloud.js';
 import * as cloudProgress from '../student-progress-cloud.js';
 import { principles, stages } from '../data.js';
 import { areFreeReviewStagesComplete, createAppState, isFreeReviewComplete, markFreeReviewPrincipleComplete, markFreeReviewVisited } from '../state.js';
@@ -124,7 +124,12 @@ test('Firestore rules preserve progress validation while separating anonymous wr
   assert.match(rules, /studentKey == request\.resource\.data\.academicYear \+ '-' \+ request\.resource\.data\.classId/);
   assert.match(rules, /get\('level1Complete', true\) == true/);
   assert.match(rules, /preservesCompletedCheckpoints/);
-  assert.match(rules, /affectedKeys\(\)[\s\S]*hasOnly\(\['freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt'\]\)/);
+  // 10/22: the update rule also allows the ten free-practice principle marks.
+  assert.match(rules, /affectedKeys\(\)[\s\S]*hasOnly\(\['freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt',[\s\S]*'freeReview_simplicity'\]\)/);
+  for (const checkpoint of FREE_REVIEW_PRINCIPLE_CHECKPOINTS) {
+    assert.match(rules, new RegExp(`get\\('${checkpoint}', true\\) == true`), checkpoint);
+    assert.match(rules, new RegExp(`'${checkpoint}' in resource\\.data`), checkpoint);
+  }
   assert.match(rules, /request\.resource\.data\.updatedAt == request\.time/);
   assert.match(rules, /match \/\{document=\*\*\}[\s\S]*allow read, write: if false/);
 });

@@ -198,6 +198,38 @@ async function checkpointCreate(db, studentKey = '115-701-12', academicYear = '1
     await assertFails(getDocs(query(collection(unauthenticated, 'studentProgress'))));
     await assertFails(deleteDoc(doc(teacher, 'studentProgress', '115-701-1')));
 
+    // 10/22: one free-practice mark per principle, written the way the site writes (setDoc + merge).
+    const principleMarks = ['repetition', 'gradation', 'symmetry', 'balance', 'contrast', 'rhythm', 'proportion', 'unity', 'harmony', 'simplicity'].map((id) => `freeReview_${id}`);
+    const mark = (db, studentKey, seatNo, fields) => setDoc(doc(db, 'studentProgress', studentKey), {
+      academicYear: '115', classId: '701', seatNo, studentKey, ...fields, updatedAt: serverTimestamp()
+    }, { merge: true });
+    // A new student whose first mark is a principle.
+    await assertSucceeds(mark(anonymous, '115-701-20', 20, { freeReview_repetition: true }));
+    // More principles, then the four old marks, keep working on the same document.
+    for (const key of principleMarks.slice(1)) await assertSucceeds(mark(anonymous, '115-701-20', 20, { [key]: true }));
+    for (const key of ['freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete']) await assertSucceeds(mark(anonymous, '115-701-20', 20, { [key]: true }));
+    // A student who already had old marks can add principle marks.
+    await assertSucceeds(mark(anonymous, '115-701-12', 12, { freeReview_gradation: true }));
+    // The four old marks still work on a brand-new document.
+    for (const [seat, key] of [[21, 'freeReviewComplete'], [22, 'level1Complete'], [23, 'level2Complete'], [24, 'level3Complete']]) {
+      await assertSucceeds(mark(anonymous, `115-701-${seat}`, seat, { [key]: true }));
+    }
+    // Refused: false marks, unknown principle names, removing a mark, other fields, teacher or signed-out writes.
+    await assertFails(mark(anonymous, '115-701-25', 25, { freeReview_balance: false }));
+    await assertFails(mark(anonymous, '115-701-25', 25, { freeReview_painting: true }));
+    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '115-701-20'), { freeReview_unity: deleteField(), updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(anonymous, 'studentProgress', '115-701-20'), { freeReview_unity: false, updatedAt: serverTimestamp() }));
+    await assertFails(mark(anonymous, '115-701-25', 25, { freeReview_contrast: true, attempts: 3 }));
+    await assertFails(mark(anonymous, '115-701-25', 25, { freeReview_contrast: 'yes' }));
+    await assertFails(setDoc(doc(anonymous, 'studentProgress', '115-701-26'), { academicYear: '115', classId: '701', seatNo: 26, studentKey: '115-701-26', freeReview_rhythm: true, updatedAt: new Date() }));
+    await assertFails(mark(teacher, '115-701-27', 27, { freeReview_rhythm: true }));
+    await assertFails(mark(unauthenticated, '115-701-27', 27, { freeReview_rhythm: true }));
+    await assertFails(mark(anonymous, '115-701-27', 99, { freeReview_rhythm: true }));
+    // Teachers can read the new marks; students still cannot read progress.
+    const withMarks = await getDoc(doc(teacher, 'studentProgress', '115-701-20'));
+    if (!principleMarks.every((key) => withMarks.data()[key] === true)) throw new Error('teacher could not read all principle marks');
+    await assertFails(getDoc(doc(anonymous, 'studentProgress', '115-701-20')));
+
     const classConfig = {
       academicYear: '115', classId: '716', active: true,
       validSeatNumbers: [1, 2, 3, 4], updatedAt: serverTimestamp()
@@ -376,7 +408,7 @@ async function checkpointCreate(db, studentKey = '115-701-12', academicYear = '1
     const partialTeacher = await getDoc(doc(admin, 'teachers', 'partial-target'));
     if (partialApplication.data().status !== 'pending' || partialTeacher.exists()) throw new Error('failed transaction left partial writes');
 
-    console.log('Firestore Rules Emulator: all C1-B, D3, Gate 2, and Gate 4B-2 allow/deny cases passed');
+    console.log('Firestore Rules Emulator: all C1-B, D3, Gate 2, Gate 4B-2 and 10/22 free-practice principle allow/deny cases passed');
   } finally {
     await env.cleanup();
   }

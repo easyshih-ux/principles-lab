@@ -1,5 +1,12 @@
 import { LEGACY_DEFAULT_ACADEMIC_YEAR, buildStudentKey } from './academic-year.js?v=v2-d3-1';
-import { STUDENT_PROGRESS_COLLECTION, STUDENT_PROGRESS_CHECKPOINTS } from './student-progress-cloud.js';
+import { STUDENT_PROGRESS_COLLECTION, STUDENT_PROGRESS_CHECKPOINTS, FREE_REVIEW_PRINCIPLE_CHECKPOINTS } from './student-progress-cloud.js';
+
+// 10/22: free practice in three parts, so the teacher can follow progress during a lesson.
+export const FREE_REVIEW_SEGMENTS = Object.freeze([
+  Object.freeze({ key: 'freeReviewSegment1', label: '01–03', names: '反覆・漸層・對稱', checkpoints: FREE_REVIEW_PRINCIPLE_CHECKPOINTS.slice(0, 3) }),
+  Object.freeze({ key: 'freeReviewSegment2', label: '04–06', names: '均衡・對比・律動', checkpoints: FREE_REVIEW_PRINCIPLE_CHECKPOINTS.slice(3, 6) }),
+  Object.freeze({ key: 'freeReviewSegment3', label: '07–10', names: '比例・統一・調和・單純', checkpoints: FREE_REVIEW_PRINCIPLE_CHECKPOINTS.slice(6, 10) })
+]);
 
 export const TEACHER_PROGRESS_ITEMS = Object.freeze([
   Object.freeze({ key: 'freeReviewComplete', label: '自由練習' }),
@@ -20,7 +27,8 @@ export function emptyTeacherProgressSummary(classroom, academicYear = LEGACY_DEF
     counts: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, 0])),
     completedSeats: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, []])),
     // 10/22: seats still to finish each step, so the teacher sees who needs help first.
-    pendingSeats: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, [...classroom.validSeatNumbers].map(Number).sort((a, b) => a - b)]))
+    pendingSeats: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, [...classroom.validSeatNumbers].map(Number).sort((a, b) => a - b)])),
+    segments: FREE_REVIEW_SEGMENTS.map(({ key, label, names }) => ({ key, label, names, completedSeats: [], pendingSeats: [...classroom.validSeatNumbers].map(Number).sort((a, b) => a - b) }))
   };
 }
 
@@ -30,6 +38,7 @@ export function summarizeTeacherProgress(classroom, records = [], academicYear =
   const completedStudents = Object.fromEntries(
     STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, new Map()])
   );
+  const segmentStudents = {};
 
   for (const record of records) {
     const recordAcademicYear = String(record?.academicYear ?? '');
@@ -38,9 +47,17 @@ export function summarizeTeacherProgress(classroom, records = [], academicYear =
     const studentKey = String(record?.studentKey ?? '');
     if (recordAcademicYear !== academicYear || classId !== classroom.id || !validSeats.has(seatNo)
       || studentKey !== buildStudentKey(recordAcademicYear, classId, seatNo)) continue;
+    // A student counts as done with free practice when the old mark is there, or every principle is.
+    const allPrinciples = FREE_REVIEW_PRINCIPLE_CHECKPOINTS.every((key) => record[key] === true);
     for (const checkpoint of STUDENT_PROGRESS_CHECKPOINTS) {
-      if (record[checkpoint] === true && !completedStudents[checkpoint].has(studentKey)) {
+      const done = record[checkpoint] === true || (checkpoint === 'freeReviewComplete' && allPrinciples);
+      if (done && !completedStudents[checkpoint].has(studentKey)) {
         completedStudents[checkpoint].set(studentKey, seatNo);
+      }
+    }
+    for (const segment of FREE_REVIEW_SEGMENTS) {
+      if (record.freeReviewComplete === true || segment.checkpoints.every((key) => record[key] === true)) {
+        (segmentStudents[segment.key] ??= new Map()).set(studentKey, seatNo);
       }
     }
   }
@@ -51,6 +68,11 @@ export function summarizeTeacherProgress(classroom, records = [], academicYear =
     const done = new Set(summary.completedSeats[checkpoint]);
     summary.pendingSeats[checkpoint] = [...validSeats].filter((seatNo) => !done.has(seatNo)).sort((left, right) => left - right);
   }
+  summary.segments = summary.segments.map((segment) => {
+    const completedSeats = [...(segmentStudents[segment.key]?.values() ?? [])].sort((left, right) => left - right);
+    const done = new Set(completedSeats);
+    return { ...segment, completedSeats, pendingSeats: [...validSeats].filter((seatNo) => !done.has(seatNo)).sort((left, right) => left - right) };
+  });
   return summary;
 }
 
@@ -70,7 +92,8 @@ export async function loadTeacherClassProgress(client, classroom, academicYear =
       freeReviewComplete: data.freeReviewComplete,
       level1Complete: data.level1Complete,
       level2Complete: data.level2Complete,
-      level3Complete: data.level3Complete
+      level3Complete: data.level3Complete,
+      ...Object.fromEntries(FREE_REVIEW_PRINCIPLE_CHECKPOINTS.map((key) => [key, data[key]]))
     };
   });
   return summarizeTeacherProgress(classroom, records, academicYear);

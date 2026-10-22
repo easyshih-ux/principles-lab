@@ -1,5 +1,5 @@
 import { snapPoint } from './grid.js';
-import { getLogicalSize } from './palette.js?v=gate4c-pending-1';
+import { getLogicalSize } from './palette.js?v=gate4c-principles-1';
 
 export function getShapeDimensions(element) {
   const size = Number.isFinite(element.logicalSize) ? element.logicalSize : getLogicalSize(element.size);

@@ -255,6 +255,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
     markPrincipleComplete(state, principleId);
     if (!areFreeReviewStagesComplete(state, getStagesForPrinciple(principleId))) return;
     markFreeReviewPrincipleComplete(state, principleId);
+    onCheckpoint(`freeReview_${principleId}`);
     if (isFreeReviewComplete(state, principles.map(({ id }) => id))) onCheckpoint('freeReviewComplete');
   }
   function bindClassroomControls(rerender) {

@@ -42,18 +42,21 @@ service cloud.firestore {
         ).data.reviewedBy == request.auth.uid;
     }
 
+    // 10/22: the freeReview_* fields are one mark per free-practice principle (01-10).
     function hasExactProgressFields() {
       return request.resource.data.keys().hasAll([
         'academicYear', 'classId', 'seatNo', 'studentKey', 'updatedAt'
       ]) && request.resource.data.keys().hasOnly([
         'academicYear', 'classId', 'seatNo', 'studentKey', 'freeReviewComplete',
-        'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt'
+        'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt',
+        'freeReview_repetition', 'freeReview_gradation', 'freeReview_symmetry', 'freeReview_balance', 'freeReview_contrast', 'freeReview_rhythm', 'freeReview_proportion', 'freeReview_unity', 'freeReview_harmony', 'freeReview_simplicity'
       ]);
     }
 
     function hasAnyCheckpoint() {
       return request.resource.data.keys().hasAny([
-        'freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete'
+        'freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete',
+        'freeReview_repetition', 'freeReview_gradation', 'freeReview_symmetry', 'freeReview_balance', 'freeReview_contrast', 'freeReview_rhythm', 'freeReview_proportion', 'freeReview_unity', 'freeReview_harmony', 'freeReview_simplicity'
       ]);
     }
 
@@ -61,14 +64,34 @@ service cloud.firestore {
       return request.resource.data.get('freeReviewComplete', true) == true
         && request.resource.data.get('level1Complete', true) == true
         && request.resource.data.get('level2Complete', true) == true
-        && request.resource.data.get('level3Complete', true) == true;
+        && request.resource.data.get('level3Complete', true) == true
+        && request.resource.data.get('freeReview_repetition', true) == true
+        && request.resource.data.get('freeReview_gradation', true) == true
+        && request.resource.data.get('freeReview_symmetry', true) == true
+        && request.resource.data.get('freeReview_balance', true) == true
+        && request.resource.data.get('freeReview_contrast', true) == true
+        && request.resource.data.get('freeReview_rhythm', true) == true
+        && request.resource.data.get('freeReview_proportion', true) == true
+        && request.resource.data.get('freeReview_unity', true) == true
+        && request.resource.data.get('freeReview_harmony', true) == true
+        && request.resource.data.get('freeReview_simplicity', true) == true;
     }
 
     function preservesCompletedCheckpoints() {
       return (!('freeReviewComplete' in resource.data) || 'freeReviewComplete' in request.resource.data)
         && (!('level1Complete' in resource.data) || 'level1Complete' in request.resource.data)
         && (!('level2Complete' in resource.data) || 'level2Complete' in request.resource.data)
-        && (!('level3Complete' in resource.data) || 'level3Complete' in request.resource.data);
+        && (!('level3Complete' in resource.data) || 'level3Complete' in request.resource.data)
+        && (!('freeReview_repetition' in resource.data) || 'freeReview_repetition' in request.resource.data)
+        && (!('freeReview_gradation' in resource.data) || 'freeReview_gradation' in request.resource.data)
+        && (!('freeReview_symmetry' in resource.data) || 'freeReview_symmetry' in request.resource.data)
+        && (!('freeReview_balance' in resource.data) || 'freeReview_balance' in request.resource.data)
+        && (!('freeReview_contrast' in resource.data) || 'freeReview_contrast' in request.resource.data)
+        && (!('freeReview_rhythm' in resource.data) || 'freeReview_rhythm' in request.resource.data)
+        && (!('freeReview_proportion' in resource.data) || 'freeReview_proportion' in request.resource.data)
+        && (!('freeReview_unity' in resource.data) || 'freeReview_unity' in request.resource.data)
+        && (!('freeReview_harmony' in resource.data) || 'freeReview_harmony' in request.resource.data)
+        && (!('freeReview_simplicity' in resource.data) || 'freeReview_simplicity' in request.resource.data);
     }
 
     function hasValidIdentity(studentKey) {
@@ -106,7 +129,8 @@ service cloud.firestore {
         && request.resource.data.seatNo == resource.data.seatNo
         && request.resource.data.studentKey == resource.data.studentKey
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt'])
+          .hasOnly(['freeReviewComplete', 'level1Complete', 'level2Complete', 'level3Complete', 'updatedAt',
+            'freeReview_repetition', 'freeReview_gradation', 'freeReview_symmetry', 'freeReview_balance', 'freeReview_contrast', 'freeReview_rhythm', 'freeReview_proportion', 'freeReview_unity', 'freeReview_harmony', 'freeReview_simplicity'])
         && hasAnyCheckpoint()
         && hasOnlyTrueCheckpoints()
         && preservesCompletedCheckpoints()

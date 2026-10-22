@@ -79,7 +79,7 @@
 - 統一：最接近的共同特色若是「有角的／圓弧的」造形，回饋會照實說出（判定本來就接受這種共同特色）。
 - 題目與判定不一致之處維持現狀、未修改判定，清單見草稿檔。
 - 測試：新增 `tests/gate4c-copy.test.mjs`（8 項）；全部 639／639 通過。iPad 1180×820、1024×768 六題題目與回饋皆完整顯示。
-- 快取版本標記 `gate4c-pending-1`。
+- 快取版本標記 `gate4c-principles-1`。
 
 ### 2.6 題目與判定不一致的處理（10/22 教師決定，commit `3e3ff88`，已上線）
 
@@ -90,7 +90,7 @@
 - 統一⑤：方向改用看得出的方向（長方形 0° 與 180° 算同一個方向）。
 - 調和⑥：相近色收緊到 3 格以內（`maximumHarmonyHueArcSpan: 3`），與對比（4 格以上）不再重疊。
 - 漸層：學生看得到的文字已無「7 級」；程式註解一併改為 6 級。
-- 測試：`tests/gate4c-copy.test.mjs` 新增 4 項；全部 644／644 通過（含均衡 1.5 倍）。iPad 實測律動：一座山顯示新回饋，兩座山過關。快取標記 `gate4c-pending-1`。
+- 測試：`tests/gate4c-copy.test.mjs` 新增 4 項；全部 644／644 通過（含均衡 1.5 倍）。iPad 實測律動：一座山顯示新回饋，兩座山過關。快取標記 `gate4c-principles-1`。
 - 實測發現：律動的「路線太陡」限制仍在；5 個造形間距 180 時，高低差 240 以內可過，260 會被判太陡。
 
 ### 2.7 單元複製（10/22 完成，commit `a78ef1f` 已上線，只開放反覆題；教師確認單元空隙 20、只有剛複製的單元整組移動）
@@ -100,7 +100,7 @@
 - 頁面重畫（例如按過檢查後再修改）時，保留目前選取的單元（只在反覆題）。
 - 程式：`geometry/constrained-engine.js`（unitOf、duplicateUnit、moveGroup、groupDelta、restoreSelection）、`geometry/constrained-canvas.js`（虛線框／藍框、整組拖曳）、`geometry/control-panel.js`（按鈕）、`geometry/constrained-tools.js`（工具開關 unitDuplicate）、`experiment-course.js`（畫布滿了提示、保留選取）、`phase6c-definitions.js`（反覆題開啟）。
 - 關閉方式：`phase6c-definitions.js` 反覆題 `allowedTools` 的 `unitDuplicate: true` 改成 `false`（一行），按鈕與框線即消失，回到原本操作。
-- 測試：新增 `tests/gate4c-unit-copy.test.mjs`（9 項，含其他九題沒有按鈕、1 個單元＋複製 4 次可過關）；全部 653／653 通過。iPad 1180×820、1024×768 觸控實測：兩造形單元做 5 個約點 11 次（原本約 20 次以上）；對稱題回歸測試正常。快取標記 `gate4c-pending-1`。
+- 測試：新增 `tests/gate4c-unit-copy.test.mjs`（9 項，含其他九題沒有按鈕、1 個單元＋複製 4 次可過關）；全部 653／653 通過。iPad 1180×820、1024×768 觸控實測：兩造形單元做 5 個約點 11 次（原本約 20 次以上）；對稱題回歸測試正常。快取標記 `gate4c-principles-1`。
 - 已知限制：只有剛複製出來的單元能整組移動；原本的單元仍一次移動一個造形。整個單元不能一起旋轉。
 
 ### 2.8 對比題重新設計（10/22，取代 2.4 的「兩組」規則；commit `267cc5c` 已上線）
@@ -109,7 +109,7 @@
 - 判定：靠在一起＝外框間距 20 以內（含重疊）；差很多沿用門檻（大小差 3 級；色相差 4 格以上或深淺差 3 級，鄰近色不算），大小或顏色符合其一即可。
 - 處數算法（教師 10/22 確認做法 A）：每個圖形最多算進一處（配對）。一個大圓旁邊圍 3 個小圓＝1 處；大小交錯排成一列 6 個＝3 處。其他選項：B 每一對相鄰都算（大圓＋3 小圓＝3 處）；C 連在一起的一整片算 1 處。
 - 回饋（一次一件事，依閱讀順序找第一個沒有對比夥伴的圖形）：旁邊沒有圖形→「右下的藍色圓形旁邊，沒有和它差很多的圖形。」；旁邊有圖形但太像→「左邊的紅色圓形和紅橙色圓形，大小和顏色都太接近了。讓一個變大或變小很多，或換一個顏色差很多的。」；處數不足→「目前有 2 處對比，再做 1 處。」；空白→「先放上圖形：大的旁邊放小的，或紅色旁邊放綠色。」已合格的地方不提建議。
-- 測試：`tests/gate4-contrast.test.mjs` 改寫（10 項），對比範例全部改為新規則；教師 iPad 作品（5 個大圓各疊一個顏色差很多的小圓，舊版會說「有 6 個圖形看不出屬於哪一組」）依截圖位置重建，新規則下 5 處、過關；全部 653／653 通過。iPad 1180×820、1024×768 實測：2 處→提示再做 1 處；3 處→過關；加一個孤單的圓→指出位置。快取標記 `gate4c-pending-1`。
+- 測試：`tests/gate4-contrast.test.mjs` 改寫（10 項），對比範例全部改為新規則；教師 iPad 作品（5 個大圓各疊一個顏色差很多的小圓，舊版會說「有 6 個圖形看不出屬於哪一組」）依截圖位置重建，新規則下 5 處、過關；全部 653／653 通過。iPad 1180×820、1024×768 實測：2 處→提示再做 1 處；3 處→過關；加一個孤單的圓→指出位置。快取標記 `gate4c-principles-1`。
 - 實測再次遇到已知問題：按過檢查後新增的圖形不會自動選取，要再點一下才出現色彩工具（列在下一輪）。
 
 ### 2.9 共用 iPad：換人自動回到全新狀態（10/22，commit `275ba43`）
@@ -117,14 +117,24 @@
 - 作品與各關進度只存在網頁記憶中（不存 iPad、不上雲端）。原本按「結束本次使用」只清身分與解鎖，網頁記憶仍保留上一位的作品與完成狀態，下一位可能看到，甚至把上一位完成的關卡記到自己名下。
 - 現在：①新學生確認身分時，若與網頁中作品的主人不同人，先清空（連同關卡解鎖）再進入；同一人重新登入則保留。②按「結束本次使用」也清空。清空方式＝等待雲端完成記號寫完（最多 8 秒）後重新載入網頁，畫面顯示「準備中…正在為下一位同學準備新的畫面」。
 - 新增 `student-handoff.js`（判斷是否換人、追蹤尚未寫完的雲端記號）；`app.js` 登入、結束、寫入記號三處接上。不修改 Firebase 資料與規則。
-- 測試：新增 `tests/student-handoff.test.mjs`（5 項，含「上一位完成第三關未結束、下一位登入不會被記成第三關完成」、雲端無回應時最多等 8 秒）；`firebase-cloud-progress` 測試改為檢查記號仍不阻塞畫面。全部 658／658 通過。瀏覽器實測（假的 Firebase，只在測試瀏覽器中）：701-3 登入→結束→網頁重新載入、身分清除→701-4 登入正常。快取標記 `gate4c-pending-1`。
+- 測試：新增 `tests/student-handoff.test.mjs`（5 項，含「上一位完成第三關未結束、下一位登入不會被記成第三關完成」、雲端無回應時最多等 8 秒）；`firebase-cloud-progress` 測試改為檢查記號仍不阻塞畫面。全部 658／658 通過。瀏覽器實測（假的 Firebase，只在測試瀏覽器中）：701-3 登入→結束→網頁重新載入、身分清除→701-4 登入正常。快取標記 `gate4c-principles-1`。
 - 說明：目前畫面上，下一位要登入必須先「結束本次使用」或重新整理，所以「沒按結束直接登入」只會在特殊情況出現（例如學年度切換使身分失效）；這條路也已保護。
 
-### 2.10 教師端「未完成座號」（10/22）
+### 2.10 教師端「未完成座號」（10/22，commit `ab331c1`）
 
 - 四張進度卡（自由練習、第一～三關）收合時顯示「查看座號（未完成 N 人）」；展開後先列紅色的「未完成座號」，再列「已完成座號」；全部完成時顯示「全部完成」。只用現有資料，不改 Firestore 規則。
 - 程式：`teacher-progress-dashboard.js`（summary 加 pendingSeats）、`teacher-page.js`（卡片）、`styles.css`（未完成座號樣式）；快取標記 `teacher-pending-1`。
 - 測試：`tests/teacher-progress-dashboard.test.mjs` 更新並新增 1 項；全部 659／659 通過。
+
+### 2.11 自由練習逐個原理記錄＋三段完成人數（10/22；網站程式已 commit，規則待教師測試與部署）
+
+- 學生端：每完成一個原理（3 個階段），寫入一個記號 `freeReview_<原理>`（10 個欄位，只記完成，不傳作品、不記次數）。原本的 `freeReviewComplete` 照舊。
+- 教師端：自由練習卡片展開後有「分段進度」：01–03 反覆・漸層・對稱、04–06 均衡・對比・律動、07–10 比例・統一・調和・單純，各段可點開看未完成／已完成座號。舊的 `freeReviewComplete` 視為三段都完成；10 個原理都有記號也算自由練習完成（解決分次做完沒被記到的問題）。
+- Firestore 規則（`firestore.rules`）：只新增 10 個欄位到允許清單（建立、更新、只能 true、不能刪除）。舊的 4 個記號規則不變。部署前規則不認得新欄位，新記號會被拒絕並略過，不影響舊記號與畫面。
+- 規則測試：`scripts/c1b-firestore-rules-emulator.cjs` 新增允許／拒絕案例（含 4 個舊記號照常可寫）。雲端工作環境與教師電腦的 Linux 環境都無法下載測試工具（npm 被擋），改由教師在 Windows 雙擊 `test-rules.bat` 執行（需要 Node.js 與 Java 11+；工具裝在 %LOCALAPPDATA%\principles-lab-rules-test，不進專案）。
+- 部署：教師雙擊 `deploy-rules.bat`（會先要求登入 Firebase，再 `firebase deploy --only firestore:rules --config firebase.production.json --project principles-lab`）。順序：先 test-rules.bat 通過 → deploy-rules.bat → push 網站（網站先上線也無害）。
+- 部署後驗證：教師端「班級設定」暫時新增測試班 799（最大座號 1、啟用）→ 用一台 iPad 以 799 班 1 號登入，完成自由練習 01 反覆的 3 個階段 → Firebase 主控台 Firestore 的 studentProgress/115-799-1 應出現 freeReview_repetition: true → 再完成 02、03，教師端選 799 班，01–03 應顯示 1 人完成。清除：Firebase 主控台刪除 studentProgress/115-799-1 文件（規則不允許網頁刪除，主控台可以），再到班級設定把 799 停用。
+- 測試：新增 `tests/free-review-principle-progress.test.mjs`（5 項）；`firebase-cloud-progress` 規則檢查更新；全部 664／664 通過。快取標記 `gate4c-principles-1`、`teacher-segments-1`、`free-principles-1`。
 
 ## 3. 尚未完成
 
@@ -183,10 +193,10 @@
   - 判定與題目：`phase6c-validators.js`、`phase6c-definitions.js`、`phase6c-fixtures.js`、`phase6c-course-state.js`（指紋加入 stepSize／stepLightness）、`composition-audit.js`（漸層專用深淺不視為重疊）。
   - 畫面：`experiment-course.js`（創作提示、具體回饋、反覆 8 方向）、`phase6c.css`（漸層級數按鈕樣式，只新增）。
   - 共用畫布（只新增漸層專用級數，其他題不變）：`geometry/config.js`、`palette.js`、`controls.js`、`model.js`、`canvas.js`、`constrained-tools.js`、`constrained-engine.js`、`control-panel.js`；以及版本標記：`bounds.js`、`engine.js`、`constrained-canvas.js`。
-  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4c-pending-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
+  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4c-principles-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
   - 測試：新增 `tests/gate4-repetition.test.mjs`、`tests/gate4-gradation.test.mjs`、`tests/gate4-symmetry.test.mjs`、`tests/gate4-contrast.test.mjs`；更新 `final-tool-spec`、`phase6c-experiments`、`phase6c-student-flow`、`phase6-initial-state`、`explore-mode`、`final-phase-flow`、`phase6c-entry`、`post-final-a`、`teacher-progress-dashboard`。
 - 本次一併加入：`CLAUDE_HANDOFF_GATE4.md`、`CLAUDE_HANDOFF_GATE4B.md`（本文件）、`composition-audit.js`、`tests/phase6-v2-composition-audit.test.mjs`、四個 gate4 測試檔。
-- 驗證：`node --test` 659／659 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
+- 驗證：`node --test` 664／664 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
 - 教師試做方式：資料夾網址列輸入 `cmd` → `python -m http.server 8765` → 開 `http://localhost:8765/explore/#level/experiment/<principle>`（自由體驗模式，不登入、不寫入進度），並按 Ctrl+F5。或雙擊專案資料夾中的 `start-preview.bat`（10/21 新增，未追蹤；會開伺服器並打開反覆、對稱試做頁，關閉伺服器視窗即停止）。本 session 無法代為輸入指令（命令視窗與檔案總管只允許點擊）。
 - 發布：已在共用畫布檔加上版本標記，避免 iPad 混用新舊快取檔。正式網站 `https://easyshih-ux.github.io/principles-lab/`；自由體驗模式 `…/explore/`。push 不會更動 Firebase 資料或 Firestore 規則。
 
