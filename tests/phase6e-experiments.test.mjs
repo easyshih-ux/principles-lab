@@ -177,8 +177,9 @@ test('harmony accepts continuous short hue arcs including the reported warm artw
     { colorId: 'red-orange-3', hueFamily: 'red-orange', hueIndex: 1, lightnessLevel: 3 },
     { colorId: 'orange-3', hueFamily: 'orange', hueIndex: 2, lightnessLevel: 3 }
   ]);
-  assert.equal(result.metrics.bestHueArc.coverage, 1);
-  assert.equal(result.metrics.bestHueArc.span, 4);
+  // Gate 4C (10/22): close colours are now within 3 steps; the lone yellow is the one shape outside.
+  assert.equal(result.metrics.bestHueArc.coverage, 5 / 6);
+  assert.equal(result.metrics.bestHueArc.span, 3);
 });
 
 test('harmony short-arc coverage rejects unrelated and largely jumping hue groups', () => {

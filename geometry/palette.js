@@ -4,7 +4,7 @@ import {
   STEP_LEVELS,
   SIZE_LEVELS,
   SIZE_TO_LOGICAL
-} from './config.js?v=gate4c-copy-1';
+} from './config.js?v=gate4c-rules-1';
 
 export const HUE_LABELS = Object.freeze({
   red: '紅', 'red-orange': '紅橙', orange: '橙', 'yellow-orange': '黃橙',
@@ -41,7 +41,7 @@ export function getDisplayColor(hue, lightness) {
   return COLOR_PALETTE[hue][lightness - 1];
 }
 
-// Seven evenly spaced lightness steps per hue, used only by the gradation question.
+// Six evenly spaced lightness steps per hue (from the darkest to the lightest of the five-level palette), used only by the gradation question.
 // Steps 1, 4 and 7 are the existing darkest, middle and lightest colours.
 export const STEP_COLOR_PALETTE = Object.freeze({
   'red': Object.freeze(['#7F302B', '#A33E35', '#C75043', '#DF695B', '#E9897D', '#F0AAA2']),

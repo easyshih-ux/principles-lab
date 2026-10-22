@@ -89,8 +89,10 @@ test('Gate 4 contrast: failed checks show one specific next step', () => {
   assert.match(markup, /紅色和橙色太接近了/);
 });
 
-test('Gate 4 contrast: the other questions are unaffected (harmony unchanged)', () => {
+test('Gate 4 contrast: harmony and contrast no longer overlap (harmony tightened on 10/22)', () => {
   const harmony = phase6cDefinitionsById['experiment-harmony'];
-  assert.equal(harmony.validationSpec.maximumHarmonyHueArcSpan, undefined);
+  // Harmony accepts colours up to 3 steps apart; contrast needs 4 or more.
+  assert.equal(harmony.validationSpec.maximumHarmonyHueArcSpan, 3);
+  assert.equal(phase6cDefinitionsById['experiment-contrast'].validationSpec.minimumHueDistance, 4);
   assert.equal(phase6cDefinitionsById['experiment-contrast'].allowedTools.lightness, false);
 });

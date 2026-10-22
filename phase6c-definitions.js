@@ -1,5 +1,5 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
-import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4c-copy-1';
+import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4c-rules-1';
 
 const overlapHint = Object.freeze({
   observe: '有些圖形完全疊在一起了，看起來像只剩下一個圖形。',
@@ -70,7 +70,7 @@ export const phase6cDefinitions = Object.freeze([
     task: '讓左右兩邊不一樣，但整個畫面看起來穩定。過關：①左右兩邊都要有造形 ②左右不能一模一樣 ③左右兩邊一樣重',
     creationTips: '大的造形比較重，離中線越遠也越重。可以用一個大的對兩個小的，或把小的放遠一點。',
     initialState: { elements: [], gridConfig: { enabled: false, visible: true, step: 20, axis: 'vertical' } },
-    validationSpec: { balanceTolerance: 0.45, allowSymmetrical: false, allowAsymmetrical: true, centerDeadZone: 45, requireAsymmetry: true, mirrorPositionTolerance: 24, mirrorYTolerance: 24, mirrorSizeTolerance: 12 },
+    validationSpec: { balanceTolerance: 0.2, allowSymmetrical: false, allowAsymmetrical: true, centerDeadZone: 45, requireAsymmetry: true, mirrorPositionTolerance: 60, mirrorYTolerance: 60, mirrorSizeTolerance: 12 },
     diagnosticHints: {
       ONE_SIDE_EMPTY: { observe: '看看整張畫面，造形是不是都集中到同一邊了？', think: '如果希望整個畫面更穩定，另一邊需要出現什麼力量呢？', action: '試著把部分造形安排到另一側，再觀察整體的感覺。' },
       LEFT_HEAVY: { observe: '先別急著改。看著整張畫面，你覺得它比較像往哪一邊倒？', think: '想想看：圖形的大小、數量和離中心的距離，哪一項可能讓某一邊看起來比較重？', action: '試著調整較重一側的大小或位置，或調整另一側，再看看畫面有沒有站得更穩。' },
@@ -83,18 +83,19 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('rhythm', {
     title: '挑戰｜做出「律動」',
-    task: '讓造形由左到右排成一條路線，用變化帶著視線前進。過關：①至少 5 個造形 ②由左往右一個接一個排 ③高低、方向、大小或間距，至少一種變化很明顯',
-    creationTips: '例如讓造形像波浪一樣一高一低，或一個比一個轉得更多。',
+    task: '讓造形由左到右排成一條路線，用變化帶著視線前進。過關：①至少 5 個造形 ②由左往右一個接一個排 ③高低、方向、大小或間距，至少一種變化有好幾座山的起伏',
+    creationTips: '例如讓造形像波浪一樣一高一低，做出好幾座山的起伏。',
     initialState: { elements: [] },
     validationSpec: { minimumElements: 5, allowedMotionChannels: ['position', 'rotation', 'size', 'spacing', 'mixed'], minimumYRange: 80, minimumRotationRange: 90, minimumSizeRange: 2, minimumSpacingRange: 35, repetitionRequired: false },
     diagnosticHints: {
       NO_CLEAR_MOTION: { observe: '看著你的畫面，眼睛會自然地往某個方向移動嗎？', think: '位置、方向、大小或間距的變化，哪一種可以帶著視線走？', action: '選一種變化，讓視線能順著造形移動看看。' },
       CHANGE_TOO_SUBTLE: { observe: '好像開始動起來了，但這個動勢容易被看見嗎？', think: '哪一種變化可以再明顯一些？', action: '把位置、方向、大小或間距的差異稍微拉開。' },
       TOO_RANDOM: { observe: '畫面有很多變化，但你的眼睛知道接下來要往哪裡看嗎？', think: '找找看，有沒有一種位置、方向或變化，可以把這些元素連起來？', action: '保留一條比較清楚的視覺路徑，讓元素沿著它產生變化。' },
+      ONE_HILL_ONLY: { observe: '變化只往一個方向，或只有一座山。', think: '只有一座山比較像漸層，律動要有好幾座山的起伏。', action: '讓變化再上去、下來一次。' },
       STATIC_REPETITION: { observe: '畫面很整齊，但視線好像停在原地。怎麼讓它開始「動」起來？', think: '除了再次出現，位置、方向、大小或間距還能怎麼改變？', action: '選一種變化加入畫面，再檢查看看。' }
     },
     successFeedback: { general: '成功！畫面已形成律動。', byMethod: { position: '成功！造形的位置變化帶著視線移動，形成了「律動」。', rotation: '成功！方向的變化帶著視線前進，形成了「律動」。', size: '成功！大小的變化讓畫面產生了視覺律動。', spacing: '成功！疏密與間距的變化，讓畫面產生了節奏與律動。', mixed: '成功！你運用了多種變化，讓視線在畫面中產生明顯動勢。' } },
-    discoveryFeedback: { position: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。', rotation: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。', size: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。', spacing: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。', mixed: '律動來自視覺上的連續變化。它可以有規律，也可以透過起伏、方向、大小或疏密產生流動感。' }
+    discoveryFeedback: { position: '律動要有好幾次起伏，像波浪一樣帶著視線往前走。', rotation: '律動要有好幾次起伏，像波浪一樣帶著視線往前走。', size: '律動要有好幾次起伏，像波浪一樣帶著視線往前走。', spacing: '律動要有好幾次起伏，像波浪一樣帶著視線往前走。', mixed: '律動要有好幾次起伏，像波浪一樣帶著視線往前走。' }
   }),
   formal('symmetry', {
     title: '挑戰｜做出「對稱」',
@@ -151,7 +152,7 @@ export const phase6cDefinitions = Object.freeze([
   formal('unity', {
     title: '挑戰｜做出「統一」',
     task: '用至少 7 個造形，讓它們有一個共同特色，同時保留一點變化。過關：①至少 7 個造形 ②7 個裡至少 6 個有同樣的顏色、造形或方向 ③還要有一點不同，例如大小',
-    creationTips: '先決定共同特色，例如全部用藍色，再讓大小或造形有一點不同。',
+    creationTips: '先決定共同特色，例如全部用藍色，或都用有角的造形；再讓大小或造形有一點不同。',
     initialState: { elements: [] },
     validationSpec: { minimumElements: 7, requiredUnityRatio: 0.857142857, minimumDirectionalElements: 6, allowedUnityModes: ['color', 'rotation', 'shapeFeature'] },
     diagnosticHints: {
@@ -167,7 +168,7 @@ export const phase6cDefinitions = Object.freeze([
     task: '用相近的顏色，讓畫面看起來協調。過關：①至少 6 個造形 ②大約四分之三以上的造形，用同一個顏色的深淺，或色環上相鄰的顏色',
     creationTips: '可以選一個顏色，用它的深淺變化；或選色環上相鄰的幾個顏色，例如紅、紅橙、橙。',
     initialState: { elements: [] },
-    validationSpec: { minimumElements: 6, harmonyCoverage: 0.75, minimumLightnessLevels: 2, allowedHarmonyModes: ['sameHueLightness', 'neighborHue', 'mixed'] },
+    validationSpec: { minimumElements: 6, harmonyCoverage: 0.75, maximumHarmonyHueArcSpan: 3, minimumLightnessLevels: 2, allowedHarmonyModes: ['sameHueLightness', 'neighborHue', 'mixed'] },
     diagnosticHints: {
       NO_CLEAR_HARMONY: { observe: '看看這些顏色，它們彼此有沒有「靠近」的感覺？', think: '可以從同色系的深淺，或色相環上相近的顏色開始找關係。', action: '選一個主要色系，再加入它的深淺變化或相近顏色。' },
       COLORS_TOO_FAR_APART: { observe: '有些顏色彼此差得很遠，哪一些最不像同一組？', think: '如果想讓色彩更協調，可以把距離很遠的顏色換成相近色嗎？', action: '保留一個主要色系，將其中差異最大的顏色換成它附近的顏色。' },

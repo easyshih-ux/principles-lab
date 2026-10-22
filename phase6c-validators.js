@@ -1,5 +1,5 @@
-import { getLogicalSize } from './geometry/palette.js?v=gate4c-copy-1';
-import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4c-copy-1';
+import { getLogicalSize } from './geometry/palette.js?v=gate4c-rules-1';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4c-rules-1';
 import { auditComposition } from './composition-audit.js';
 
 function response(passed, code, metrics, detectedMethods = []) {
@@ -162,7 +162,7 @@ function range(values) {
   return values.length ? Math.max(...values) - Math.min(...values) : 0;
 }
 
-// Gate 4 gradation: at least seven stages (counted by position along the
+// Gate 4 gradation: at least six stages (counted by position along the
 // arrangement) with at least two changes happening together. Each change may
 // run one way, or rise then fall (one peak) / fall then rise; more ups and downs
 // are rhythm, not gradation. Any path works: row, column, diagonal, arc, S-curve,
@@ -442,12 +442,21 @@ export function validateFormalRhythm({ elements = [], spec = {} }) {
   const size = ordered.map((item) => item.size);
   const spacing = ordered.slice(1).map((item, index) => item.x - ordered[index].x);
   const path = rhythmPathMetrics(ordered, spec);
-  const channels = {
-    position: path.traceable && range(y) >= (spec.minimumYRange ?? 80),
-    rotation: path.traceable && range(rotation) >= (spec.minimumRotationRange ?? 90),
-    size: path.traceable && range(size) >= (spec.minimumSizeRange ?? 2),
-    spacing: path.traceable && range(spacing) >= (spec.minimumSpacingRange ?? 35)
+  // Gate 4C (10/22): rhythm needs several hills — at least two ups-and-downs. One hill
+  // (up then down) or one direction only is a gradation, not a rhythm.
+  const turnsOf = (values, step) => {
+    const signs = values.slice(1).map((value, index) => (Math.abs(value - values[index]) >= step ? Math.sign(value - values[index]) : 0)).filter(Boolean);
+    return signs.filter((sign, index) => index > 0 && sign !== signs[index - 1]).length;
   };
+  const minimumTurns = spec.minimumRhythmTurns ?? 2;
+  const series = {
+    position: { big: range(y) >= (spec.minimumYRange ?? 80), turns: turnsOf(y, 20) },
+    rotation: { big: range(rotation) >= (spec.minimumRotationRange ?? 90), turns: turnsOf(rotation, 45) },
+    size: { big: range(size) >= (spec.minimumSizeRange ?? 2), turns: turnsOf(size, 1) },
+    spacing: { big: range(spacing) >= (spec.minimumSpacingRange ?? 35), turns: turnsOf(spacing, 20) }
+  };
+  const channels = Object.fromEntries(Object.entries(series).map(([mode, item]) => [mode, path.traceable && item.big && item.turns >= minimumTurns]));
+  const oneWay = path.traceable ? Object.values(series).filter((item) => item.big && item.turns < minimumTurns) : [];
   const detected = Object.entries(channels).filter(([, passed]) => passed).map(([mode]) => mode);
   const staticRepetition = ordered.length >= 3 && range(y) === 0 && range(rotation) === 0 && range(size) === 0 && range(spacing) < 10;
   const totalVariation = range(y) + range(rotation) + range(size) * 30 + range(spacing);
@@ -457,6 +466,11 @@ export function validateFormalRhythm({ elements = [], spec = {} }) {
   if (ordered.length < minimumElements) return fail('CHANGE_TOO_SUBTLE', `目前有 ${ordered.length} 個造形，至少要 ${minimumElements} 個。`);
   if (staticRepetition) return fail('STATIC_REPETITION', '造形排得很整齊，但都一樣。讓位置一高一低，或改變方向、大小、間距。');
   if (detected.length) return response(true, 'valid', metrics, detected.length > 1 ? ['mixed', ...detected] : detected);
+  if (oneWay.length) {
+    return oneWay.some((item) => item.turns === 1)
+      ? fail('ONE_HILL_ONLY', '只有一座山比較像漸層，律動要有好幾座山的起伏。')
+      : fail('ONE_HILL_ONLY', '變化一路往同一個方向，比較像漸層。律動要有好幾座山的起伏。');
+  }
   if (totalVariation < 70) return fail('CHANGE_TOO_SUBTLE', '變化太小，看不太出來。讓高低差大一點，或方向轉多一點。');
   if (path.traceable) return fail('NO_CLEAR_MOTION', '有變化，但每一種都不夠明顯。選一種做大一點，例如高低差再大一些。');
   // Name the one reason the path cannot be followed from left to right.
@@ -888,7 +902,9 @@ export function validateFormalUnity({ elements = [], spec = {} }) {
   const color = dominantGroup(elements, (item) => item.hueFamily ?? item.hue);
   const exactShape = dominantGroup(elements, (item) => item.shape);
   const directional = elements.filter((item) => getShapeMetadata(item.shape).directional);
-  const rotation = dominantGroup(directional, (item) => item.rotation ?? 0);
+  // Gate 4C (10/22): directions that look the same count as one direction (rectangle 0° = 180°).
+  const visibleRotation = (item) => { const period = UNIT_ROTATION_PERIOD[item.shape] ?? 360; return period ? (((item.rotation ?? 0) % period) + period) % period : 0; };
+  const rotation = dominantGroup(directional, visibleRotation);
   const directionCoverage = elements.length ? rotation.count / elements.length : 0;
   const featureCounts = new Map();
   const meaningfulFeatures = new Set(['rounded', 'angular', 'pointed', 'elongated', 'equal-sides', 'radial', 'flat-edge', 'open', 'linear']);
@@ -899,7 +915,7 @@ export function validateFormalUnity({ elements = [], spec = {} }) {
     size: new Set(elements.map((item) => item.size)).size >= 2,
     color: new Set(elements.map((item) => item.hueFamily ?? item.hue)).size >= 2,
     shape: new Set(elements.map((item) => item.shape)).size >= 2,
-    rotation: new Set(directional.map((item) => item.rotation ?? 0)).size >= 2
+    rotation: new Set(directional.map(visibleRotation)).size >= 2
   };
   const methods = [];
   if (elements.length >= minimumElements && color.ratio >= requiredRatio && (variations.size || variations.shape || variations.rotation)) methods.push('color');

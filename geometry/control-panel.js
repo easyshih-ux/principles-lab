@@ -5,8 +5,8 @@ import {
   ROTATION_VALUES,
   SIZE_LEVELS,
   STEP_LEVELS
-} from './config.js?v=gate4c-copy-1';
-import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4c-copy-1';
+} from './config.js?v=gate4c-rules-1';
+import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4c-rules-1';
 
 function nearestAllowed(value, allowedValues) {
   return allowedValues.reduce((nearest, candidate) => (
@@ -91,7 +91,7 @@ export class GeometryControlPanel {
       }));
     }
     if (showPrimary && this.engine.canUse('color')) controls.push(this.colorMarkup(element));
-    // Seven-step size and lightness sit in the right-hand panel so every button stays on screen on an iPad.
+    // Six-step size and lightness sit in the right-hand panel so every button stays on screen on an iPad.
     if (showSecondary && this.engine.canUse('stepSize')) controls.push(this.stepMarkup(element, 'stepSize'));
     if (showSecondary && this.engine.canUse('stepLightness')) controls.push(this.stepMarkup(element, 'stepLightness'));
     if (showPrimary && this.engine.canUse('lightness')) {

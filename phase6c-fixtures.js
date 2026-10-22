@@ -66,7 +66,7 @@ export const phase6cFixtures = Object.freeze({
     }
   },
   gradation: {
-    // Gate 4: seven or more stages, two changes together, any path. Uses the gradation-only seven-step scale.
+    // Gate 4: six or more stages, two changes together, any path. Uses the gradation-only six-step scale.
     pass: {
       sizeLightness: stepLine('gsl', [1, 2, 3, 4, 5, 6], ['stepSize', 'stepLightness']),
       descending: stepLine('gde', [6, 5, 4, 3, 2, 1], ['stepSize', 'stepLightness']),
@@ -95,8 +95,9 @@ export const phase6cFixtures = Object.freeze({
   },
   balance: {
     pass: {
+      // Gate 4C (10/22): the two sides must weigh about the same (heavier side at most 1.5x).
       asymmetrical: [
-        element('ba-l', { x: 300, size: 4, hue: 'red' }),
+        element('ba-l', { x: 300, size: 5, hue: 'red' }),
         element('ba-r1', { shape: 'square', x: 620, y: 180, size: 2 }),
         element('ba-r2', { shape: 'square', x: 700, y: 300, size: 2 }),
         element('ba-r3', { shape: 'square', x: 780, y: 420, size: 2 })
@@ -120,18 +121,6 @@ export const phase6cFixtures = Object.freeze({
         element('bb-c-right-small-2', { shape: 'triangle', x: 710, y: 330, size: 1 }),
         element('bb-c-right-small-3', { shape: 'square', x: 770, y: 440, size: 1 })
       ],
-      reportedLargeAgainstGroup: [
-        element('bb-d-left', { shape: 'square', x: 280, y: 300, size: 5 }),
-        element('bb-d-right-medium', { shape: 'triangle', x: 640, y: 360, size: 3 }),
-        element('bb-d-right-small-1', { shape: 'triangle', x: 580, y: 270, size: 1 }),
-        element('bb-d-right-small-2', { shape: 'triangle', x: 700, y: 220, size: 1 })
-      ],
-      reportedLargeAgainstGroupShifted: [
-        element('bb-e-left', { shape: 'square', x: 260, y: 300, size: 5 }),
-        element('bb-e-right-medium', { shape: 'triangle', x: 660, y: 360, size: 3 }),
-        element('bb-e-right-small-1', { shape: 'triangle', x: 600, y: 270, size: 1 }),
-        element('bb-e-right-small-2', { shape: 'triangle', x: 720, y: 220, size: 1 })
-      ],
       equalCountDifferentSize: [
         element('bd-s-left', { x: 350, y: 300, size: 4 }),
         element('bd-s-right', { x: 770, y: 300, size: 3 })
@@ -144,6 +133,25 @@ export const phase6cFixtures = Object.freeze({
       ]
     },
     fail: {
+      // Before 10/22 these passed (2.6x allowed); with the 1.5x rule they lean to one side.
+      circleAgainstThreeSquares: [
+        element('ba-old-l', { x: 300, size: 4, hue: 'red' }),
+        element('ba-old-r1', { shape: 'square', x: 620, y: 180, size: 2 }),
+        element('ba-old-r2', { shape: 'square', x: 700, y: 300, size: 2 }),
+        element('ba-old-r3', { shape: 'square', x: 780, y: 420, size: 2 })
+      ],
+      reportedLargeAgainstGroup: [
+        element('bb-d-left', { shape: 'square', x: 280, y: 300, size: 5 }),
+        element('bb-d-right-medium', { shape: 'triangle', x: 640, y: 360, size: 3 }),
+        element('bb-d-right-small-1', { shape: 'triangle', x: 580, y: 270, size: 1 }),
+        element('bb-d-right-small-2', { shape: 'triangle', x: 700, y: 220, size: 1 })
+      ],
+      reportedLargeAgainstGroupShifted: [
+        element('bb-e-left', { shape: 'square', x: 260, y: 300, size: 5 }),
+        element('bb-e-right-medium', { shape: 'triangle', x: 660, y: 360, size: 3 }),
+        element('bb-e-right-small-1', { shape: 'triangle', x: 600, y: 270, size: 1 }),
+        element('bb-e-right-small-2', { shape: 'triangle', x: 720, y: 220, size: 1 })
+      ],
       symmetrical: [element('bs-l', { shape: 'square', x: 300, y: 300 }), element('bs-r', { shape: 'square', x: 708, y: 312 })],
       symmetricalPairs: [
         element('bs2-l1', { shape: 'square', x: 300, y: 200, size: 3 }),
@@ -168,13 +176,14 @@ export const phase6cFixtures = Object.freeze({
   },
   rhythm: {
     pass: {
-      regular: row('yr', [300, 200, 140, 200, 300], 'y'),
-      irregular: row('yi', [430, 370, 295, 205, 110], 'y'),
-      rotation: row('yt', [0, 45, 90, 135, 90], 'rotation'),
-      size: row('yz', [1, 2, 3, 4, 5], 'size'),
-      spacing: row('yp', [3, 3, 3, 3, 3], 'size', [100, 210, 350, 520, 720]),
-      mixed: [0, 1, 2, 3, 4].map((index) => element(`ym-${index}`, { x: 120 + index * 175, y: 420 - index * 70, size: index + 1 })),
-      noRepetition: ['circle', 'square', 'triangle', 'rectangle', 'semicircle'].map((shape, index) => element(`yn-${index}`, { shape, x: 120 + index * 180, y: 430 - index * 75, hue: index % 2 ? 'red' : 'blue' })),
+      // Gate 4C (10/22): rhythm needs several hills (at least two ups-and-downs).
+      regular: row('yr', [300, 180, 300, 180, 300], 'y'),
+      irregular: row('yi', [430, 300, 380, 200, 330], 'y'),
+      rotation: row('yt', [0, 90, 0, 90, 0], 'rotation'),
+      size: row('yz', [1, 3, 1, 3, 1], 'size'),
+      spacing: row('yp', [3, 3, 3, 3, 3], 'size', [100, 200, 400, 500, 700]),
+      mixed: [0, 1, 2, 3, 4].map((index) => element(`ym-${index}`, { x: 120 + index * 175, y: index % 2 ? 260 : 420, size: index % 2 ? 4 : 2 })),
+      noRepetition: ['circle', 'square', 'triangle', 'rectangle', 'semicircle'].map((shape, index) => element(`yn-${index}`, { shape, x: 120 + index * 180, y: index % 2 ? 280 : 430, hue: index % 2 ? 'red' : 'blue' })),
       'rhythm-irregular-wave-size-flow': [
         [90, 350, 1], [170, 310, 2], [255, 200, 4], [345, 340, 2], [440, 430, 1], [530, 410, 2],
         [625, 300, 4], [715, 270, 2], [810, 170, 3], [900, 350, 2], [970, 390, 1]

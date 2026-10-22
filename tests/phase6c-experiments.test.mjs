@@ -106,16 +106,19 @@ test('formal balance rejects near mirrors and accepts asymmetric balance', () =>
 });
 
 test('classroom balance accepts basic, asymmetric, and grouped visual weight arrangements', () => {
-  for (const fixtureName of ['borderlineLargeAgainstTwoSmall', 'borderlineUnevenPositions', 'largeAgainstMediumAndThreeSmall', 'reportedLargeAgainstGroup', 'reportedLargeAgainstGroupShifted', 'equalCountDifferentSize', 'equalCountDifferentPositions']) {
+  for (const fixtureName of ['borderlineLargeAgainstTwoSmall', 'borderlineUnevenPositions', 'largeAgainstMediumAndThreeSmall', 'equalCountDifferentSize', 'equalCountDifferentPositions']) {
     const result = validate('balance', phase6cFixtures.balance.pass[fixtureName]);
     assert.equal(result.passed, true, fixtureName);
     assert.deepEqual(result.detectedMethods, ['asymmetrical'], fixtureName);
-    assert.ok(result.metrics.differenceRatio <= 0.45, `${fixtureName} must remain visually plausible`);
-    assert.equal(result.metrics.tolerance, 0.45);
+    assert.ok(result.metrics.differenceRatio <= 0.2, `${fixtureName} must remain visually plausible`);
+    assert.equal(result.metrics.tolerance, 0.2);
   }
-  const reported = validate('balance', phase6cFixtures.balance.pass.reportedLargeAgainstGroup);
-  assert.ok(reported.metrics.leftVisualWeight > 0);
-  assert.ok(reported.metrics.rightVisualWeight > 0);
+  // Gate 4C (10/22): heavier side at most 1.5x. These earlier examples now lean to one side.
+  for (const [fixtureName, code] of [['reportedLargeAgainstGroup', 'LEFT_HEAVY'], ['reportedLargeAgainstGroupShifted', 'LEFT_HEAVY'], ['circleAgainstThreeSquares', 'RIGHT_HEAVY']]) {
+    const result = validate('balance', phase6cFixtures.balance.fail[fixtureName]);
+    assert.equal(result.primaryDiagnosticCode, code, fixtureName);
+    assert.ok(result.metrics.leftVisualWeight > 0 && result.metrics.rightVisualWeight > 0, fixtureName);
+  }
 });
 
 test('formal balance gives a student-facing asymmetric challenge and mirror hint', () => {

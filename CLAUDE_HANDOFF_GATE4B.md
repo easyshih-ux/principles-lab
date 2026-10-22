@@ -71,7 +71,7 @@
 - 落單圖形：只要有 1 個圖形不屬於任何一組就不過關，回饋「有一個圖形看不出屬於哪一組：右下角的綠色圓形。……」（iPad 兩種尺寸實測顯示正常）。
 - 色彩名稱本輪維持「橙色」，與畫面一致。
 
-### 2.5 其他六題文案（10/22 完成，待教師確認；尚未 commit）
+### 2.5 其他六題文案（10/22 完成，commit `85c8623`）
 
 - 均衡、律動、比例、統一、調和、單純：題目改為「一句說明＋過關：①②③」、各加一句創作提示，未通過時一次說一件事（文字依 `GATE4C_六題文案與單元複製草稿.md`，教師 10/22 同意）。
 - 只改文字，過關條件全部不變；具體句子寫在 `phase6c-validators.js` 各題的失敗回傳（`studentDetail`）。
@@ -79,7 +79,19 @@
 - 統一：最接近的共同特色若是「有角的／圓弧的」造形，回饋會照實說出（判定本來就接受這種共同特色）。
 - 題目與判定不一致之處維持現狀、未修改判定，清單見草稿檔。
 - 測試：新增 `tests/gate4c-copy.test.mjs`（8 項）；全部 639／639 通過。iPad 1180×820、1024×768 六題題目與回饋皆完整顯示。
-- 快取版本標記 `gate4c-copy-1`。
+- 快取版本標記 `gate4c-rules-1`。
+
+### 2.6 題目與判定不一致的處理（10/22 教師決定）
+
+- 均衡①：「左右一模一樣」改為「差一點也算對稱」：鏡像位置容許 24 → 60（大小仍需同一級）。
+- 均衡②：兩邊比重要差不多，較重一邊最多是另一邊的 1.5 倍（原 2.6 倍；`balanceTolerance` 0.45 → 0.2）。教師看過 8 件實測作品後決定：一大對一中、三小對一大（距離相同）、一大對一小都算不平衡。原本的過關範例中有 3 件（含「先前回報的作品」）偏重一邊，改列為不過關範例；「不對稱均衡」示範改為左邊用較大的圓。
+- 律動③：至少一種變化要有「好幾座山」（至少兩次起伏）才算律動；只有一座山或一路同方向屬漸層，回饋「只有一座山比較像漸層，律動要有好幾座山的起伏。」／「變化一路往同一個方向，比較像漸層。……」。題目③與提示、小發現同步改寫。律動測試範例改為多座山。
+- 統一④：提示加「或都用有角的造形」。
+- 統一⑤：方向改用看得出的方向（長方形 0° 與 180° 算同一個方向）。
+- 調和⑥：相近色收緊到 3 格以內（`maximumHarmonyHueArcSpan: 3`），與對比（4 格以上）不再重疊。
+- 漸層：學生看得到的文字已無「7 級」；程式註解一併改為 6 級。
+- 測試：`tests/gate4c-copy.test.mjs` 新增 4 項；全部 644／644 通過（含均衡 1.5 倍）。iPad 實測律動：一座山顯示新回饋，兩座山過關。快取標記 `gate4c-rules-1`。
+- 實測發現：律動的「路線太陡」限制仍在；5 個造形間距 180 時，高低差 240 以內可過，260 會被判太陡。
 
 ## 3. 尚未完成
 
@@ -138,10 +150,10 @@
   - 判定與題目：`phase6c-validators.js`、`phase6c-definitions.js`、`phase6c-fixtures.js`、`phase6c-course-state.js`（指紋加入 stepSize／stepLightness）、`composition-audit.js`（漸層專用深淺不視為重疊）。
   - 畫面：`experiment-course.js`（創作提示、具體回饋、反覆 8 方向）、`phase6c.css`（漸層級數按鈕樣式，只新增）。
   - 共用畫布（只新增漸層專用級數，其他題不變）：`geometry/config.js`、`palette.js`、`controls.js`、`model.js`、`canvas.js`、`constrained-tools.js`、`constrained-engine.js`、`control-panel.js`；以及版本標記：`bounds.js`、`engine.js`、`constrained-canvas.js`。
-  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4c-copy-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
+  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4c-rules-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
   - 測試：新增 `tests/gate4-repetition.test.mjs`、`tests/gate4-gradation.test.mjs`、`tests/gate4-symmetry.test.mjs`、`tests/gate4-contrast.test.mjs`；更新 `final-tool-spec`、`phase6c-experiments`、`phase6c-student-flow`、`phase6-initial-state`、`explore-mode`、`final-phase-flow`、`phase6c-entry`、`post-final-a`、`teacher-progress-dashboard`。
 - 本次一併加入：`CLAUDE_HANDOFF_GATE4.md`、`CLAUDE_HANDOFF_GATE4B.md`（本文件）、`composition-audit.js`、`tests/phase6-v2-composition-audit.test.mjs`、四個 gate4 測試檔。
-- 驗證：`node --test` 639／639 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
+- 驗證：`node --test` 644／644 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
 - 教師試做方式：資料夾網址列輸入 `cmd` → `python -m http.server 8765` → 開 `http://localhost:8765/explore/#level/experiment/<principle>`（自由體驗模式，不登入、不寫入進度），並按 Ctrl+F5。或雙擊專案資料夾中的 `start-preview.bat`（10/21 新增，未追蹤；會開伺服器並打開反覆、對稱試做頁，關閉伺服器視窗即停止）。本 session 無法代為輸入指令（命令視窗與檔案總管只允許點擊）。
 - 發布：已在共用畫布檔加上版本標記，避免 iPad 混用新舊快取檔。正式網站 `https://easyshih-ux.github.io/principles-lab/`；自由體驗模式 `…/explore/`。push 不會更動 Firebase 資料或 Firestore 規則。
 

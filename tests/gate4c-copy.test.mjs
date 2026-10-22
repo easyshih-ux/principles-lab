@@ -15,9 +15,9 @@ const el = (id, values = {}) => ({ id, shape: 'circle', x: 500, y: 300, size: 3,
 test('Gate 4C copy: six tasks list their pass conditions and each has one creation tip', () => {
   const expected = {
     balance: ['讓左右兩邊不一樣，但整個畫面看起來穩定。過關：①左右兩邊都要有造形 ②左右不能一模一樣 ③左右兩邊一樣重', '大的造形比較重，離中線越遠也越重。可以用一個大的對兩個小的，或把小的放遠一點。'],
-    rhythm: ['讓造形由左到右排成一條路線，用變化帶著視線前進。過關：①至少 5 個造形 ②由左往右一個接一個排 ③高低、方向、大小或間距，至少一種變化很明顯', '例如讓造形像波浪一樣一高一低，或一個比一個轉得更多。'],
+    rhythm: ['讓造形由左到右排成一條路線，用變化帶著視線前進。過關：①至少 5 個造形 ②由左往右一個接一個排 ③高低、方向、大小或間距，至少一種變化有好幾座山的起伏', '例如讓造形像波浪一樣一高一低，做出好幾座山的起伏。'],
     proportion: ['用 1×、2×、3× 三種尺寸，做出清楚的大小關係。過關：①至少 6 個造形 ②三種尺寸都要用到', '2× 是 1× 的兩倍大，3× 是 1× 的三倍大。怎麼排列由你決定。'],
-    unity: ['用至少 7 個造形，讓它們有一個共同特色，同時保留一點變化。過關：①至少 7 個造形 ②7 個裡至少 6 個有同樣的顏色、造形或方向 ③還要有一點不同，例如大小', '先決定共同特色，例如全部用藍色，再讓大小或造形有一點不同。'],
+    unity: ['用至少 7 個造形，讓它們有一個共同特色，同時保留一點變化。過關：①至少 7 個造形 ②7 個裡至少 6 個有同樣的顏色、造形或方向 ③還要有一點不同，例如大小', '先決定共同特色，例如全部用藍色，或都用有角的造形；再讓大小或造形有一點不同。'],
     harmony: ['用相近的顏色，讓畫面看起來協調。過關：①至少 6 個造形 ②大約四分之三以上的造形，用同一個顏色的深淺，或色環上相鄰的顏色', '可以選一個顏色，用它的深淺變化；或選色環上相鄰的幾個顏色，例如紅、紅橙、橙。'],
     simplicity: ['讓畫面更單純，但要留下中間的花。過關：①花要留下 ②至少留 1 個裝飾 ③用一種方法：刪掉 2 個以上、排整齊，或減少顏色和大小的種類', '先找出最重要的花，再想想哪些裝飾可以刪掉、排整齊，或改成一樣的顏色。']
   };
@@ -97,4 +97,58 @@ test('Gate 4C copy: student sentences avoid engineering words', () => {
   for (const id of ['balance', 'rhythm', 'proportion', 'unity', 'harmony', 'simplicity']) {
     assert.doesNotMatch(def(id).task + def(id).creationTips, engineering, id);
   }
+});
+
+// Gate 4C (10/22) teacher decisions: judgement changes, each with its own check.
+test('Gate 4C balance: a near-mirror (one shape moved a little) now counts as symmetric', () => {
+  const pair = (dx) => [el('a', { x: 300, y: 200 }), el('b', { x: 700 + dx, y: 200 }), el('c', { x: 260, y: 420, size: 2 }), el('d', { x: 740, y: 420, size: 2 })];
+  assert.equal(check('balance', pair(0)).primaryDiagnosticCode, 'ASYMMETRY_REQUIRED');
+  assert.equal(check('balance', pair(40)).primaryDiagnosticCode, 'ASYMMETRY_REQUIRED');
+  assert.equal(check('balance', pair(100)).primaryDiagnosticCode !== 'ASYMMETRY_REQUIRED', true);
+});
+
+test('Gate 4C rhythm: several hills pass; one hill or one direction is a gradation', () => {
+  const row = (field, values) => values.map((value, index) => el(`w${index}`, { x: 120 + index * 170, [field]: value }));
+  assert.equal(check('rhythm', row('y', [300, 160, 300, 160, 300])).passed, true);
+  assert.equal(check('rhythm', row('size', [1, 3, 1, 3, 1])).passed, true);
+  const oneHill = check('rhythm', row('y', [400, 300, 180, 300, 400]));
+  assert.equal(oneHill.primaryDiagnosticCode, 'ONE_HILL_ONLY');
+  assert.equal(oneHill.studentDetail, '只有一座山比較像漸層，律動要有好幾座山的起伏。');
+  assert.equal(check('rhythm', row('size', [1, 2, 3, 4, 5])).studentDetail, '變化一路往同一個方向，比較像漸層。律動要有好幾座山的起伏。');
+  assert.equal(check('rhythm', row('rotation', [0, 45, 90, 135, 180])).primaryDiagnosticCode, 'ONE_HILL_ONLY');
+  assert.equal(check('rhythm', row('rotation', [0, 90, 0, 90, 0])).passed, true);
+});
+
+test('Gate 4C unity: a rectangle turned 180° faces the same way', () => {
+  const shapes = [['rectangle', 0], ['rectangle', 180], ['rectangle', 180], ['triangle', 0], ['triangle', 0], ['semicircle', 0], ['semicircle', 0]];
+  const hues = ['red', 'blue', 'yellow', 'green', 'violet', 'orange', 'blue-green'];
+  const work = shapes.map(([shape, rotation], index) => el(`d${index}`, { shape, rotation, x: 100 + index * 130, hue: hues[index] }));
+  const result = check('unity', work);
+  assert.equal(result.passed, true);
+  assert.ok(result.detectedMethods.includes('rotation'));
+});
+
+test('Gate 4C harmony: close colours are within 3 steps, so harmony and contrast no longer overlap', () => {
+  const six = (hues) => hues.map((hue, index) => el(`k${index}`, { x: 100 + index * 150, hue, size: index % 2 ? 2 : 4 }));
+  assert.equal(check('harmony', six(['red', 'red-orange', 'orange', 'yellow-orange', 'red', 'orange'])).passed, true);
+  assert.equal(check('harmony', six(['red', 'red', 'red-orange', 'yellow', 'yellow', 'orange'])).passed, false);
+  assert.equal(check('harmony', six(['red', 'red-orange', 'red', 'red-orange', 'red', 'yellow'])).passed, true);
+});
+
+test('Gate 4C balance: the two sides must weigh about the same (heavier side at most 1.5×)', () => {
+  assert.equal(def('balance').validationSpec.balanceTolerance, 0.2);
+  const c = (id, x, size, y = 300) => el(id, { x, y, size });
+  const works = {
+    A: [[c('a', 250, 5), c('b', 700, 3, 220), c('c', 800, 3, 400)], true],
+    B: [[c('a', 380, 5), c('b', 880, 3)], true],
+    E: [[c('a', 250, 5), c('b', 750, 4)], true],
+    H: [[c('a', 300, 3, 200), c('b', 300, 3, 420), c('c', 820, 4)], true],
+    C: [[c('a', 250, 5), c('b', 750, 3)], false],
+    D: [[c('a', 250, 2, 180), c('b', 250, 2, 300), c('c', 250, 2, 420), c('d', 750, 4)], false],
+    G: [[c('a', 250, 5), c('b', 750, 2)], false],
+    F: [[c('a', 200, 5), c('b', 350, 4, 450), c('c', 750, 2)], false]
+  };
+  for (const [name, [work, passes]] of Object.entries(works)) assert.equal(check('balance', work).passed, passes, name);
+  // Three small against one big still works once the big one moves further out.
+  assert.equal(check('balance', [c('a', 300, 2, 180), c('b', 300, 2, 300), c('c', 300, 2, 420), c('d', 900, 4)]).passed, true);
 });
