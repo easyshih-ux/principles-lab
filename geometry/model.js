@@ -7,7 +7,7 @@ import {
   ROTATION_VALUES,
   SIZE_LEVELS,
   STEP_LEVELS
-} from './config.js?v=gate4c-rules-1';
+} from './config.js?v=gate4c-unit-1';
 
 let idSequence = 0;
 

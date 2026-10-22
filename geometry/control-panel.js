@@ -5,8 +5,8 @@ import {
   ROTATION_VALUES,
   SIZE_LEVELS,
   STEP_LEVELS
-} from './config.js?v=gate4c-rules-1';
-import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4c-rules-1';
+} from './config.js?v=gate4c-unit-1';
+import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4c-unit-1';
 
 function nearestAllowed(value, allowedValues) {
   return allowedValues.reduce((nearest, candidate) => (
@@ -106,6 +106,7 @@ export class GeometryControlPanel {
 
     const actions = showSecondary ? [
       this.engine.canUse('duplicate') ? '<button type="button" class="secondary-button control-action" data-action="duplicate">複製</button>' : '',
+      this.engine.canUse('unitDuplicate') ? '<button type="button" class="secondary-button control-action" data-action="duplicate-unit">複製單元</button>' : '',
       this.engine.canUse('delete') ? '<button type="button" class="secondary-button control-action" data-action="delete">刪除</button>' : '',
       this.engine.canUse('undo') ? '<button type="button" class="secondary-button control-action" data-action="undo">Undo</button>' : ''
     ].join('') : '';
@@ -291,6 +292,7 @@ export class GeometryControlPanel {
         const action = button.dataset.action;
         let result;
         if (action === 'duplicate') result = this.engine.duplicate();
+        if (action === 'duplicate-unit') result = this.engine.duplicateUnit();
         if (action === 'delete') result = this.engine.delete();
         if (action === 'undo') result = this.engine.undo();
         this.onActionResult(result, action);

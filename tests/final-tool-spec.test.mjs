@@ -9,7 +9,7 @@ import { addShapeControlsMarkup } from '../experiment-course.js';
 
 const enabled = (id) => Object.entries(phase6cDefinitionsById[`experiment-${id}`].allowedTools).filter(([,on])=>on).map(([tool])=>tool).sort();
 const expected = {
- repetition:['addShape','color','delete','duplicate','position','rotation','size'],
+ repetition:['addShape','color','delete','duplicate','position','rotation','size','unitDuplicate'],
  gradation:['addShape','color','delete','duplicate','position','stepLightness','stepSize'],
  balance:['addShape','delete','duplicate','position','size'],
  rhythm:['addShape','delete','duplicate','position','rotation','size'],

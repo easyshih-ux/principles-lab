@@ -1,7 +1,7 @@
-import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js?v=gate4c-rules-1';
-import { GeometryControlPanel } from './geometry/control-panel.js?v=gate4c-rules-1';
-import { ConstrainedGeometryEngine } from './geometry/constrained-engine.js?v=gate4c-rules-1';
-import { GEOMETRY_SHAPES } from './geometry/config.js?v=gate4c-rules-1';
+import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js?v=gate4c-unit-1';
+import { GeometryControlPanel } from './geometry/control-panel.js?v=gate4c-unit-1';
+import { ConstrainedGeometryEngine } from './geometry/constrained-engine.js?v=gate4c-unit-1';
+import { GEOMETRY_SHAPES } from './geometry/config.js?v=gate4c-unit-1';
 import { getExperimentState } from './experiment-session.js?v=gate3-validation-1';
 import {
   advancePhase6c,
@@ -12,9 +12,9 @@ import {
   submitPhase6cExperiment,
   updatePhase6cWorkingElements
 } from './phase6c-course-state.js?v=gate3-validation-1';
-import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-rules-1';
+import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-unit-1';
 import { phase6cFixtures } from './phase6c-fixtures.js';
-import { validatePhase6cExperiment } from './phase6c-validators.js?v=gate4c-rules-1';
+import { validatePhase6cExperiment } from './phase6c-validators.js?v=gate4c-unit-1';
 import { resolveDiagnosticHint } from './experiment-hints.js';
 import { principles as principleMetadata } from './data.js';
 import { syncCourseCompletion } from './state.js';
@@ -97,6 +97,7 @@ export function experimentActionsMarkup(course, definition, feedback) {
 
 export function createExperimentCourseRenderers({ app, state, navigate, onCheckpoint = () => {} }) {
   let active = null;
+  let keptUnitSelection = null;
 
   function destroy() {
     active?.canvas.destroy();
@@ -158,8 +159,12 @@ export function createExperimentCourseRenderers({ app, state, navigate, onCheckp
       nonDeletableElementIds: definition.initialState.nonDeletableElementIds ?? [],
       toolConstraints: { rotation: { allowedValues: ['symmetry', 'repetition'].includes(definition.principleId) ? [0,45,90,135,180,225,270,315] : [0,45,90,135], defaultValue: 0 } }
     });
+    // Gate 4C unit copy: keep the selected unit when the page redraws after a check.
+    const keepsUnits = Boolean(definition.allowedTools.unitDuplicate);
+    if (keepsUnits && keptUnitSelection?.id === definition.id) engine.restoreSelection(keptUnitSelection.selectedId, keptUnitSelection.groupIds);
     let panels = [];
     const sync = () => {
+      if (keepsUnits) keptUnitSelection = { id: definition.id, selectedId: engine.selectedId, groupIds: engine.groupIds };
       const invalidated = updatePhase6cWorkingElements(state.experimentCourse, definition, engine.getState().elements);
       experimentState.historyRef = engine.history;
       panels.forEach((panel) => panel.render());
@@ -176,6 +181,9 @@ export function createExperimentCourseRenderers({ app, state, navigate, onCheckp
       onVisualChange: () => canvas.render(),
       onStateChange: () => { if (!refreshAfterStateChange()) canvas.render(); },
       onActionResult: (result, action) => {
+        if (action === 'duplicate-unit' && result?.reason === 'no-space') {
+          document.querySelector('#experiment-feedback').innerHTML = '<p class="experiment-feedback-label">畫布滿了</p><p>先移動或刪除一些造形，再複製單元。</p>';
+        }
         if (action === 'delete' && result?.reason === 'protected-element') {
           document.querySelector('#experiment-feedback').innerHTML = '<p class="experiment-feedback-label">保留重要元素</p><p>這是構圖的重要元素，要想辦法保留下來。</p>';
         }
