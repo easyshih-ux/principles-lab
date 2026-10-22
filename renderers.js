@@ -20,6 +20,7 @@ import { nextHashForStage, stageHash } from './router.js';
 import { validateStage } from './validators.js';
 import { attemptClassroomUnlock, CLASSROOM_COURSES } from './classroom-unlocks.js?v=classroom-control-1';
 import { getDisplayColor } from './geometry/palette.js';
+import { butterflyScene, initialRocketPieces, owlScene, ROCKET_BOUNDS, ROCKET_PIECES, rocketScene } from './symmetry-scenes.js?v=sym-scenes-1';
 
 const homeCoursePresentation = Object.freeze({
   recognize: Object.freeze({ number: '01', title: '看得出來', subtitle: '觀察與辨識' }),
@@ -416,7 +417,7 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
                 ${stage.interactionType === 'symbol-options'
                   ? `<span class="symbol-sequence ${shouldAnimate ? 'repeat-success' : ''}">${option.symbols.map(symbolMark).join('')}</span>`
                   : stage.interactionType === 'symmetry-options'
-                    ? symmetryComposition(option, shouldAnimate)
+                    ? (option.scene === 'butterfly' ? butterflyScene(option.variant, shouldAnimate) : symmetryComposition(option, shouldAnimate))
                     : stage.interactionType === 'balance-options'
                       ? `<span class="${shouldAnimate ? 'balance-success balance-success-recognize' : ''}">${balanceComposition(option)}</span>`
                       : stage.interactionType === 'rhythm-options'
@@ -600,7 +601,11 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
       ${stage.elements.map((element, index) => `<button class="harmony-dot ${element.id === stage.validation.correctElementId ? 'outlier' : ''} ${stageState.selectedElementId === element.id ? 'selected' : ''}" data-element-id="${element.id}" style="--x:${element.x}%;--family-color:${visualColor(element.color)};--delay:${index * .08}s" aria-label="第 ${index + 1} 個色彩元素"></button>`).join('')}
     </div>` : isBalanceDiagnose ? `<div class="single-artboard position-board ${stageState.isComplete ? 'balance-success balance-success-discover' : ''}"><div class="balance-center"></div>
       ${stage.elements.map((element, index) => `<button class="position-element ${stageState.selectedElementId === element.id ? 'selected' : ''}" data-element-id="${element.id}" style="--x:${element.x}%;--y:${element.y}%;--size:${element.size}px;--balance-color:var(--${element.color})" aria-label="第 ${index + 1} 個均衡元素"></button>`).join('')}
-    </div>` : isSymmetryDiagnose ? `
+    </div>` : isSymmetryDiagnose && stage.scene === 'owl' ? `
+      <div class="single-artboard symmetry-board symmetry-scene-board ${stageState.isComplete ? 'mirror-success' : ''}">
+        <div class="symmetry-axis" aria-hidden="true"></div>
+        ${owlScene({ selectedId: stageState.selectedElementId, complete: stageState.isComplete })}
+      </div>` : isSymmetryDiagnose ? `
       <div class="single-artboard symmetry-board ${stageState.isComplete ? 'mirror-success' : ''}">
         <div class="symmetry-axis" aria-hidden="true"></div>
         ${stage.elements.map((element, index) => {
@@ -1091,7 +1096,129 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
     document.querySelector('#next')?.addEventListener('click', () => { completeFreeReviewPrinciple(stage.principleId); navigate(nextHashForStage(stage, stages)); });
   }
 
+  // 10/22 對稱③（火箭）：拖曳兩個零件到鏡像位置，並翻轉方向。
+  function renderRocketMirrorStage(stage) {
+    const principle = getPrinciple(stage.principleId);
+    const stageState = getStageState(state, stage.id);
+    if (!stageState.pieces) updateStageState(state, stage.id, { pieces: initialRocketPieces(), selectedPiece: null });
+    const current = getStageState(state, stage.id);
+    const pieces = current.isComplete
+      ? Object.fromEntries(Object.entries(stage.validation.pieces).map(([id, rule]) => [id, { ...rule.target, flipped: true }]))
+      : current.pieces;
+    const canvas = `<div class="single-artboard symmetry-board symmetry-scene-board rocket-board ${current.isComplete ? 'mirror-success' : ''}" id="mirror-board">
+      <div class="symmetry-axis" aria-hidden="true"></div>
+      ${rocketScene({ pieces, selectedPiece: current.selectedPiece, complete: current.isComplete })}
+    </div>`;
+    const controls = [
+      button('翻轉方向', 'secondary-button', 'flip'),
+      button('復原', 'secondary-button', 'undo'),
+      button('提示', 'secondary-button', 'hint'),
+      button('完成檢測', 'primary-button compact', 'check'),
+      current.isComplete ? successActionButton('完成實驗', stage) : ''
+    ].join('');
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: current.isComplete ? `<strong>${stage.successFeedback}</strong>` : current.feedback });
+    bindTaskBack();
+    enableSuccessAction();
+    if (current.isComplete) document.querySelector('#flip').disabled = true;
+    const svg = document.querySelector('.rocket-scene');
+    const toScene = (event) => {
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      return point.matrixTransform(svg.getScreenCTM().inverse());
+    };
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const savePiece = (id, next) => {
+      const latest = getStageState(state, stage.id);
+      updateStageState(state, stage.id, { pieces: { ...latest.pieces, [id]: { ...latest.pieces[id], ...next } }, selectedPiece: id, feedback: '' });
+      clearStageCompletion(state, stage.id);
+    };
+    // Only very close to the right spot does the piece click into place.
+    const settle = (id, x, y) => {
+      const target = stage.validation.pieces[id].target;
+      return Math.hypot(x - target.x, y - target.y) <= stage.validation.snapTolerance
+        ? { x: target.x, y: target.y }
+        : { x: Math.round(clamp(x, ROCKET_BOUNDS.minX, ROCKET_BOUNDS.maxX)), y: Math.round(clamp(y, ROCKET_BOUNDS.minY, ROCKET_BOUNDS.maxY)) };
+    };
+    svg.querySelectorAll('.rocket-piece').forEach((group) => {
+      const id = group.dataset.pieceId;
+      let drag = null;
+      group.addEventListener('pointerdown', (event) => {
+        if (getStageState(state, stage.id).isComplete) return;
+        event.preventDefault();
+        const start = toScene(event);
+        const piece = getStageState(state, stage.id).pieces[id];
+        drag = { dx: piece.x - start.x, dy: piece.y - start.y, moved: false };
+        group.setPointerCapture?.(event.pointerId);
+        svg.querySelectorAll('.rocket-piece').forEach((item) => item.classList.toggle('is-selected', item === group));
+      });
+      group.addEventListener('pointermove', (event) => {
+        if (!drag) return;
+        const point = toScene(event);
+        const x = clamp(point.x + drag.dx, ROCKET_BOUNDS.minX, ROCKET_BOUNDS.maxX);
+        const y = clamp(point.y + drag.dy, ROCKET_BOUNDS.minY, ROCKET_BOUNDS.maxY);
+        const piece = getStageState(state, stage.id).pieces[id];
+        drag.moved = true;
+        drag.last = { x, y };
+        group.setAttribute('transform', `translate(${x - piece.x} ${y - piece.y})`);
+      });
+      const finish = () => {
+        if (!drag) return;
+        const last = drag.moved ? drag.last : getStageState(state, stage.id).pieces[id];
+        drag = null;
+        savePiece(id, settle(id, last.x, last.y));
+        renderRocketMirrorStage(stage);
+      };
+      group.addEventListener('pointerup', finish);
+      group.addEventListener('pointercancel', finish);
+      group.addEventListener('keydown', (event) => {
+        const delta = { ArrowLeft: [-4, 0], ArrowRight: [4, 0], ArrowUp: [0, -4], ArrowDown: [0, 4] }[event.key];
+        if (!delta || getStageState(state, stage.id).isComplete) return;
+        event.preventDefault();
+        const piece = getStageState(state, stage.id).pieces[id];
+        savePiece(id, settle(id, piece.x + delta[0], piece.y + delta[1]));
+        renderRocketMirrorStage(stage);
+        document.querySelector(`[data-piece-id="${id}"]`)?.focus();
+      });
+    });
+    document.querySelector('#flip').addEventListener('click', () => {
+      const latest = getStageState(state, stage.id);
+      if (!latest.selectedPiece) {
+        updateStageState(state, stage.id, { feedback: stage.feedbackByCode['no-piece'] });
+      } else {
+        savePiece(latest.selectedPiece, { flipped: !latest.pieces[latest.selectedPiece].flipped });
+      }
+      renderRocketMirrorStage(stage);
+    });
+    document.querySelector('#undo').addEventListener('click', () => {
+      updateStageState(state, stage.id, { pieces: initialRocketPieces(), selectedPiece: null, feedback: '' });
+      clearStageCompletion(state, stage.id);
+      renderRocketMirrorStage(stage);
+    });
+    document.querySelector('#hint').addEventListener('click', () => {
+      updateStageState(state, stage.id, { feedback: stage.hints[0] });
+      renderRocketMirrorStage(stage);
+    });
+    document.querySelector('#check').addEventListener('click', () => {
+      const latest = getStageState(state, stage.id);
+      const result = validateStage(stage, { pieces: latest.pieces });
+      if (result.isValid) {
+        markStageComplete(state, stage);
+        updateStageState(state, stage.id, { feedback: stage.successFeedback });
+      } else {
+        const name = ROCKET_PIECES[result.pieceId]?.name ?? '零件';
+        updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code].replaceAll('{name}', name), selectedPiece: result.pieceId ?? latest.selectedPiece });
+      }
+      renderRocketMirrorStage(stage);
+    });
+    document.querySelector('#next')?.addEventListener('click', () => { completeFreeReviewPrinciple(stage.principleId); navigate(nextHashForStage(stage, stages)); });
+  }
+
   function renderMirrorExperimentStage(stage) {
+    if (stage.scene === 'rocket') {
+      renderRocketMirrorStage(stage);
+      return;
+    }
     const principle = getPrinciple(stage.principleId);
     const stageState = getStageState(state, stage.id);
     const target = stage.validation.target;

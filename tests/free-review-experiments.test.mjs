@@ -46,15 +46,17 @@ test('symmetry free-review route and mirror data are complete', () => {
     'symmetry-observe', 'symmetry-discover', 'symmetry-experiment'
   ]);
   reviewStages.forEach((item) => assert.equal(resolveRoute(stageHash(item), stages, principles).name, 'stage'));
-  assert.deepEqual(stage('symmetry-experiment').validation.target, { x: 70, y: 42 });
-  assert.equal(stage('symmetry-discover').elements.find((item) => item.id === 'symmetry-middle').correctY, 42);
+  assert.deepEqual(stage('symmetry-experiment').validation.pieces.fin.target, { x: 386, y: 372 });
+  assert.equal(stage('symmetry-discover').validation.correctElementId, 'owl-eye');
 });
 
-test('symmetry rejects a displaced element and accepts a reasonable tolerance', () => {
+test('symmetry rejects a displaced or unflipped piece and accepts a close, flipped one', () => {
   const repair = stage('symmetry-experiment');
-  assert.equal(validateStage(repair, { position: { x: 78, y: 58 } }).isValid, false);
-  assert.equal(validateStage(repair, { position: { x: 73, y: 45 } }).isValid, true);
-  assert.equal(validateStage(repair, { position: { x: 76, y: 42 } }).isValid, false);
+  const placed = { fin: { x: 386, y: 372, flipped: true }, booster: { x: 368, y: 280, flipped: true } };
+  assert.equal(validateStage(repair, { pieces: placed }).isValid, true);
+  assert.equal(validateStage(repair, { pieces: { ...placed, fin: { x: 396, y: 380, flipped: true } } }).isValid, true);
+  assert.deepEqual(validateStage(repair, { pieces: { ...placed, fin: { x: 410, y: 372, flipped: true } } }), { isValid: false, code: 'piece-position', pieceId: 'fin' });
+  assert.deepEqual(validateStage(repair, { pieces: { ...placed, booster: { x: 368, y: 280, flipped: false } } }), { isValid: false, code: 'piece-direction', pieceId: 'booster' });
   assert.match(repair.successFeedback, /^對稱完成！/);
 });
 

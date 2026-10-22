@@ -79,6 +79,19 @@ registerValidator('mirror-position', ({ input, stage }) => {
   return { isValid, code: isValid ? 'valid' : 'mirror-not-aligned' };
 });
 
+// 10/22 對稱③（火箭）：每個零件都要放到左邊零件的鏡像位置，而且方向要翻過來。
+registerValidator('mirror-pieces', ({ input, stage }) => {
+  const pieces = input.pieces ?? {};
+  for (const [id, rule] of Object.entries(stage.validation.pieces)) {
+    const piece = pieces[id] ?? {};
+    const placed = Number.isFinite(piece.x) && Number.isFinite(piece.y)
+      && Math.hypot(piece.x - rule.target.x, piece.y - rule.target.y) <= stage.validation.tolerance;
+    if (!placed) return { isValid: false, code: 'piece-position', pieceId: id };
+    if (piece.flipped !== true) return { isValid: false, code: 'piece-direction', pieceId: id };
+  }
+  return { isValid: true, code: 'valid' };
+});
+
 registerValidator('visual-balance', ({ input, stage }) => {
   const x = input.position?.x;
   const moment = Number.isFinite(x) ? x - 50 : Infinity;
