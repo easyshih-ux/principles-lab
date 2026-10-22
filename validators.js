@@ -126,8 +126,11 @@ registerValidator('size-ratio', ({ input, stage }) => {
 });
 
 registerValidator('dominant-size', ({ input, stage }) => {
+  // Free practice 比例③ (10/22): the student picks the main shape first.
+  if (input.mainIndex === null) return { isValid: false, code: 'no-main' };
   const ratio = Number(input.mainSize) / Number(input.supportSize);
-  const isValid = Number.isFinite(ratio) && ratio >= stage.validation.minRatio && ratio <= stage.validation.maxRatio;
+  if (Number.isFinite(ratio) && ratio > stage.validation.maxRatio) return { isValid: false, code: stage.feedbackByCode?.['main-too-large'] ? 'main-too-large' : 'main-not-dominant' };
+  const isValid = Number.isFinite(ratio) && ratio >= stage.validation.minRatio;
   return { isValid, code: isValid ? 'valid' : 'main-not-dominant' };
 });
 

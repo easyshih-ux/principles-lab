@@ -291,3 +291,10 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus)
 .choice-art .review-symbol{width:min(54px,3.9vw);height:min(54px,3.9vw);font-size:min(48px,3.3vw);width:min(54px,13cqi);height:min(54px,13cqi);font-size:min(48px,11cqi)}
 .choice-art .proportion-composition{gap:min(13px,1vw);gap:min(13px,3cqi)}
 .choice-art .proportion-composition i{width:calc(var(--shape-n) * min(1px,.095vw));height:calc(var(--shape-n) * min(1px,.095vw));width:calc(var(--shape-n) * min(1px,.32cqi));height:calc(var(--shape-n) * min(1px,.32cqi))}
+/* 10/22 自由練習比例③：學生自己點選主角。 */
+.proportion-pick{position:relative;display:grid;place-items:center;min-width:56px;min-height:56px;padding:8px;border:2px dashed transparent;border-radius:12px;background:transparent;cursor:pointer;font:inherit}
+.proportion-pick:hover:not(:disabled){border-color:var(--line)}
+.proportion-pick.is-main{border-color:var(--black);background:rgba(242,201,76,.18)}
+.proportion-pick b{position:absolute;left:50%;top:100%;transform:translate(-50%,6px);white-space:nowrap;font-size:15px;font-weight:900;color:var(--black)}
+.proportion-pick:disabled{cursor:default;color:var(--black);opacity:1}
+.proportion-pick-first{flex-basis:100%;margin:0;text-align:center;font-weight:900;color:var(--red)}

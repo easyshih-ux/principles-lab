@@ -1,5 +1,5 @@
 import { principles, stages } from './data.js';
-import { createRenderers } from './renderers.js?v=overflow-fit-1';
+import { createRenderers } from './renderers.js?v=pick-main-1';
 import { resolveRoute } from './router.js?v=v2-entry-1';
 import { createAppState, setCurrentRoute } from './state.js?v=v2-b2-checkpoints-1';
 import { renderGeometryPlayground } from './geometry/playground.js';

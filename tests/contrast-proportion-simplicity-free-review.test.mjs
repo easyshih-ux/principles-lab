@@ -142,3 +142,25 @@ test('new free-review completion remains isolated from formal progress and class
   assert.deepEqual(state.masteryPractice, mastery);
   assert.deepEqual(state.classroomUnlocks, classroom);
 });
+
+test('proportion Q3 (10/22): the student picks the main shape, then sizes it', () => {
+  const stage = byId('proportion-experiment');
+  assert.equal(stage.initialState.mainIndex, null);
+  assert.equal(stage.baseSizes.length, stage.colors.length);
+  assert.equal(new Set(stage.pieceNames).size, stage.pieceNames.length);
+  assert.equal(validateStage(stage, { mainIndex: null, mainSize: 60, supportSize: 26 }).code, 'no-main');
+  assert.equal(validateStage(stage, { mainIndex: 2, mainSize: 42, supportSize: 27 }).isValid, true);
+  assert.equal(validateStage(stage, { mainIndex: 2, mainSize: 30, supportSize: 27 }).code, 'main-not-dominant');
+  assert.equal(validateStage(stage, { mainIndex: 2, mainSize: 84, supportSize: 27 }).code, 'main-too-large');
+  for (const code of ['no-main', 'main-not-dominant', 'main-too-large']) assert.ok(stage.feedbackByCode[code]);
+  assert.match(rendererSource, /class="proportion-pick \$\{chosen \? 'is-main' : ''\}" data-shape-index/);
+  assert.match(rendererSource, /mainIndex: index, mainSize: supportSizeOf\(index, getStageState\(state, stage\.id\)\.supportScale \?\? 100\)/);
+  assert.match(rendererSource, /id="proportion-support-size"/);
+  assert.deepEqual(stage.supportScaleRange, [60, 140]);
+  // The ratio is what counts: main 40 / supports 20 passes just like main 80 / supports 40.
+  assert.equal(validateStage(stage, { mainIndex: 0, mainSize: 40, supportSize: 20 }).isValid, true);
+  assert.equal(validateStage(stage, { mainIndex: 0, mainSize: 80, supportSize: 40 }).isValid, true);
+  assert.equal(validateStage(stage, { mainIndex: 0, mainSize: 30, supportSize: 38 }).code, 'main-not-dominant');
+  assert.match(rendererSource, /你選的\$\{stage\.pieceNames\[mainIndex\]\}成為主角了！主角大約是配角的/);
+  assert.match(stylesSource, /\.proportion-pick\.is-main\{/);
+});

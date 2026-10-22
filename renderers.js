@@ -161,7 +161,13 @@ function contrastComposition(option, animated = false, completionClass = '') {
 }
 
 function proportionComposition(option, animated = false, completionClass = '') {
-  return `<span class="proportion-composition ${animated ? 'proportion-recognize-success' : ''} ${completionClass}">${option.sizes.map((size, index) => `<i class="${index === 0 ? 'main' : 'support'} shape-${index % 3}" style="--shape-size:${size}px;--shape-n:${size};--shape-color:${visualColor(option.colors[index])};--delay:${index * .07}s"></i>`).join('')}</span>`;
+  return `<span class="proportion-composition ${animated ? 'proportion-recognize-success' : ''} ${completionClass}">${option.sizes.map((size, index) => {
+    const shape = `<i class="${index === (option.mainIndex ?? 0) ? 'main' : 'support'} shape-${index % 3}" style="--shape-size:${size}px;--shape-n:${size};--shape-color:${visualColor(option.colors[index])};--delay:${index * .07}s"></i>`;
+    // Free practice 比例③: every shape is a button, so the student can pick the main shape.
+    if (!option.pickable) return shape;
+    const chosen = index === option.mainIndex;
+    return `<button type="button" class="proportion-pick ${chosen ? 'is-main' : ''}" data-shape-index="${index}" aria-pressed="${chosen}" aria-label="選${option.names?.[index] ?? '這個圖形'}當主角" ${option.locked ? 'disabled' : ''}>${shape}${chosen ? '<b>主角</b>' : ''}</button>`;
+  }).join('')}</span>`;
 }
 
 function simplicityComposition(option, animated = false) {
@@ -935,23 +941,58 @@ export function createRenderers({ app, state, navigate, classroomStorage = null,
   function renderProportionSizeStage(stage) {
     const principle = getPrinciple(stage.principleId);
     const stageState = getStageState(state, stage.id);
-    const sizes = [stageState.mainSize, stage.supportSize, stage.supportSize - 3, stage.supportSize + 1, stage.supportSize - 2];
-    const canvas = `<div class="size-stage-layout"><div class="single-artboard proportion-work ${stageState.isComplete ? 'proportion-experiment-success' : ''}">${proportionComposition({ sizes, colors: stage.colors })}</div>
-      <div class="size-controls single"><label>主角大小<input type="range" min="28" max="72" value="${stageState.mainSize}" id="proportion-size" ${stageState.isComplete ? 'disabled' : ''}></label></div></div>`;
+    const mainIndex = stageState.mainIndex ?? null;
+    const supportScale = stageState.supportScale ?? 100;
+    // 10/22: the student picks the main shape; the other four are supporting shapes sized together.
+    const supportSizeOf = (index, scale = supportScale) => Math.round(stage.baseSizes[index] * scale / 100);
+    const sizes = stage.baseSizes.map((_, index) => index === mainIndex ? stageState.mainSize : supportSizeOf(index));
+    const largestSupport = (scale = supportScale) => Math.max(...stage.baseSizes.map((_, index) => index === mainIndex ? 0 : supportSizeOf(index, scale)));
+    const successTextFor = (mainSize, scale) => {
+      if (mainIndex === null) return stage.successFeedback;
+      const ratio = Math.round(mainSize / largestSupport(scale) * 10) / 10;
+      return `你選的${stage.pieceNames[mainIndex]}成為主角了！主角大約是配角的 ${ratio} 倍，改變大小關係，就能決定誰是主角。`;
+    };
+    const locked = stageState.isComplete || mainIndex === null;
+    const canvas = `<div class="size-stage-layout"><div class="single-artboard proportion-work ${stageState.isComplete ? 'proportion-experiment-success' : ''}">${proportionComposition({ sizes, colors: stage.colors, mainIndex: mainIndex ?? -1, pickable: true, locked: stageState.isComplete, names: stage.pieceNames })}</div>
+      <div class="size-controls">${mainIndex === null ? '<p class="proportion-pick-first">先點一個圖形當主角</p>' : ''}
+        <label>主角大小<input type="range" min="20" max="84" value="${stageState.mainSize}" id="proportion-size" ${locked ? 'disabled' : ''}></label>
+        <label>配角大小<input type="range" min="${stage.supportScaleRange[0]}" max="${stage.supportScaleRange[1]}" value="${supportScale}" id="proportion-support-size" ${locked ? 'disabled' : ''}></label></div></div>`;
     const controls = [button('復原', 'secondary-button', 'undo'), button('提示', 'secondary-button', 'hint'), button('完成檢測', 'primary-button compact', 'check'), stageState.isComplete ? successActionButton('完成實驗', stage) : ''].join('');
-    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${stage.successFeedback}</strong>` : stageState.feedback });
+    app.innerHTML = taskFrame({ principle, stage, canvas, controls, feedback: stageState.isComplete ? `<strong>${successTextFor(stageState.mainSize, supportScale)}</strong>` : stageState.feedback });
     bindTaskBack();
     enableSuccessAction();
-    bindSquareSizePreview(document.querySelector('#proportion-size'), document.querySelector('.proportion-work .main'), (mainSize) => {
-      updateStageState(state, stage.id, { mainSize, feedback: '' });
+    document.querySelectorAll('.proportion-pick').forEach((pick) => pick.addEventListener('click', () => {
+      const index = Number(pick.dataset.shapeIndex);
+      if (index === mainIndex) return;
+      // The new main shape starts at its supporting size; the previous main goes back to being a supporting shape.
+      updateStageState(state, stage.id, { mainIndex: index, mainSize: supportSizeOf(index, getStageState(state, stage.id).supportScale ?? 100), feedback: '' });
       clearStageCompletion(state, stage.id);
-      document.querySelector('.feedback').textContent = '';
+      renderProportionSizeStage(stage);
+    }));
+    const clearFeedback = () => { clearStageCompletion(state, stage.id); document.querySelector('.feedback').textContent = ''; };
+    const mainShape = document.querySelector('.proportion-work .main');
+    if (mainShape) bindSquareSizePreview(document.querySelector('#proportion-size'), mainShape, (mainSize) => {
+      updateStageState(state, stage.id, { mainSize, feedback: '' });
+      clearFeedback();
     });
-    document.querySelector('#undo').addEventListener('click', () => { updateStageState(state, stage.id, { mainSize: stage.initialState.mainSize, feedback: '' }); clearStageCompletion(state, stage.id); renderProportionSizeStage(stage); });
+    document.querySelector('#proportion-support-size').addEventListener('input', (event) => {
+      const scale = Number(event.target.value);
+      updateStageState(state, stage.id, { supportScale: scale, feedback: '' });
+      document.querySelectorAll('.proportion-work .support').forEach((shape) => {
+        const index = Number(shape.closest('[data-shape-index]').dataset.shapeIndex);
+        const size = supportSizeOf(index, scale);
+        shape.style.setProperty('--shape-size', `${size}px`);
+        shape.style.setProperty('--shape-n', String(size));
+      });
+      clearFeedback();
+    });
+    document.querySelector('#undo').addEventListener('click', () => { updateStageState(state, stage.id, { mainSize: stage.initialState.mainSize, mainIndex: null, supportScale: 100, feedback: '' }); clearStageCompletion(state, stage.id); renderProportionSizeStage(stage); });
     document.querySelector('#hint').addEventListener('click', () => { updateStageState(state, stage.id, { feedback: stage.hints[0] }); renderProportionSizeStage(stage); });
     document.querySelector('#check').addEventListener('click', () => {
-      const result = validateStage(stage, { mainSize: stageState.mainSize, supportSize: stage.supportSize });
-      if (result.isValid) { markStageComplete(state, stage); updateStageState(state, stage.id, { feedback: stage.successFeedback }); }
+      const current = getStageState(state, stage.id);
+      const scale = current.supportScale ?? 100;
+      const result = validateStage(stage, { mainIndex: current.mainIndex ?? null, mainSize: current.mainSize, supportSize: largestSupport(scale) });
+      if (result.isValid) { markStageComplete(state, stage); updateStageState(state, stage.id, { feedback: successTextFor(current.mainSize, scale) }); }
       else updateStageState(state, stage.id, { feedback: stage.feedbackByCode[result.code] });
       renderProportionSizeStage(stage);
     });
