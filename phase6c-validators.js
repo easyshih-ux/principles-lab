@@ -1,5 +1,5 @@
-import { getLogicalSize } from './geometry/palette.js?v=gate4c-contrast-1';
-import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4c-contrast-1';
+import { getLogicalSize } from './geometry/palette.js?v=gate4c-handoff-1';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4c-handoff-1';
 import { auditComposition } from './composition-audit.js';
 
 function response(passed, code, metrics, detectedMethods = []) {

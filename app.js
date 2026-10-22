@@ -8,9 +8,9 @@ import { recognizeQuestions } from './recognize-questions.js';
 import { createRecognizeCourseRenderers } from './recognize-course.js?v=v2-b2-checkpoints-1';
 import { discoverQuestions } from './discover-questions.js';
 import { createDiscoverCourseRenderers } from './discover-course.js?v=v2-b2-checkpoints-1';
-import { createExperimentCourseRenderers } from './experiment-course.js?v=gate4c-contrast-1';
+import { createExperimentCourseRenderers } from './experiment-course.js?v=gate4c-handoff-1';
 import { createPhase6cCourseState } from './phase6c-course-state.js?v=gate3-validation-1';
-import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-contrast-1';
+import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-handoff-1';
 import { createLockedClassroomUnlocks, isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { fallbackClassConfigs, loadClassConfigs } from './class-config-service.js?v=v2-d3-1';
@@ -20,6 +20,7 @@ import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCur
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=v2-b2-checkpoints-1';
 import { renderTeacherPage, signOutTeacherFromTeachingMode } from './teacher-page.js?v=teacher-gate2-1';
 import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
+import { createCheckpointTracker, shouldStartFresh } from './student-handoff.js?v=handoff-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 const runtimePath = location.pathname.replace(/\/+$/, '');
@@ -33,6 +34,8 @@ if (captureWidth) {
 const app = document.querySelector('#app');
 const state = createAppState(stages, recognizeQuestions, discoverQuestions);
 let classroomStorage = null;
+const checkpointWrites = createCheckpointTracker();
+let progressOwner = null; // studentKey of the student whose work is in page memory
 if (!isExploreMode) {
   try { classroomStorage = window.localStorage; } catch { /* storage may be unavailable */ }
 }
@@ -59,6 +62,7 @@ function loadStudentAcademicYear() {
     if (result.errorCode) console.warn(`[academic year] read failed: ${result.errorCode}`);
     const restored = result.academicYear ? loadCurrentStudent(classroomStorage, result.academicYear) : null;
     state.currentStudent = restored;
+    if (restored) progressOwner = restored.studentKey;
     if (pendingStoredStudent && !restored) {
       clearCurrentStudent(classroomStorage);
       state.classroomUnlocks = resetClassroomUnlocks(classroomStorage);
@@ -73,6 +77,7 @@ function loadStudentAcademicYear() {
       : { status: 'ready', academicYear: null, source: 'runtime-error', initialized: false, warning: '目前無法取得學年度設定，請稍後重新整理或通知老師。', errorCode: error?.code ?? 'runtime-error' };
     console.warn(`[academic year] initialization failed: ${academicYearState.errorCode}`);
     state.currentStudent = networkFallback ? loadCurrentStudent(classroomStorage, '115') : null;
+    if (state.currentStudent) progressOwner = state.currentStudent.studentKey;
     return { client: null, result: academicYearState };
   }).then((loaded) => { renderCurrentRoute(); return loaded; });
   return academicYearRequest;
@@ -106,9 +111,17 @@ function loadStudentClassConfigs() {
 
 function saveCloudCheckpoint(checkpointName) {
   if (runtimeMode !== 'class' || !state.currentStudent || isTeacherTeachingMode()) return;
-  void writeStudentProgressCheckpoint(state.currentStudent, checkpointName).then((result) => {
+  checkpointWrites.track(writeStudentProgressCheckpoint(state.currentStudent, checkpointName).then((result) => {
     if (!result.ok) console.warn(`[cloud progress] ${checkpointName}: ${result.message}`);
-  });
+  }));
+}
+
+// Shared iPads (10/22): a new student — or ending the session — starts the page fresh, so nobody
+// sees or inherits the previous student's work. Completion marks are sent to the cloud first.
+async function startFreshForNextStudent() {
+  app.innerHTML = '<section class="identity-gate page-shell"><div><h1>準備中…</h1><p>正在為下一位同學準備新的畫面。</p></div></section>';
+  await checkpointWrites.flush();
+  location.reload();
 }
 
 function renderIdentityGate() {
@@ -175,6 +188,13 @@ function renderIdentityGate() {
   document.querySelector('#identity-confirm')?.addEventListener('click', () => {
     state.currentStudent = saveCurrentStudent(identityDraft, classroomStorage, activeConfigs, academicYearState.academicYear);
     identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
+    if (state.currentStudent && shouldStartFresh(progressOwner, state.currentStudent.studentKey)) {
+      // Someone else's work is still in memory: clear it (and their unlocks) before this student starts.
+      state.classroomUnlocks = resetClassroomUnlocks(classroomStorage);
+      void startFreshForNextStudent();
+      return;
+    }
+    if (state.currentStudent) progressOwner = state.currentStudent.studentKey;
     renderCurrentRoute();
   });
 }
@@ -197,7 +217,8 @@ function attachStudentControls() {
     state.classroomUnlocks = resetClassroomUnlocks(classroomStorage);
     state.classroomGate = { activeCourseId: null, message: '', error: '' };
     identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
-    renderCurrentRoute();
+    // Ending the session also clears all work and progress from the page.
+    void startFreshForNextStudent();
   });
 }
 

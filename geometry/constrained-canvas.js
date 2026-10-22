@@ -1,6 +1,6 @@
-import { GeometryCanvas } from './canvas.js?v=gate4c-contrast-1';
-import { createGridConfig } from './constrained-tools.js?v=gate4c-contrast-1';
-import { getRotatedHalfExtents } from './bounds.js?v=gate4c-contrast-1';
+import { GeometryCanvas } from './canvas.js?v=gate4c-handoff-1';
+import { createGridConfig } from './constrained-tools.js?v=gate4c-handoff-1';
+import { getRotatedHalfExtents } from './bounds.js?v=gate4c-handoff-1';
 import { screenToLogical } from './coordinates.js?v=geometry-aspect-1';
 
 export class ConstrainedGeometryCanvas extends GeometryCanvas {

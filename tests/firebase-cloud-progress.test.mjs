@@ -53,7 +53,8 @@ test('cloud failure returns a result and formal completion remains non-blocking'
   const result = await writeStudentProgressCheckpoint({ classId: '701', seatNo: 12 }, 'level1Complete', { client: fakeClient({ fail: true }) });
   assert.equal(result.ok, false);
   const app = source('../app.js');
-  assert.match(app, /void writeStudentProgressCheckpoint/);
+  // 10/22: writes are tracked (still not awaited) so they can finish before a shared iPad starts fresh.
+  assert.match(app, /checkpointWrites\.track\(writeStudentProgressCheckpoint/);
   assert.match(app, /console\.warn/);
   assert.doesNotMatch(app, /await writeStudentProgressCheckpoint/);
 });

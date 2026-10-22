@@ -5,8 +5,8 @@ import {
   ROTATION_VALUES,
   SIZE_LEVELS,
   STEP_LEVELS
-} from './config.js?v=gate4c-contrast-1';
-import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4c-contrast-1';
+} from './config.js?v=gate4c-handoff-1';
+import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4c-handoff-1';
 
 function nearestAllowed(value, allowedValues) {
   return allowedValues.reduce((nearest, candidate) => (

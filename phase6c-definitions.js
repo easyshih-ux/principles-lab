@@ -1,5 +1,5 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
-import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4c-contrast-1';
+import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4c-handoff-1';
 
 const overlapHint = Object.freeze({
   observe: '有些圖形完全疊在一起了，看起來像只剩下一個圖形。',

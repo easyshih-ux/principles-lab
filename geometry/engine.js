@@ -3,23 +3,23 @@ import {
   GEOMETRY_CANVAS,
   GEOMETRY_GRID,
   GEOMETRY_TOOLS
-} from './config.js?v=gate4c-contrast-1';
+} from './config.js?v=gate4c-handoff-1';
 import {
   assertGeometryElement,
   assertUniqueIds,
   cloneElements,
   createElementId,
   createGeometryElement
-} from './model.js?v=gate4c-contrast-1';
+} from './model.js?v=gate4c-handoff-1';
 import {
   clampElementPosition,
   snapAndClampElementPosition
-} from './bounds.js?v=gate4c-contrast-1';
+} from './bounds.js?v=gate4c-handoff-1';
 import {
   CONTROL_DEFINITIONS,
   isControlValueAllowed,
   normalizeToolConstraints
-} from './controls.js?v=gate4c-contrast-1';
+} from './controls.js?v=gate4c-handoff-1';
 
 function cloneSnapshot(snapshot) {
   return {
