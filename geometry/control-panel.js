@@ -5,8 +5,8 @@ import {
   ROTATION_VALUES,
   SIZE_LEVELS,
   STEP_LEVELS
-} from './config.js?v=gate4-six-step-1';
-import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4-six-step-1';
+} from './config.js?v=gate4c-copy-1';
+import { HUE_LABELS, getDisplayColor, getStepColor } from './palette.js?v=gate4c-copy-1';
 
 function nearestAllowed(value, allowedValues) {
   return allowedValues.reduce((nearest, candidate) => (

@@ -71,6 +71,16 @@
 - 落單圖形：只要有 1 個圖形不屬於任何一組就不過關，回饋「有一個圖形看不出屬於哪一組：右下角的綠色圓形。……」（iPad 兩種尺寸實測顯示正常）。
 - 色彩名稱本輪維持「橙色」，與畫面一致。
 
+### 2.5 其他六題文案（10/22 完成，待教師確認；尚未 commit）
+
+- 均衡、律動、比例、統一、調和、單純：題目改為「一句說明＋過關：①②③」、各加一句創作提示，未通過時一次說一件事（文字依 `GATE4C_六題文案與單元複製草稿.md`，教師 10/22 同意）。
+- 只改文字，過關條件全部不變；具體句子寫在 `phase6c-validators.js` 各題的失敗回傳（`studentDetail`）。
+- 額外：均衡畫布空白時說「先放上造形，左右兩邊都要有。」（原本會誤說「擠在中線附近」）。
+- 統一：最接近的共同特色若是「有角的／圓弧的」造形，回饋會照實說出（判定本來就接受這種共同特色）。
+- 題目與判定不一致之處維持現狀、未修改判定，清單見草稿檔。
+- 測試：新增 `tests/gate4c-copy.test.mjs`（8 項）；全部 639／639 通過。iPad 1180×820、1024×768 六題題目與回饋皆完整顯示。
+- 快取版本標記 `gate4c-copy-1`。
+
 ## 3. 尚未完成
 
 四題（反覆、漸層、對稱、對比）的過關條件與文案皆已完成。其他六題之後再處理。
@@ -128,10 +138,10 @@
   - 判定與題目：`phase6c-validators.js`、`phase6c-definitions.js`、`phase6c-fixtures.js`、`phase6c-course-state.js`（指紋加入 stepSize／stepLightness）、`composition-audit.js`（漸層專用深淺不視為重疊）。
   - 畫面：`experiment-course.js`（創作提示、具體回饋、反覆 8 方向）、`phase6c.css`（漸層級數按鈕樣式，只新增）。
   - 共用畫布（只新增漸層專用級數，其他題不變）：`geometry/config.js`、`palette.js`、`controls.js`、`model.js`、`canvas.js`、`constrained-tools.js`、`constrained-engine.js`、`control-panel.js`；以及版本標記：`bounds.js`、`engine.js`、`constrained-canvas.js`。
-  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4-six-step-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
+  - 快取版本標記：`index.html`、`explore/index.html`、`app.js`，目前標記為 `gate4c-copy-1`（explore 入口的 `app.js?v=explore-1` 由測試固定，未改）。
   - 測試：新增 `tests/gate4-repetition.test.mjs`、`tests/gate4-gradation.test.mjs`、`tests/gate4-symmetry.test.mjs`、`tests/gate4-contrast.test.mjs`；更新 `final-tool-spec`、`phase6c-experiments`、`phase6c-student-flow`、`phase6-initial-state`、`explore-mode`、`final-phase-flow`、`phase6c-entry`、`post-final-a`、`teacher-progress-dashboard`。
 - 本次一併加入：`CLAUDE_HANDOFF_GATE4.md`、`CLAUDE_HANDOFF_GATE4B.md`（本文件）、`composition-audit.js`、`tests/phase6-v2-composition-audit.test.mjs`、四個 gate4 測試檔。
-- 驗證：`node --test` 631／631 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
+- 驗證：`node --test` 639／639 通過；本輪修改檔 `git diff --check` 乾淨。注意：Gate 2～3 遺留檔案中有幾行 Windows 換行（`app.js`、`index.html`、數個測試檔），`git diff --check` 會標出；`geometry/coordinates.js` 工作目錄為 CRLF（未修改）。
 - 教師試做方式：資料夾網址列輸入 `cmd` → `python -m http.server 8765` → 開 `http://localhost:8765/explore/#level/experiment/<principle>`（自由體驗模式，不登入、不寫入進度），並按 Ctrl+F5。或雙擊專案資料夾中的 `start-preview.bat`（10/21 新增，未追蹤；會開伺服器並打開反覆、對稱試做頁，關閉伺服器視窗即停止）。本 session 無法代為輸入指令（命令視窗與檔案總管只允許點擊）。
 - 發布：已在共用畫布檔加上版本標記，避免 iPad 混用新舊快取檔。正式網站 `https://easyshih-ux.github.io/principles-lab/`；自由體驗模式 `…/explore/`。push 不會更動 Firebase 資料或 Firestore 規則。
 

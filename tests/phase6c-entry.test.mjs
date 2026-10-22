@@ -61,9 +61,9 @@ test('experiment start and the complete ten-experiment route chain resolve safel
 });
 
 test('entry release uses a fresh application cache marker', () => {
-  assert.match(indexSource, /app\.js\?v=gate4-six-step-1/);
+  assert.match(indexSource, /app\.js\?v=gate4c-copy-1/);
   assert.match(indexSource, /classroom-control\.css\?v=classroom-control-1/);
-  assert.match(indexSource, /phase6c\.css\?v=gate4-six-step-1/);
+  assert.match(indexSource, /phase6c\.css\?v=gate4c-copy-1/);
 });
 test('explicit completion advances through all ten experiments and then completion', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);

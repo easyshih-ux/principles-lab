@@ -110,7 +110,7 @@ test('landscape task row grows with content instead of clipping rhythm copy',()=
  const css=fs.readFileSync(new URL('../phase6c.css',import.meta.url),'utf8');
  assert.match(css,/grid-template-rows:54px minmax\(44px,auto\) minmax\(0,1fr\)/);
  assert.match(css,/\.experiment-task\{min-height:0;overflow:visible\}/);
- assert.match(phase6cDefinitionsById['experiment-rhythm'].task,/位置、方向、大小或間距變化/);
+ assert.match(phase6cDefinitionsById['experiment-rhythm'].task,/高低、方向、大小或間距/);
 });
 
 test('tablet touch and bounded workspace contracts remain present',()=>{

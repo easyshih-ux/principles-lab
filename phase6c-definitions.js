@@ -1,5 +1,5 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
-import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4-six-step-1';
+import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4c-copy-1';
 
 const overlapHint = Object.freeze({
   observe: '有些圖形完全疊在一起了，看起來像只剩下一個圖形。',
@@ -67,7 +67,8 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('balance', {
     title: '挑戰｜做出「不對稱的均衡」',
-    task: '調整造形的大小、數量和位置，讓整個畫面看起來穩定。左右不能一模一樣！試著用不同的大小、數量或位置取得平衡。',
+    task: '讓左右兩邊不一樣，但整個畫面看起來穩定。過關：①左右兩邊都要有造形 ②左右不能一模一樣 ③左右兩邊一樣重',
+    creationTips: '大的造形比較重，離中線越遠也越重。可以用一個大的對兩個小的，或把小的放遠一點。',
     initialState: { elements: [], gridConfig: { enabled: false, visible: true, step: 20, axis: 'vertical' } },
     validationSpec: { balanceTolerance: 0.45, allowSymmetrical: false, allowAsymmetrical: true, centerDeadZone: 45, requireAsymmetry: true, mirrorPositionTolerance: 24, mirrorYTolerance: 24, mirrorSizeTolerance: 12 },
     diagnosticHints: {
@@ -82,7 +83,8 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('rhythm', {
     title: '挑戰｜做出「律動」',
-    task: '運用造形的位置、方向、大小或間距變化，讓視線在畫面中產生移動、起伏或前進的感覺。可以有規律，也可以不規律，怎麼安排由你決定。',
+    task: '讓造形由左到右排成一條路線，用變化帶著視線前進。過關：①至少 5 個造形 ②由左往右一個接一個排 ③高低、方向、大小或間距，至少一種變化很明顯',
+    creationTips: '例如讓造形像波浪一樣一高一低，或一個比一個轉得更多。',
     initialState: { elements: [] },
     validationSpec: { minimumElements: 5, allowedMotionChannels: ['position', 'rotation', 'size', 'spacing', 'mixed'], minimumYRange: 80, minimumRotationRange: 90, minimumSizeRange: 2, minimumSpacingRange: 35, repetitionRequired: false },
     diagnosticHints: {
@@ -134,7 +136,8 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('proportion', {
     title: '挑戰｜做出「比例」',
-    task: '運用不同大小的造形，讓它們之間形成清楚的大小關係。怎麼排列，由你決定。',
+    task: '用 1×、2×、3× 三種尺寸，做出清楚的大小關係。過關：①至少 6 個造形 ②三種尺寸都要用到',
+    creationTips: '2× 是 1× 的兩倍大，3× 是 1× 的三倍大。怎麼排列由你決定。',
     initialState: { elements: [] },
     validationSpec: { requiredRatioLevels: [1, 2, 3], ratioLogicalSizes: { 1: 40, 2: 80, 3: 120 }, minimumElements: 6 },
     diagnosticHints: {
@@ -147,7 +150,8 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('unity', {
     title: '挑戰｜做出「統一」',
-    task: '使用至少 7 個造形，讓大部分圖形有共同特色，同時保留一些看得見的變化。',
+    task: '用至少 7 個造形，讓它們有一個共同特色，同時保留一點變化。過關：①至少 7 個造形 ②7 個裡至少 6 個有同樣的顏色、造形或方向 ③還要有一點不同，例如大小',
+    creationTips: '先決定共同特色，例如全部用藍色，再讓大小或造形有一點不同。',
     initialState: { elements: [] },
     validationSpec: { minimumElements: 7, requiredUnityRatio: 0.857142857, minimumDirectionalElements: 6, allowedUnityModes: ['color', 'rotation', 'shapeFeature'] },
     diagnosticHints: {
@@ -160,7 +164,8 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('harmony', {
     title: '挑戰｜做出「調和」',
-    task: '利用彼此接近、能互相呼應的色彩，讓畫面看起來協調。',
+    task: '用相近的顏色，讓畫面看起來協調。過關：①至少 6 個造形 ②大約四分之三以上的造形，用同一個顏色的深淺，或色環上相鄰的顏色',
+    creationTips: '可以選一個顏色，用它的深淺變化；或選色環上相鄰的幾個顏色，例如紅、紅橙、橙。',
     initialState: { elements: [] },
     validationSpec: { minimumElements: 6, harmonyCoverage: 0.75, minimumLightnessLevels: 2, allowedHarmonyModes: ['sameHueLightness', 'neighborHue', 'mixed'] },
     diagnosticHints: {
@@ -173,7 +178,8 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('simplicity', {
     title: '挑戰｜做出「單純」',
-    task: '試著讓畫面變得更單純。你可以從「減少、整理、減少變化」三種方法開始，不一定每一種都要使用。',
+    task: '讓畫面更單純，但要留下中間的花。過關：①花要留下 ②至少留 1 個裝飾 ③用一種方法：刪掉 2 個以上、排整齊，或減少顏色和大小的種類',
+    creationTips: '先找出最重要的花，再想想哪些裝飾可以刪掉、排整齊，或改成一樣的顏色。',
     initialState: experimentDefinitionsById['experiment-simplicity'].initialState,
     validationSpec: { minimumElementReduction: 2, minimumVarietyReduction: 2, minimumOrganizationGain: 0.16, minimumNonCoreRemaining: 1, coreElementIds: experimentDefinitionsById['experiment-simplicity'].initialState.coreElementIds, coreProtection: true },
     diagnosticHints: {

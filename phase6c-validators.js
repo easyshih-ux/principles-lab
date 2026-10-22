@@ -1,5 +1,5 @@
-import { getLogicalSize } from './geometry/palette.js?v=gate4-six-step-1';
-import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4-six-step-1';
+import { getLogicalSize } from './geometry/palette.js?v=gate4c-copy-1';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4c-copy-1';
 import { auditComposition } from './composition-audit.js';
 
 function response(passed, code, metrics, detectedMethods = []) {
@@ -393,10 +393,17 @@ export function validateFormalBalance({ elements = [], spec = {} }) {
   const differenceRatio = total ? Math.abs(leftWeight - rightWeight) / total : 1;
   const mirrored = isMirror(left, right, axis, spec);
   const metrics = { leftVisualWeight, rightVisualWeight, leftWeight, rightWeight, differenceRatio, tolerance, isMirror: mirrored, outsideDeadZone: outside.length };
-  if (!outside.length) return response(false, 'TOO_CENTERED', metrics);
-  if (!left.length || !right.length) return response(false, 'ONE_SIDE_EMPTY', metrics);
-  if (mirrored && spec.requireAsymmetry) return response(false, 'ASYMMETRY_REQUIRED', metrics);
-  if (differenceRatio > tolerance) return response(false, leftWeight > rightWeight ? 'LEFT_HEAVY' : 'RIGHT_HEAVY', metrics);
+  // Gate 4C: one specific sentence per failure (text only; the conditions are unchanged).
+  const fail = (code, studentDetail) => ({ ...response(false, code, metrics), studentDetail });
+  if (!elements.length) return fail('TOO_CENTERED', '先放上造形，左右兩邊都要有。');
+  if (!outside.length) return fail('TOO_CENTERED', '造形都擠在中線附近，中間的造形不算左邊也不算右邊。把一些造形移到兩側。');
+  if (!left.length || !right.length) return fail('ONE_SIDE_EMPTY', `目前只有${left.length ? '左邊' : '右邊'}有造形，另一邊也要放。`);
+  if (mirrored && spec.requireAsymmetry) return fail('ASYMMETRY_REQUIRED', '左右一模一樣，這是對稱。改變一邊的大小、數量或位置。');
+  if (differenceRatio > tolerance) {
+    return leftWeight > rightWeight
+      ? fail('LEFT_HEAVY', '畫面往左邊倒了。把左邊的造形變小或移近中線，或讓右邊的變大、移遠一點。')
+      : fail('RIGHT_HEAVY', '畫面往右邊倒了。把右邊的造形變小或移近中線，或讓左邊的變大、移遠一點。');
+  }
   const method = mirrored ? 'symmetrical' : 'asymmetrical';
   return response(true, 'valid', metrics, [method]);
 }
@@ -445,11 +452,20 @@ export function validateFormalRhythm({ elements = [], spec = {} }) {
   const staticRepetition = ordered.length >= 3 && range(y) === 0 && range(rotation) === 0 && range(size) === 0 && range(spacing) < 10;
   const totalVariation = range(y) + range(rotation) + range(size) * 30 + range(spacing);
   const metrics = { channels, path, yRange: range(y), rotationRange: range(rotation), sizeRange: range(size), spacingRange: range(spacing), totalVariation };
-  if (ordered.length < (spec.minimumElements ?? 5)) return response(false, 'CHANGE_TOO_SUBTLE', metrics);
-  if (staticRepetition) return response(false, 'STATIC_REPETITION', metrics);
+  const fail = (code, studentDetail) => ({ ...response(false, code, metrics), studentDetail });
+  const minimumElements = spec.minimumElements ?? 5;
+  if (ordered.length < minimumElements) return fail('CHANGE_TOO_SUBTLE', `目前有 ${ordered.length} 個造形，至少要 ${minimumElements} 個。`);
+  if (staticRepetition) return fail('STATIC_REPETITION', '造形排得很整齊，但都一樣。讓位置一高一低，或改變方向、大小、間距。');
   if (detected.length) return response(true, 'valid', metrics, detected.length > 1 ? ['mixed', ...detected] : detected);
-  if (totalVariation < 70) return response(false, 'CHANGE_TOO_SUBTLE', metrics);
-  return response(false, path.traceable ? 'NO_CLEAR_MOTION' : 'TOO_RANDOM', metrics);
+  if (totalVariation < 70) return fail('CHANGE_TOO_SUBTLE', '變化太小，看不太出來。讓高低差大一點，或方向轉多一點。');
+  if (path.traceable) return fail('NO_CLEAR_MOTION', '有變化，但每一種都不夠明顯。選一種做大一點，例如高低差再大一些。');
+  // Name the one reason the path cannot be followed from left to right.
+  const sameColumn = ordered.slice(1).some((item, index) => item.x - ordered[index].x <= 0);
+  const reason = sameColumn ? '有兩個造形上下排在同一條直線上。造形要由左往右一個接一個排。'
+    : path.xSpan < (spec.minimumReadingSpan ?? 280) ? '造形擠在一起，看不出路線。把路線往左右拉長一點。'
+      : path.gapRatio > (spec.maximumGapRatio ?? 2.5) ? '有一段空隙特別大，路線斷掉了。把造形之間的距離排得平均一點。'
+        : '路線太陡了，不要直上直下。讓造形往右多排開一點。';
+  return fail('TOO_RANDOM', reason);
 }
 
 
@@ -848,9 +864,13 @@ export function validateFormalProportion({ elements = [], spec = {} }) {
   const levels = elements.map((item) => item.ratioLevel ?? item.proportion).filter((value) => value != null);
   const present = [...new Set(levels)].sort();
   const metrics = { presentRatioLevels: present, requiredRatioLevels: required, elementCount: elements.length };
-  if (elements.length < (spec.minimumElements ?? 6)) return response(false, 'TOO_FEW_ELEMENTS', metrics);
-  if (!required.every((level) => present.includes(level))) return response(false, 'RATIO_LEVELS_INCOMPLETE', metrics);
-  if (present.some((level) => !required.includes(level))) return response(false, 'RATIO_RELATION_TOO_WEAK', metrics);
+  const fail = (code, studentDetail) => ({ ...response(false, code, metrics), studentDetail });
+  const minimumElements = spec.minimumElements ?? 6;
+  const label = (level) => `${level}×`;
+  if (elements.length < minimumElements) return fail('TOO_FEW_ELEMENTS', `目前有 ${elements.length} 個造形，至少要 ${minimumElements} 個。`);
+  const missing = required.filter((level) => !present.includes(level));
+  if (missing.length) return fail('RATIO_LEVELS_INCOMPLETE', `還沒用到 ${missing.map(label).join('、')}。${required.map(label).join('、')} 三種尺寸都要有。`);
+  if (present.some((level) => !required.includes(level))) return fail('RATIO_RELATION_TOO_WEAK', `只用 ${required.map(label).join('、')} 這三種尺寸，讓大小關係更清楚。`);
   return response(true, 'valid', metrics, ['ratio']);
 }
 
@@ -895,8 +915,22 @@ export function validateFormalUnity({ elements = [], spec = {} }) {
   if (methods.length) return response(true, 'valid', metrics, methods.length > 1 ? ['multiple', ...methods] : methods);
   const strongest = Math.max(color.ratio, exactShape.ratio, directionCoverage, shapeFeature.ratio);
   const hasCommonFeature = elements.length >= minimumElements && strongest >= requiredRatio;
-  if (hasCommonFeature && !Object.values(variations).some(Boolean)) return response(false, 'NO_VISIBLE_VARIATION', metrics);
-  return response(false, strongest >= 0.4 ? 'UNITY_TOO_WEAK' : 'NO_CLEAR_UNITY', metrics);
+  const code = hasCommonFeature && !Object.values(variations).some(Boolean) ? 'NO_VISIBLE_VARIATION' : strongest >= 0.4 ? 'UNITY_TOO_WEAK' : 'NO_CLEAR_UNITY';
+  const fail = (studentDetail) => ({ ...response(false, code, metrics), studentDetail });
+  if (elements.length < minimumElements) return fail(`目前有 ${elements.length} 個造形，至少要 ${minimumElements} 個。`);
+  if (code === 'NO_VISIBLE_VARIATION') return fail('全部都一樣了。讓一些造形的大小、顏色或方向不同。');
+  if (code === 'NO_CLEAR_UNITY') return fail('看不出共同特色。選一種：同一種顏色、同一種造形，或同一個方向。');
+  // Point to the common feature that is closest to working, and how many more shapes need it.
+  const needed = Math.ceil(elements.length * requiredRatio - 1e-9);
+  const featureWords = { rounded: '圓弧的', angular: '有角的' };
+  const options = [
+    { count: color.count, text: (need) => `${CONTRAST_HUE_LABELS[color.value] ?? '同一種顏色'}的造形有 ${color.count} 個，還差 ${need} 個。把其他造形也改成${CONTRAST_HUE_LABELS[color.value] ?? '同一種顏色'}。` },
+    { count: exactShape.count, text: (need) => `${CONTRAST_SHAPE_LABELS[exactShape.value] ?? '同一種造形'}有 ${exactShape.count} 個，還差 ${need} 個。把其他造形也換成${CONTRAST_SHAPE_LABELS[exactShape.value] ?? '同一種造形'}。` },
+    { count: rotation.count, text: (need) => `朝同一個方向的造形有 ${rotation.count} 個，還差 ${need} 個。把其他造形也轉成同一個方向。` },
+    ...(featureWords[shapeFeature.value] ? [{ count: shapeFeature.count, text: (need) => `${featureWords[shapeFeature.value]}造形有 ${shapeFeature.count} 個，還差 ${need} 個。把其他造形也換成${featureWords[shapeFeature.value]}造形。` }] : [])
+  ].sort((a, b) => b.count - a.count);
+  const best = options[0];
+  return fail(best && needed - best.count > 0 ? best.text(needed - best.count) : '共同特色還不夠清楚。讓更多造形有同樣的顏色、造形或方向。');
 }
 
 function hueDistance(first, second) {
@@ -949,10 +983,23 @@ export function validateFormalHarmony({ elements = [], spec = {} }) {
   const maximumHueDistance = uniqueHues.reduce((maximum, first) => Math.max(maximum, ...uniqueHues.map((second) => hueDistance(first, second))), 0);
   const metrics = { elementCount: elements.length, uniqueHues, hueGroups, sameHueLightness, hasLightnessVariation, neighborHue, bestNeighborCoverage, bestHueArc, maximumHueArcSpan, maximumHueDistance };
   if (methods.length) return response(true, 'valid', metrics, methods);
-  if (uniqueHues.length === 1 && new Set(elements.map((item) => item.lightnessLevel ?? item.lightness)).size === 1) return response(false, 'NO_CLEAR_HARMONY', metrics);
-  if (maximumHueDistance >= 3 && bestNeighborCoverage <= 0.5) return response(false, 'COLORS_TOO_FAR_APART', metrics);
-  if (bestNeighborCoverage >= 0.4) return response(false, 'HARMONY_TOO_WEAK', metrics);
-  return response(false, 'NO_CLEAR_HARMONY', metrics);
+  const fail = (code, studentDetail) => ({ ...response(false, code, metrics), studentDetail });
+  const hueName = (hue) => CONTRAST_HUE_LABELS[hue] ?? '這個顏色';
+  const tooFew = elements.length < minimumElements ? `目前有 ${elements.length} 個造形，至少要 ${minimumElements} 個。` : null;
+  if (uniqueHues.length === 1 && new Set(elements.map((item) => item.lightnessLevel ?? item.lightness)).size === 1) return fail('NO_CLEAR_HARMONY', tooFew ?? '全部是同一個顏色、同一個深淺。加入深淺變化，或換成相鄰的顏色。');
+  if (maximumHueDistance >= 3 && bestNeighborCoverage <= 0.5) {
+    const main = hueGroups.value;
+    const far = [...uniqueHues].sort((a, b) => hueDistance(b, main) - hueDistance(a, main))[0];
+    return fail('COLORS_TOO_FAR_APART', tooFew ?? `${hueName(far)}和${hueName(main)}在色環上離得太遠了。把${hueName(far)}換成${hueName(main)}旁邊的顏色。`);
+  }
+  if (bestNeighborCoverage >= 0.4) {
+    const strays = elements.filter((item) => !bestHueArc.hues.includes(item.hueFamily ?? item.hue));
+    const detail = strays.length
+      ? `還有 ${strays.length} 個造形的顏色離得比較遠，例如${contrastPlace(strays[0], spec)}的${hueName(strays[0].hueFamily ?? strays[0].hue)}${CONTRAST_SHAPE_LABELS[strays[0].shape] ?? '造形'}。`
+      : '這些顏色還不夠接近。換成色環上緊鄰的顏色，例如紅和紅橙。';
+    return fail('HARMONY_TOO_WEAK', tooFew ?? detail);
+  }
+  return fail('NO_CLEAR_HARMONY', tooFew ?? '看不出顏色之間的關係。選一個顏色用深淺變化，或用色環上相鄰的顏色。');
 }
 
 function alignmentScore(elements, tolerance = 24) {
@@ -993,11 +1040,16 @@ export function validateFormalSimplicity({ elements = [], beforeState = [], spec
   if (organizationGain >= (spec.minimumOrganizationGain ?? 0.16)) methods.push('organize');
   if (varietyReduction >= (spec.minimumVarietyReduction ?? 2)) methods.push('simplifyVariety');
   const metrics = { before, after, elementReduction, varietyReduction, organizationGain, nonCoreRemaining, missingCoreIds };
-  if (missingCoreIds.length) return response(false, 'CORE_ELEMENT_MISSING', metrics);
-  if (nonCoreRemaining < (spec.minimumNonCoreRemaining ?? 1)) return response(false, 'OVER_REDUCED', metrics);
-  if (!methods.length) return response(false, 'NOT_SIMPLIFIED', metrics);
-  if (methods.includes('reduce') && !methods.includes('organize') && !methods.includes('simplifyVariety') && after.organization < 0.12) return response(false, 'STILL_DISORGANIZED', metrics);
-  if (methods.includes('reduce') && !methods.includes('simplifyVariety') && after.uniqueHues >= before.uniqueHues && after.uniqueSizes >= before.uniqueSizes && after.uniqueShapes >= before.uniqueShapes) return response(false, 'TOO_MUCH_VARIETY', metrics);
+  const fail = (code, studentDetail) => ({ ...response(false, code, metrics), studentDetail });
+  if (missingCoreIds.length) {
+    const partName = (id) => (id.includes('petal') ? '紅色花瓣' : id.includes('stem') ? '綠色莖' : id.includes('center') ? '黃色圓心' : '花的一部分');
+    const parts = [...new Set(missingCoreIds.map(partName))].join('、');
+    return fail('CORE_ELEMENT_MISSING', `中間的花要留下來，${parts}不見了。按「復原本題」重新開始。`);
+  }
+  if (nonCoreRemaining < (spec.minimumNonCoreRemaining ?? 1)) return fail('OVER_REDUCED', '裝飾全部刪掉了，至少留下 1 個。按「復原本題」重新開始。');
+  if (!methods.length) return fail('NOT_SIMPLIFIED', '畫面還沒有變單純。刪掉 2 個以上的裝飾、把造形排整齊，或把顏色改成一樣。');
+  if (methods.includes('reduce') && !methods.includes('organize') && !methods.includes('simplifyVariety') && after.organization < 0.12) return fail('STILL_DISORGANIZED', '東西變少了，但剩下的還很散。把剩下的造形排成一排或對齊。');
+  if (methods.includes('reduce') && !methods.includes('simplifyVariety') && after.uniqueHues >= before.uniqueHues && after.uniqueSizes >= before.uniqueSizes && after.uniqueShapes >= before.uniqueShapes) return fail('TOO_MUCH_VARIETY', '刪掉了一些，但顏色和大小的種類沒有變少。把一些造形改成一樣的顏色或大小。');
   return response(true, 'valid', metrics, methods.length > 1 ? ['multiple', ...methods] : methods);
 }
 

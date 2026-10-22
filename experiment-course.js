@@ -1,7 +1,7 @@
-import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js?v=gate4-six-step-1';
-import { GeometryControlPanel } from './geometry/control-panel.js?v=gate4-six-step-1';
-import { ConstrainedGeometryEngine } from './geometry/constrained-engine.js?v=gate4-six-step-1';
-import { GEOMETRY_SHAPES } from './geometry/config.js?v=gate4-six-step-1';
+import { ConstrainedGeometryCanvas } from './geometry/constrained-canvas.js?v=gate4c-copy-1';
+import { GeometryControlPanel } from './geometry/control-panel.js?v=gate4c-copy-1';
+import { ConstrainedGeometryEngine } from './geometry/constrained-engine.js?v=gate4c-copy-1';
+import { GEOMETRY_SHAPES } from './geometry/config.js?v=gate4c-copy-1';
 import { getExperimentState } from './experiment-session.js?v=gate3-validation-1';
 import {
   advancePhase6c,
@@ -12,9 +12,9 @@ import {
   submitPhase6cExperiment,
   updatePhase6cWorkingElements
 } from './phase6c-course-state.js?v=gate3-validation-1';
-import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4-six-step-1';
+import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-copy-1';
 import { phase6cFixtures } from './phase6c-fixtures.js';
-import { validatePhase6cExperiment } from './phase6c-validators.js?v=gate4-six-step-1';
+import { validatePhase6cExperiment } from './phase6c-validators.js?v=gate4c-copy-1';
 import { resolveDiagnosticHint } from './experiment-hints.js';
 import { principles as principleMetadata } from './data.js';
 import { syncCourseCompletion } from './state.js';
