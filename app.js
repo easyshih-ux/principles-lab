@@ -21,6 +21,7 @@ import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=fr
 import { renderTeacherPage, signOutTeacherFromTeachingMode } from './teacher-page.js?v=teacher-segments-1';
 import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
 import { createCheckpointTracker, shouldStartFresh } from './student-handoff.js?v=handoff-1';
+import { BACK_GUARD_NOTICE, createBackGuard } from './student-back-guard.js?v=back-guard-1';
 
 const captureWidth = Number(new URLSearchParams(location.search).get('capture'));
 const runtimePath = location.pathname.replace(/\/+$/, '');
@@ -140,6 +141,7 @@ async function startFreshForNextStudent(nextHash) {
   } finally {
     resetPageForNextStudent();
     progressOwner = state.currentStudent?.studentKey ?? null;
+    backGuard.reset();
     history.replaceState(null, '', nextHash);
     renderCurrentRoute();
     window.scrollTo(0, 0);
@@ -217,6 +219,7 @@ function renderIdentityGate() {
       return;
     }
     if (state.currentStudent) progressOwner = state.currentStudent.studentKey;
+    backGuard.install();
     renderCurrentRoute();
   });
 }
@@ -439,7 +442,47 @@ function renderCurrentRoute() {
   focusRouteHeading();
 }
 
-window.addEventListener('hashchange', renderCurrentRoute);
+// Back-button guard: see student-back-guard.js.
+const backGuard = createBackGuard({
+  history,
+  location,
+  isActive: () => !isExploreMode && Boolean(state.currentStudent) && !isTeacherTeachingMode()
+});
+
+function showBackGuardNotice() {
+  document.querySelector('.back-guard-notice')?.remove();
+  const notice = document.createElement('div');
+  notice.className = 'back-guard-notice';
+  notice.setAttribute('role', 'status');
+  notice.textContent = BACK_GUARD_NOTICE;
+  document.body.append(notice);
+  setTimeout(() => notice.remove(), 3500);
+}
+
+function leaveGuardEntry() {
+  const studentSignedIn = !isExploreMode && Boolean(state.currentStudent) && !isTeacherTeachingMode();
+  if (!studentSignedIn) {
+    history.replaceState(null, '', state.currentStudent ? '#home' : '#student');
+    renderCurrentRoute();
+    return;
+  }
+  showBackGuardNotice();
+  history.forward();
+  // No page in front (e.g. the history was cut short): stay on the home page instead.
+  setTimeout(() => {
+    if (!backGuard.isGuardHash()) return;
+    backGuard.reset();
+    history.replaceState(null, '', '#home');
+    renderCurrentRoute();
+  }, 600);
+}
+
+document.addEventListener('pointerdown', () => backGuard.install(), { capture: true });
+window.addEventListener('hashchange', () => {
+  if (backGuard.isGuardHash()) leaveGuardEntry();
+  else renderCurrentRoute();
+});
+if (backGuard.isGuardHash()) history.replaceState(null, '', '#home');
 renderCurrentRoute();
 
 export { navigate, renderCurrentRoute, runtimeMode, state };

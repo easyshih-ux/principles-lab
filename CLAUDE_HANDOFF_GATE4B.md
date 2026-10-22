@@ -128,15 +128,26 @@
 - 程式：`teacher-progress-dashboard.js`（summary 加 pendingSeats）、`teacher-page.js`（卡片）、`styles.css`（未完成座號樣式）；快取標記 `teacher-pending-1`。
 - 測試：`tests/teacher-progress-dashboard.test.mjs` 更新並新增 1 項；全部 659／659 通過。
 
-### 2.11 自由練習逐個原理記錄＋三段完成人數（10/22；commit `023e186`；規則已於 10/22 13:31 由教師部署，test-rules.bat 全部通過；上線規則部署前經比對與專案上一版完全一致，rollback-rules.bat 可還原）
+### 2.11 自由練習逐個原理記錄＋三段完成人數（10/22；commit `023e186`；規則於 10/22 14:13 部署生效（13:31 第一次部署實際沒有送出，見下方）；test-rules.bat 全部通過；上線規則部署前經比對與專案上一版完全一致，rollback-rules.bat 可還原）
 
 - 學生端：每完成一個原理（3 個階段），寫入一個記號 `freeReview_<原理>`（10 個欄位，只記完成，不傳作品、不記次數）。原本的 `freeReviewComplete` 照舊。
 - 教師端：自由練習卡片展開後有「分段進度」：01–03 反覆・漸層・對稱、04–06 均衡・對比・律動、07–10 比例・統一・調和・單純，各段可點開看未完成／已完成座號。舊的 `freeReviewComplete` 視為三段都完成；10 個原理都有記號也算自由練習完成（解決分次做完沒被記到的問題）。
 - Firestore 規則（`firestore.rules`）：只新增 10 個欄位到允許清單（建立、更新、只能 true、不能刪除）。舊的 4 個記號規則不變。部署前規則不認得新欄位，新記號會被拒絕並略過，不影響舊記號與畫面。
 - 規則測試：`scripts/c1b-firestore-rules-emulator.cjs` 新增允許／拒絕案例（含 4 個舊記號照常可寫）。雲端工作環境與教師電腦的 Linux 環境都無法下載測試工具（npm 被擋），改由教師在 Windows 雙擊 `test-rules.bat` 執行（需要 Node.js 與 Java 11+；工具裝在 %LOCALAPPDATA%\principles-lab-rules-test，不進專案）。
-- 部署：教師雙擊 `deploy-rules.bat`（會先要求登入 Firebase，再 `firebase deploy --only firestore:rules --config firebase.production.json --project principles-lab`）。順序：先 test-rules.bat 通過 → deploy-rules.bat → push 網站（網站先上線也無害）。
+- 部署：教師雙擊 `deploy-rules.bat`（會先要求登入 Firebase，再 `firebase deploy --only firestore:rules --config firebase.deploy.json --project principles-lab`）。
+- 13:31 第一次部署沒有生效：當時用 `firebase.production.json`（清單寫法 `"firestore":[{"database":"(default)",...}]`），firebase-tools 13.35.1 顯示 Deploy complete! 卻沒有編譯、上傳規則（輸出沒有 compiled／uploading／released rules 三行），主控台規則歷史也沒有 10/22 的紀錄。修正：新增 `firebase.deploy.json`（一般寫法 `{"firestore":{"rules":"firestore.rules"}}`），`firebase.rollback.json` 也改成一般寫法；兩個 bat 會檢查輸出必須有 `released rules` 才顯示 OK，否則顯示 DID NOT TAKE EFFECT。14:13 重新部署，三行都出現，主控台已確認更新。以後判斷部署成功要看 `released rules`，不能只看 Deploy complete!。
+- 教師放在專案資料夾的 `目前規則備份_1022.txt`（10/14 版主控台規則）與 `rules-rollback/firestore.rules` 比對：除換行格式外完全一致。
+- 不 commit：deploy-rules.bat、rollback-rules.bat、test-rules.bat、firebase.deploy.json、firebase.rollback.json、rules-rollback/、目前規則備份_1022.txt。順序：先 test-rules.bat 通過 → deploy-rules.bat → push 網站（網站先上線也無害）。
 - 部署後驗證：教師端「班級設定」暫時新增測試班 799（最大座號 1、啟用）→ 用一台 iPad 以 799 班 1 號登入，完成自由練習 01 反覆的 3 個階段 → Firebase 主控台 Firestore 的 studentProgress/115-799-1 應出現 freeReview_repetition: true → 再完成 02、03，教師端選 799 班，01–03 應顯示 1 人完成。清除：Firebase 主控台刪除 studentProgress/115-799-1 文件（規則不允許網頁刪除，主控台可以），再到班級設定把 799 停用。
 - 測試：新增 `tests/free-review-principle-progress.test.mjs`（5 項）；`firebase-cloud-progress` 規則檢查更新；全部 664／664 通過。快取標記 `gate4c-endfix-1`、`teacher-segments-1`、`free-principles-1`。
+
+### 2.12 防止「上一頁」離開網站（10/22）
+
+- 背景：學校用 Apple「課堂」把學生鎖在 Safari，網址列與上一頁仍可用；學生按上一頁或從左邊緣滑回去會離開網站，作品（只在記憶體）就不見。「加入主畫面」在課堂鎖定下不可行。
+- 做法（`student-back-guard.js`，app.js 接線）：學生登入後的第一次點按（含按「確定」登入那一下），在瀏覽紀錄目前頁的下方放一頁「擋板」`#stay`。退回擋板時自動往前回到原本的頁面，畫面上方黃色提示「已留在原來的畫面。要離開，請按右上角「結束本次使用」。」（3.5 秒）。網站內各頁之間的上一頁照常。換下一位同學（結束本次使用或換人登入）後，下一位的第一次點按重新放擋板。教師模式、探索版不放。
+- 擋不住：重新整理、網址列輸入別的網址、開新分頁、非常快速連按兩次上一頁。真正保險要做「作品暫存在這台 iPad」（B 方案，尚未做）。
+- 快取：`styles.css?v=back-guard-1`；`student-back-guard.js?v=back-guard-1`。
+- 測試：新增 `tests/student-back-guard.test.mjs`（4 項）；全部 668／668 通過。Chromium iPad 尺寸 1180×820、1024×768 模擬：先開別的網頁再進網站登入 → 連按上一頁 1～5 次都留在網站並出現提示；結束後下一位同學登入，上一頁同樣被擋。尚待 iPad Safari 實機（課堂鎖定下）確認。
 
 ## 3. 尚未完成
 
