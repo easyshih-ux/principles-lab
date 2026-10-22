@@ -298,3 +298,7 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus)
 .proportion-pick b{position:absolute;left:50%;top:100%;transform:translate(-50%,6px);white-space:nowrap;font-size:15px;font-weight:900;color:var(--black)}
 .proportion-pick:disabled{cursor:default;color:var(--black);opacity:1}
 .proportion-pick-first{flex-basis:100%;margin:0;text-align:center;font-weight:900;color:var(--red)}
+/* 10/22 教師端進度自動更新：連線狀態與最後更新時間。 */
+.teacher-live-status{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:-6px 0 14px;font-size:15px;font-weight:800;color:var(--text-secondary)}
+.teacher-live-badge.is-live{color:#2e7d4f}
+.teacher-live-badge.is-offline{color:var(--red)}

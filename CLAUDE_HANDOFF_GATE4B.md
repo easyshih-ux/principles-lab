@@ -165,6 +165,15 @@
 - 5 個圖形：紅色方形、藍色圓形、黃色三角形、黑色方形、紅色圓形（原本兩個藍色圓形，第 5 個改紅色以便說出名字）；原大小 26、25、23、27、24。
 - 快取：`styles.css?v=pick-main-1`、`renderers.js?v=pick-main-1`。測試 673／673；Chromium 1024×768、810×1080 實際點選流程正常。
 
+### 2.15 教師端進度自動更新（10/22）
+
+- 學生完成標記時，教師頁「班級學習進度」自動更新（Firestore 即時監聽 `onSnapshot`，同一個「學年度＋班級」查詢）。安全規則不用改：監聽與「取得最新進度」用的是同一個「通過審核的老師可讀取 studentProgress」權限。用量：開啟時讀一次全班，之後每位學生有變動只多讀 1 份；螢幕回來時再補抓一次全班（約 30 份）。
+- 回到畫面（螢幕打開、從別的 App 回來、網路恢復：visibilitychange／pageshow／online）：不顯示「讀取中」，直接安靜補抓最新進度；監聽若已停止就重新開始。
+- 畫面：班級名稱下方「● 自動更新中　最後更新：下午03:42:05」；連線中斷時紅字「連線中斷，正在重新連線…（下面是最後更新時的資料）」。「取得最新進度」按鈕保留。
+- 自動更新只替換「班級學習進度」區塊：已展開的座號清單、捲動位置不變；老師在「班級設定」等其他頁面打字時不受打擾（切回學習進度時才顯示最新）；班級下拉選單打開時先不更新，收起後再更新。
+- 程式：`teacher-progress-dashboard.js`（`subscribeTeacherClassProgress`、控制器 `start`／`resume`、`live`、`lastUpdated`）、`teacher-page.js`（只換區塊、回到畫面補抓、狀態列）、`teacher-auth.js`（加 `onSnapshot`）。快取：`teacher-page.js?v=live-progress-1`、`teacher-progress-dashboard.js?v=live-progress-1`、`teacher-auth.js?v=live-progress-1`、`styles.css?v=live-progress-1`。
+- 測試：新增 `tests/teacher-live-progress.test.mjs`（8 項）；全部 681／681 通過。模擬（假 Firebase，教師頁與另一頁「學生」共用資料）1180×820、390×844：學生完成 → 教師頁約 0.5 秒內更新且展開的清單與捲動位置不變；暫停監聽（模擬 iPad 關螢幕）期間的完成，回到畫面立即補上；離線顯示紅字；在班級設定頁不被打擾。待實機：教師手機／iPad ＋ 測試班 799。
+
 ## 3. 尚未完成
 
 四題（反覆、漸層、對稱、對比）的過關條件與文案皆已完成。其他六題之後再處理。

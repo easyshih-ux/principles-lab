@@ -4,11 +4,11 @@ import {
   signOutTeacher,
   teacherAuthErrorMessage,
   verifyTeacherAuthorization
-} from './teacher-auth.js?v=v2-d3-1-1';
+} from './teacher-auth.js?v=live-progress-1';
 import {
   createTeacherDashboardController,
   TEACHER_PROGRESS_ITEMS
-} from './teacher-progress-dashboard.js?v=teacher-segments-1';
+} from './teacher-progress-dashboard.js?v=live-progress-1';
 import { formatSeatNumber } from './classroom-config.js';
 import { changeDraftMaximum, createTeacherClassSettingsController, toggleDraftSeat } from './teacher-class-settings.js?v=v2-d3-1';
 import { createAcademicYearManagementController } from './teacher-academic-year-management.js?v=v2-d3-1-1';
@@ -51,6 +51,27 @@ function freeReviewSegmentsMarkup(summary, expandedCheckpoints) {
   </div>`;
 }
 
+// 10/22 live progress: when the numbers were last brought in, and whether they keep updating by themselves.
+export function formatLastUpdated(timestamp) {
+  if (!timestamp) return '';
+  return new Date(timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+export function teacherLiveStatusMarkup(dashboard) {
+  if (!dashboard || dashboard.status === 'permission-denied' || !dashboard.classrooms?.length) return '';
+  const time = formatLastUpdated(dashboard.lastUpdated);
+  const updated = time ? `<span class="teacher-last-updated">最後更新：${time}</span>` : '';
+  const live = dashboard.live === 'live'
+    ? '<span class="teacher-live-badge is-live">● 自動更新中</span>'
+    : dashboard.live === 'connecting'
+      ? '<span class="teacher-live-badge">連線中…</span>'
+      : dashboard.live === 'offline'
+        ? `<span class="teacher-live-badge is-offline">連線中斷，正在重新連線…${time ? '（下面是最後更新時的資料）' : ''}</span>`
+        : '';
+  if (!updated && !live) return '';
+  return `<p class="teacher-live-status">${live}${updated}</p>`;
+}
+
 function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
   const summary = dashboard.summary;
   const validCount = summary?.validCount ?? 0;
@@ -71,6 +92,7 @@ function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
         : dashboard.status === 'permission-denied' || dashboard.status === 'error'
           ? escapeHtml(dashboard.error)
           : `${escapeHtml(dashboard.academicYear)} 學年度｜${escapeHtml(dashboard.selectedClassId)} 班學習進度`}</p>
+      ${teacherLiveStatusMarkup(dashboard)}
       ${dashboard.status === 'permission-denied' ? '' : `
         <div class="teacher-progress-grid">
           ${TEACHER_PROGRESS_ITEMS.map(({ key, label }, index) => {
@@ -353,9 +375,9 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
     settingsController = createTeacherClassSettingsController({ client, academicYear, allowLegacyFallback, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (settings) => { pageState.settings = settings; render(); } });
     const classResult = await settingsController.refresh();
     dashboardController?.destroy();
-    dashboardController = createTeacherDashboardController({ client, academicYear, classrooms: classResult.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
+    dashboardController = createTeacherDashboardController({ client, academicYear, classrooms: classResult.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: onDashboardChange });
     pageState.dashboard = dashboardController.getState();
-    void dashboardController.refresh();
+    void dashboardController.start();
   }
 
   async function applyTeacherUser(user) {
@@ -530,8 +552,8 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
       await settingsController?.bootstrap();
       if (pageState.settings?.source === 'firestore') {
         dashboardController?.destroy();
-        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
-        pageState.dashboard = dashboardController.getState(); void dashboardController.refresh();
+        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: onDashboardChange });
+        pageState.dashboard = dashboardController.getState(); void dashboardController.start();
       }
     });
     app.querySelector('#class-settings-add')?.addEventListener('click', () => settingsController?.add());
@@ -553,10 +575,52 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
       await settingsController?.save();
       if (pageState.settings?.source === 'firestore' && pageState.settings.mode === 'list') {
         dashboardController?.destroy();
-        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: (dashboard) => { pageState.dashboard = dashboard; render(); } });
-        pageState.dashboard = dashboardController.getState(); void dashboardController.refresh();
+        dashboardController = createTeacherDashboardController({ client, classrooms: pageState.settings.configs, onPermissionDenied: revalidateAfterPermissionDenied, onChange: onDashboardChange });
+        pageState.dashboard = dashboardController.getState(); void dashboardController.start();
       }
     });
+    bindDashboard();
+  }
+
+  // 10/22 live progress: a new picture of the class replaces only the progress section, so open
+  // seat lists, the scroll position and the other teacher pages (settings being typed) stay as they are.
+  let dashboardUpdatePending = false;
+  function onDashboardChange(dashboard) {
+    pageState.dashboard = dashboard;
+    if (disposed) return;
+    const section = app.querySelector('.teacher-dashboard');
+    if (!section) {
+      if (pageState.teacherView === 'dashboard') render();
+      return;
+    }
+    const select = section.querySelector('#teacher-class-select');
+    if (select && document.activeElement === select) {
+      // The class list is open on the iPad: update once it closes.
+      if (!dashboardUpdatePending) {
+        dashboardUpdatePending = true;
+        select.addEventListener('blur', () => {
+          dashboardUpdatePending = false;
+          onDashboardChange(pageState.dashboard);
+        }, { once: true });
+      }
+      return;
+    }
+    const scrollY = window.scrollY;
+    section.outerHTML = teacherDashboardMarkup(pageState.dashboard, expandedCheckpoints);
+    if (window.scrollY !== scrollY) window.scrollTo(0, scrollY);
+    bindDashboard();
+  }
+
+  // Screen on again, back from another app, or network back: bring in the latest progress at once.
+  function catchUpProgress() {
+    if (disposed || document.visibilityState === 'hidden') return;
+    void dashboardController?.resume();
+  }
+  document.addEventListener('visibilitychange', catchUpProgress);
+  window.addEventListener('online', catchUpProgress);
+  window.addEventListener('pageshow', catchUpProgress);
+
+  function bindDashboard() {
     app.querySelector('#teacher-class-select')?.addEventListener('change', (event) => {
       void dashboardController?.selectClass(event.currentTarget.value);
     });
@@ -589,6 +653,9 @@ export function renderTeacherPage({ app, navigate, returnToTeaching = () => navi
   return {
     destroy() {
       disposed = true;
+      document.removeEventListener('visibilitychange', catchUpProgress);
+      window.removeEventListener('online', catchUpProgress);
+      window.removeEventListener('pageshow', catchUpProgress);
       dashboardController?.destroy();
       unsubscribe?.();
     }

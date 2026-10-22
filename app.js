@@ -18,7 +18,7 @@ import { isAcademicYearNetworkError, loadActiveAcademicYear } from './academic-y
 import { ensureAnonymousAuth, getFirebaseClient } from './firebase-client.js?v=v2-d3-1-1';
 import { clearCurrentStudent, createStudentIdentity, loadCurrentStudent, saveCurrentStudent } from './student-session.js?v=v2-d3-1';
 import { writeStudentProgressCheckpoint } from './student-progress-cloud.js?v=free-principles-1';
-import { renderTeacherPage, signOutTeacherFromTeachingMode } from './teacher-page.js?v=teacher-segments-1';
+import { renderTeacherPage, signOutTeacherFromTeachingMode } from './teacher-page.js?v=live-progress-1';
 import { renderSiteEntry } from './site-entry.js?v=author-credit-1';
 import { createCheckpointTracker, shouldStartFresh } from './student-handoff.js?v=handoff-1';
 import { BACK_GUARD_NOTICE, createBackGuard } from './student-back-guard.js?v=back-guard-1';
