@@ -8,9 +8,9 @@ import { recognizeQuestions } from './recognize-questions.js';
 import { createRecognizeCourseRenderers } from './recognize-course.js?v=v2-b2-checkpoints-1';
 import { discoverQuestions } from './discover-questions.js';
 import { createDiscoverCourseRenderers } from './discover-course.js?v=v2-b2-checkpoints-1';
-import { createExperimentCourseRenderers } from './experiment-course.js?v=gate4c-principles-1';
+import { createExperimentCourseRenderers } from './experiment-course.js?v=gate4c-endfix-1';
 import { createPhase6cCourseState } from './phase6c-course-state.js?v=gate3-validation-1';
-import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-principles-1';
+import { phase6cDefinitions, phase6cDefinitionsById } from './phase6c-definitions.js?v=gate4c-endfix-1';
 import { createLockedClassroomUnlocks, isClassroomRouteAllowed, loadClassroomUnlocks, requiredUnlockForRoute, resetClassroomUnlocks } from './classroom-unlocks.js?v=classroom-control-1';
 import { classroomOptions, formatSeatNumber, seatOptions } from './classroom-config.js';
 import { fallbackClassConfigs, loadClassConfigs } from './class-config-service.js?v=v2-d3-1';
@@ -118,10 +118,32 @@ function saveCloudCheckpoint(checkpointName) {
 
 // Shared iPads (10/22): a new student — or ending the session — starts the page fresh, so nobody
 // sees or inherits the previous student's work. Completion marks are sent to the cloud first.
-async function startFreshForNextStudent() {
+// The page is reset in place (no reload), so the login screen appears at once even on a slow
+// school network; a reload showed a blank page on iPads while everything downloaded again.
+function resetPageForNextStudent() {
+  experimentRenderers.destroy();
+  const fresh = createAppState(stages, recognizeQuestions, discoverQuestions);
+  for (const key of Object.keys(state)) {
+    if (!(key in fresh) && key !== 'currentStudent' && key !== 'experimentCourse') delete state[key];
+  }
+  Object.assign(state, fresh);
+  state.experimentCourse = createPhase6cCourseState(phase6cDefinitions);
+  state.classroomUnlocks = resetClassroomUnlocks(classroomStorage);
+  state.classroomGate = { activeCourseId: null, message: '', error: '' };
+  buildRenderers();
+}
+
+async function startFreshForNextStudent(nextHash) {
   app.innerHTML = '<section class="identity-gate page-shell"><div><h1>準備中…</h1><p>正在為下一位同學準備新的畫面。</p></div></section>';
-  await checkpointWrites.flush();
-  location.reload();
+  try {
+    await checkpointWrites.flush();
+  } finally {
+    resetPageForNextStudent();
+    progressOwner = state.currentStudent?.studentKey ?? null;
+    history.replaceState(null, '', nextHash);
+    renderCurrentRoute();
+    window.scrollTo(0, 0);
+  }
 }
 
 function renderIdentityGate() {
@@ -191,7 +213,7 @@ function renderIdentityGate() {
     if (state.currentStudent && shouldStartFresh(progressOwner, state.currentStudent.studentKey)) {
       // Someone else's work is still in memory: clear it (and their unlocks) before this student starts.
       state.classroomUnlocks = resetClassroomUnlocks(classroomStorage);
-      void startFreshForNextStudent();
+      void startFreshForNextStudent('#home');
       return;
     }
     if (state.currentStudent) progressOwner = state.currentStudent.studentKey;
@@ -217,8 +239,8 @@ function attachStudentControls() {
     state.classroomUnlocks = resetClassroomUnlocks(classroomStorage);
     state.classroomGate = { activeCourseId: null, message: '', error: '' };
     identityDraft = { classId: '', seatNo: '', confirming: false, ending: false };
-    // Ending the session also clears all work and progress from the page.
-    void startFreshForNextStudent();
+    // Ending the session also clears all work and progress, then shows the login screen.
+    void startFreshForNextStudent('#student');
   });
 }
 
@@ -260,10 +282,18 @@ function navigate(hash) {
 const checkpointCallback = isExploreMode ? () => {} : (checkpointName) => {
   if (!isTeacherTeachingMode()) saveCloudCheckpoint(checkpointName);
 };
-const renderers = createRenderers({ app, state, navigate, classroomStorage, getClassroomStorage: () => state.currentStudent ? classroomStorage : null, onCheckpoint: checkpointCallback, mode: runtimeMode });
-const recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
-const discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
-const experimentRenderers = createExperimentCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
+let renderers;
+let recognizeRenderers;
+let discoverRenderers;
+let experimentRenderers;
+// Built once at start, and again when a shared iPad starts fresh for the next student.
+function buildRenderers() {
+  renderers = createRenderers({ app, state, navigate, classroomStorage, getClassroomStorage: () => state.currentStudent ? classroomStorage : null, onCheckpoint: checkpointCallback, mode: runtimeMode });
+  recognizeRenderers = createRecognizeCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
+  discoverRenderers = createDiscoverCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
+  experimentRenderers = createExperimentCourseRenderers({ app, state, navigate, onCheckpoint: checkpointCallback });
+}
+buildRenderers();
 let activePlayground = null;
 let activeTeacherPage = null;
 let teachingReturnHash = '#home';

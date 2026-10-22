@@ -1,4 +1,4 @@
-import { GEOMETRY_CANVAS } from './config.js?v=gate4c-principles-1';
+import { GEOMETRY_CANVAS } from './config.js?v=gate4c-endfix-1';
 import { snapPoint } from './grid.js';
 
 function shapeMetadata(id, shapeType, directional, features) {

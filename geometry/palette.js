@@ -4,7 +4,7 @@ import {
   STEP_LEVELS,
   SIZE_LEVELS,
   SIZE_TO_LOGICAL
-} from './config.js?v=gate4c-principles-1';
+} from './config.js?v=gate4c-endfix-1';
 
 export const HUE_LABELS = Object.freeze({
   red: '紅', 'red-orange': '紅橙', orange: '橙', 'yellow-orange': '黃橙',

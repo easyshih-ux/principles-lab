@@ -37,12 +37,16 @@ test('Hand-off: a cloud write that never answers does not block the next student
 test('Hand-off: app wiring — checkpoints are tracked, login compares students, ending starts fresh', () => {
   assert.match(appSource, /checkpointWrites\.track\(writeStudentProgressCheckpoint\(state\.currentStudent, checkpointName\)/);
   const fresh = appSource.slice(appSource.indexOf('async function startFreshForNextStudent'));
-  assert.ok(fresh.indexOf('await checkpointWrites.flush()') < fresh.indexOf('location.reload()'), 'marks are flushed before the page reloads');
+  assert.ok(fresh.indexOf('await checkpointWrites.flush()') < fresh.indexOf('resetPageForNextStudent()'), 'marks are sent before the page is cleared');
+  // 10/22 fix: no page reload (it showed a blank page on iPads); the page is reset in place.
+  assert.doesNotMatch(appSource, /location\.reload\(\)/);
+  const reset = appSource.slice(appSource.indexOf('function resetPageForNextStudent'), appSource.indexOf('async function startFreshForNextStudent'));
+  for (const piece of ['createAppState(', 'createPhase6cCourseState(', 'resetClassroomUnlocks(', 'buildRenderers()']) assert.ok(reset.includes(piece), piece);
   const confirm = appSource.slice(appSource.indexOf("querySelector('#identity-confirm')"), appSource.indexOf('function attachStudentControls'));
   assert.match(confirm, /shouldStartFresh\(progressOwner, state\.currentStudent\.studentKey\)/);
   assert.ok(confirm.indexOf('startFreshForNextStudent') < confirm.indexOf('renderCurrentRoute()'), 'a different student never sees the old work');
   const end = appSource.slice(appSource.indexOf("querySelector('#student-end-confirm')"));
-  assert.match(end.slice(0, 600), /startFreshForNextStudent\(\)/);
+  assert.match(end.slice(0, 600), /startFreshForNextStudent\('#student'\)/, 'ending goes straight to the login screen');
 });
 
 test('Hand-off: the next student is never marked with the third level the previous student finished', async () => {
