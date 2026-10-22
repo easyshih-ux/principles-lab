@@ -216,7 +216,7 @@ test('Dashboard uses compact horizontal rows with full-width details and a narro
   assert.match(css, /@media\(max-width:620px\)[\s\S]*teacher-progress-card\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/);
   assert.doesNotMatch(css, /teacher-progress-grid\{[^}]*repeat\(2/);
   assert.match(index, /styles\.css\?v=sym-scenes-1/);
-  assert.match(index, /app\.js\?v=gate4c-endfix-1/);
+  assert.match(index, /app\.js\?v=release-1022b/);
   assert.match(app, /teacher-page\.js\?v=live-progress-1/);
 });
 

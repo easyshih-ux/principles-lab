@@ -61,7 +61,7 @@ test('experiment start and the complete ten-experiment route chain resolve safel
 });
 
 test('entry release uses a fresh application cache marker', () => {
-  assert.match(indexSource, /app\.js\?v=gate4c-endfix-1/);
+  assert.match(indexSource, /app\.js\?v=release-1022b/);
   assert.match(indexSource, /classroom-control\.css\?v=classroom-control-1/);
   assert.match(indexSource, /phase6c\.css\?v=gate4c-endfix-1/);
 });

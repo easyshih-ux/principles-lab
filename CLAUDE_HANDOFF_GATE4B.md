@@ -184,6 +184,12 @@
 - 快取：`renderers.js?v=sym-scenes-1`、`symmetry-scenes.js?v=sym-scenes-1`、`styles.css?v=sym-scenes-1`。測試：新增 `tests/symmetry-scenes.test.mjs`（4 項）、更新 `free-review-experiments`（2 項）；685／685 通過。Chromium 1180×820、1024×768、810×1080 實際點選與拖曳三題流程正常。
 - 其他九個原理的自由練習問題清單（教師要求只列出）：律動③只要有高低差（與創作挑戰「至少兩次起伏」不一致）、對比只練大小（創作挑戰還有顏色、3 處）、反覆三題都是 ●■ 且答案明顯、比例三題同一排、漸層只有大小、統一②③同一組箭頭、調和②③同一排、均衡②③同構圖、單純②③構圖相似。
 
+### 2.17 每次上線都換入口檔版本號（10/22）
+
+- 問題：教師頁自動更新上線後，老師的瀏覽器仍用舊的 app.js（`index.html` 的 `app.js?v=gate4c-endfix-1` 很久沒換），看不到新功能；重新整理後才正常。
+- 修正：`index.html` 與 `explore/index.html` 都改用 `app.js?v=release-1022b`；探索版的 styles.css 也和正式版一致（`sym-scenes-1`，原本停在 `author-credit-2`）。新增 `tests/release-version.test.mjs` 檢查兩個入口頁版本一致。
+- 以後的規則：每次要上線的 commit，都把兩個入口頁的 `app.js?v=` 換成新的名稱（例如 `release-日期+字母`），有改 CSS 就一起換 `styles.css?v=`。沒有加版本號的檔案（如 data.js、validators.js）GitHub Pages 約 10 分鐘後更新，所以 push 後等 10 分鐘再實機測試最保險。
+
 ## 3. 尚未完成
 
 四題（反覆、漸層、對稱、對比）的過關條件與文案皆已完成。其他六題之後再處理。

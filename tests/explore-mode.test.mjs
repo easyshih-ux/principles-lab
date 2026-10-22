@@ -10,11 +10,11 @@ const rendererSource = source('../renderers.js');
 const exploreEntry = source('../explore/index.html');
 
 test('/explore/ is a physical GitHub Pages shell using only root shared assets', () => {
-  assert.match(exploreEntry, /href="\.\.\/styles\.css\?v=author-credit-2"/);
+  assert.match(exploreEntry, /href="\.\.\/styles\.css\?v=sym-scenes-1"/);
   assert.match(exploreEntry, /href="\.\.\/phase6c\.css\?v=gate4c-endfix-1"/);
   assert.match(exploreEntry, /href="\.\.\/post-final-a\.css\?v=post-final-a-templates"/);
   assert.match(exploreEntry, /href="\.\.\/classroom-control\.css\?v=classroom-control-1"/);
-  assert.match(exploreEntry, /src="\.\.\/app\.js\?v=explore-1"/);
+  assert.match(exploreEntry, /src="\.\.\/app\.js\?v=release-1022b"/);
   assert.doesNotMatch(exploreEntry, /(?:href|src)="(?:\.\/)?(?:styles|app)\.js/);
 });
 
