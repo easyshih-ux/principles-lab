@@ -161,7 +161,7 @@ function contrastComposition(option, animated = false, completionClass = '') {
 }
 
 function proportionComposition(option, animated = false, completionClass = '') {
-  return `<span class="proportion-composition ${animated ? 'proportion-recognize-success' : ''} ${completionClass}">${option.sizes.map((size, index) => `<i class="${index === 0 ? 'main' : 'support'} shape-${index % 3}" style="--shape-size:${size}px;--shape-color:${visualColor(option.colors[index])};--delay:${index * .07}s"></i>`).join('')}</span>`;
+  return `<span class="proportion-composition ${animated ? 'proportion-recognize-success' : ''} ${completionClass}">${option.sizes.map((size, index) => `<i class="${index === 0 ? 'main' : 'support'} shape-${index % 3}" style="--shape-size:${size}px;--shape-n:${size};--shape-color:${visualColor(option.colors[index])};--delay:${index * .07}s"></i>`).join('')}</span>`;
 }
 
 function simplicityComposition(option, animated = false) {

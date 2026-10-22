@@ -514,7 +514,7 @@ export const stages = [
   },
   {
     id:'proportion-observe',stageType:'recognize',principleId:'proportion',interactionType:'proportion-options',title:'看出主角',prompt:'哪一個畫面最容易看出誰是主角？',description:'比例讓畫面建立主角與配角。',progress:{current:1,total:3},elements:[],initialState:{selectedOptionId:null},
-    options:[{id:'a',sizes:[34,32,35,33,34],colors:['red','blue','yellow','black','red']},{id:'b',sizes:[62,24,22,26,23],colors:['blue','yellow','red','black','yellow']},{id:'c',sizes:[48,43,39,46,41],colors:['yellow','red','blue','black','red']}],
+    options:[{id:'a',sizes:[34,32,35,33,34],colors:['red','blue','yellow','black','red']},{id:'b',sizes:[92,22,20,24,21],colors:['blue','yellow','red','black','yellow']},{id:'c',sizes:[48,43,39,46,41],colors:['yellow','red','blue','black','red']}],
     hints:['找找哪一組只有一個清楚主角，其他元素願意當配角。'],feedbackByCode:{incomplete:'請先選擇一個畫面。'},successFeedback:'找到了！大小比例會讓畫面產生主角和配角。',validatorId:'selected-option-equals',validation:{correctOptionId:'b'},allowedTools:['select-option','hint','validate'],nextStep:{type:'stage',stageId:'proportion-discover'}
   },
   {
