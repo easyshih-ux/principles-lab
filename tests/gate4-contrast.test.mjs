@@ -7,92 +7,84 @@ import { feedbackMarkup } from '../experiment-course.js';
 import { createPhase6cCourseState, submitPhase6cExperiment } from '../phase6c-course-state.js';
 import { getExperimentState } from '../experiment-session.js';
 
+// Gate 4C contrast (10/22): at least 3 places of strong contrast. A place is two shapes next to
+// each other (touching, overlapping or almost touching) that differ a lot in size OR colour.
+// Every shape needs a strongly different neighbour. Each shape counts in one place at most.
 const definition = phase6cDefinitionsById['experiment-contrast'];
+const fixtures = phase6cFixtures.contrast;
 const validate = (elements) => validatePhase6cExperiment(definition, { workingElements: elements });
-const engineering = /[A-Z_]{4,}|threshold|門檻|座標|\bid\b|\d+\s*px/;
-// Two groups of three, spaced so nothing overlaps: a big group on the top row, a small group on the bottom row.
-const groups = (big, small, extra = []) => [
-  ...[0, 1, 2].map((i) => ({ id: `b${i}`, shape: 'circle', x: 150 + i * 220, y: 160, size: 5, hue: 'red', lightness: 3, rotation: 0, proportion: 1, ...big })),
-  ...[0, 1, 2].map((i) => ({ id: `s${i}`, shape: 'circle', x: 220 + i * 220, y: 450, size: 1, hue: 'blue', lightness: 3, rotation: 0, proportion: 1, ...small })),
-  ...extra
-];
+const el = (id, values = {}) => ({ id, shape: 'circle', x: 500, y: 300, size: 3, hue: 'red', lightness: 3, rotation: 0, proportion: 1, ...values });
+// Three touching pairs across the middle row.
+const pairs = (a, b, gap = 80) => [150, 450, 750].flatMap((x, i) => [el(`a${i}`, { x, ...a }), el(`b${i}`, { x: x + gap, ...b })]);
 
-test('Gate 4 contrast: two clear groups, very different in size and colour, pass', () => {
-  assert.equal(validate(groups({}, {})).passed, true);
-  assert.equal(validate(phase6cFixtures.contrast.pass.dual).passed, true);
+test('Gate 4C contrast: the teacher iPad artwork (5 big circles, each overlapped by a small circle of another colour) passes', () => {
+  const result = validate(fixtures.pass.teacherFivePairs);
+  assert.equal(result.passed, true);
+  assert.equal(result.metrics.places, 5);
 });
 
-test('Gate 4 contrast: hues at least 4 steps apart count, including complements', () => {
-  assert.equal(validate(groups({ hue: 'red' }, { hue: 'yellow' })).passed, true);
-  assert.equal(validate(groups({ hue: 'red' }, { hue: 'green' })).passed, true);
-  assert.equal(validate(groups({ hue: 'yellow' }, { hue: 'violet' })).passed, true);
+test('Gate 4C contrast: 3 big red and 3 small blue, placed as 3 touching pairs, pass', () => {
+  const result = validate(fixtures.pass.dual);
+  assert.equal(result.passed, true);
+  assert.deepEqual(result.detectedMethods, ['multiple', 'size', 'color']);
 });
 
-test('Gate 4 contrast: neighbouring hues such as red and orange do not count', () => {
-  const result = validate(groups({ hue: 'red' }, { hue: 'orange' }));
-  assert.equal(result.primaryDiagnosticCode, 'COLOR_CONTRAST_REQUIRED');
-  assert.equal(result.studentDetail, '紅色和橙色太接近了，換一個色環上距離更遠的顏色。');
-  assert.equal(validate(groups({ hue: 'red' }, { hue: 'yellow-orange' })).passed, false);
-  assert.equal(validate(groups({ hue: 'blue' }, { hue: 'blue' })).studentDetail, '兩組都是藍色，換一個色環上距離很遠的顏色，例如紅配藍。');
+test('Gate 4C contrast: size alone or colour alone is enough for each place', () => {
+  assert.deepEqual(validate(pairs({ size: 5, hue: 'blue' }, { size: 2, hue: 'blue' }, 88)).detectedMethods, ['size']);
+  assert.deepEqual(validate(pairs({ hue: 'red' }, { hue: 'green' })).detectedMethods, ['color']);
+  assert.equal(validate(pairs({ hue: 'red' }, { hue: 'yellow' })).passed, true, 'hues 4 steps apart');
+  assert.equal(validate(pairs({ hue: 'red' }, { hue: 'blue-green' })).passed, true, 'complements');
+  assert.equal(validate(pairs({ lightness: 1 }, { lightness: 4 })).passed, true, 'lightness 3 levels apart (rule only)');
 });
 
-test('Gate 4 contrast: a lightness gap of 3 levels also counts (kept in the rule, not in the task text)', () => {
-  assert.equal(validate(groups({ hue: 'blue', lightness: 1 }, { hue: 'blue', lightness: 4 })).passed, true);
-  assert.equal(validate(groups({ hue: 'blue', lightness: 2 }, { hue: 'blue', lightness: 4 })).passed, false);
-  assert.doesNotMatch(definition.task + definition.creationTips, /深淺|明度/);
+test('Gate 4C contrast: look-alike neighbours do not count (same size, same colour family)', () => {
+  const result = validate(pairs({ hue: 'red' }, { hue: 'red-orange' }));
+  assert.equal(result.passed, false);
+  assert.equal(result.studentDetail, '左邊的紅色圓形和紅橙色圓形，大小和顏色都太接近了。讓一個變大或變小很多，或換一個顏色差很多的。');
+  assert.equal(validate(pairs({ hue: 'red' }, { hue: 'orange' })).passed, false, 'red and orange are neighbours');
+  assert.equal(validate(pairs({ size: 4 }, { size: 2 }, 82)).passed, false, 'a 2-level size gap is not enough');
+  assert.equal(validate(pairs({}, {})).studentDetail, '左邊的兩個紅色圓形，大小和顏色都太接近了。讓一個變大或變小很多，或換一個顏色差很多的。');
 });
 
-test('Gate 4 contrast: the size rule is unchanged and its message is student-friendly', () => {
-  const result = validate(groups({ size: 3 }, { size: 2 }));
-  assert.equal(result.primaryDiagnosticCode, 'SIZE_CONTRAST_REQUIRED');
-  assert.equal(result.studentDetail, '兩組圖形的大小差不多，讓一組更大、一組更小。');
-  assert.equal(validate(groups({ size: 4 }, { size: 1 })).passed, true);
+test('Gate 4C contrast: a shape with no strongly different neighbour is pointed out by place and colour', () => {
+  assert.equal(validate(fixtures.fail.lonely).studentDetail, '右下的藍色圓形旁邊，沒有和它差很多的圖形。');
+  assert.match(validate(fixtures.fail.apart).studentDetail, /旁邊，沒有和它差很多的圖形。$/);
 });
 
-test('Gate 4 contrast: a shape that belongs to neither group is pointed out', () => {
-  const stray = { id: 'x', shape: 'triangle', x: 880, y: 300, size: 3, hue: 'green', lightness: 3, rotation: 0, proportion: 1 };
-  const result = validate(groups({}, {}, [stray, { ...stray, id: 'y', x: 500, y: 300, hue: 'yellow' }]));
-  assert.equal(result.primaryDiagnosticCode, 'OUTSIDE_GROUPS');
-  assert.match(result.studentDetail, /^有 2 個圖形看不出屬於哪一組/);
-  // Every shape must belong to a group: a single odd shape fails with the teacher's message.
-  const single = validate(groups({}, {}, [stray]));
-  assert.equal(single.passed, false);
-  assert.equal(single.primaryDiagnosticCode, 'OUTSIDE_GROUPS');
-  assert.match(single.studentDetail, /^有一個圖形看不出屬於哪一組：右邊的綠色三角形。/);
-  const lonely = validate([...groups({}, {}).slice(0, 4), { ...stray, id: 'z', x: 660, y: 450, size: 1, hue: 'blue' }, { ...stray, id: 'w', x: 880, y: 160, size: 5, hue: 'red' }].map((item, index) => (index === 3 ? { ...item, hue: 'green' } : item)));
-  assert.equal(lonely.passed, false);
+test('Gate 4C contrast: counts places and says how many more are needed', () => {
+  assert.equal(validate(fixtures.fail.twoPlaces).studentDetail, '目前有 2 處對比，再做 1 處。');
+  // One big circle with three small circles around it is one place, not three.
+  const centre = validate(fixtures.fail.oneCentre);
+  assert.equal(centre.metrics.places, 1);
+  assert.equal(centre.studentDetail, '目前有 1 處對比，再做 2 處。');
+  assert.equal(validate([]).studentDetail, '先放上圖形：大的旁邊放小的，或紅色旁邊放綠色。');
 });
 
-test('Gate 4 contrast: too few shapes, all the same, and only the form different', () => {
-  assert.equal(validate(groups({}, {}).slice(0, 5)).studentDetail, '目前有 5 個圖形，至少要 6 個，分成兩組。');
-  assert.equal(validate(groups({ size: 3, hue: 'blue' }, { size: 3 })).studentDetail, '目前所有圖形都一樣。分成兩組：一組大、一組小，顏色也要差很多。');
-  assert.equal(validate(phase6cFixtures.contrast.fail.shapeOnly).studentDetail, '目前只有造形不同。讓一組更大、一組更小，顏色也要差很多。');
+test('Gate 4C contrast: overlapping pairs count as next to each other', () => {
+  const overlapping = [150, 450, 750].flatMap((x, i) => [el(`o${i}`, { x, size: 5 }), el(`p${i}`, { x: x + 40, size: 1, hue: 'blue' })]);
+  assert.equal(validate(overlapping).passed, true);
 });
 
-test('Gate 4 contrast: student task, tip and hints', () => {
-  assert.equal(definition.task, '做出兩組對比強烈的圖形：大小要差很多，顏色也要差很多。至少 6 個圖形。');
-  assert.equal(definition.creationTips, '顏色可以選色環上距離很遠的，例如紅配藍、黃配紫。');
-  assert.match(feedbackMarkup(definition, null), /紅配藍、黃配紫/);
-  for (const hint of Object.values(definition.diagnosticHints)) for (const text of Object.values(hint)) assert.doesNotMatch(text, engineering);
-  for (const elements of Object.values(phase6cFixtures.contrast.fail)) {
-    const result = validate(elements);
-    assert.ok(definition.diagnosticHints[result.primaryDiagnosticCode], result.primaryDiagnosticCode);
-    if (result.studentDetail) assert.doesNotMatch(result.studentDetail, engineering);
-  }
+test('Gate 4C contrast: student task and tip, without the word 組', () => {
+  assert.equal(definition.task, '讓畫面中至少有 3 個地方出現強烈的對比。過關：①至少 3 處對比 ②每處是兩個靠在一起（相鄰或重疊）的圖形：大小差很多，或顏色差很多 ③每個圖形旁邊，都要有一個和它差很多的圖形');
+  assert.equal(definition.creationTips, '例如大圓旁邊放小圓，紅色旁邊放綠色；兩種一起用，對比會更強烈。');
+  const studentText = [definition.task, definition.creationTips, ...Object.values(definition.successFeedback.byMethod), ...Object.values(definition.discoveryFeedback), ...Object.values(definition.diagnosticHints).flatMap((hint) => Object.values(hint))];
+  for (const text of studentText) assert.doesNotMatch(text, /組/, text);
+  const details = Object.values(fixtures.fail).map((work) => validate(work).studentDetail);
+  for (const text of details) { assert.doesNotMatch(text, /組/, text); assert.doesNotMatch(text, /[A-Z_]{4,}|門檻|座標/, text); }
 });
 
-test('Gate 4 contrast: failed checks show one specific next step', () => {
+test('Gate 4C contrast: a failed check shows one specific next step', () => {
   const course = createPhase6cCourseState(phase6cDefinitions);
-  getExperimentState(course, definition.id).workingElements = groups({ hue: 'red' }, { hue: 'orange' });
+  const state = getExperimentState(course, definition.id);
+  state.workingElements = structuredClone(fixtures.fail.twoPlaces);
   const markup = feedbackMarkup(definition, submitPhase6cExperiment(course, definition));
   assert.equal((markup.match(/<p/g) ?? []).length, 2);
-  assert.match(markup, /紅色和橙色太接近了/);
+  assert.match(markup, /目前有 2 處對比，再做 1 處。/);
 });
 
-test('Gate 4 contrast: harmony and contrast no longer overlap (harmony tightened on 10/22)', () => {
-  const harmony = phase6cDefinitionsById['experiment-harmony'];
-  // Harmony accepts colours up to 3 steps apart; contrast needs 4 or more.
-  assert.equal(harmony.validationSpec.maximumHarmonyHueArcSpan, 3);
-  assert.equal(phase6cDefinitionsById['experiment-contrast'].validationSpec.minimumHueDistance, 4);
-  assert.equal(phase6cDefinitionsById['experiment-contrast'].allowedTools.lightness, false);
+test('Gate 4C contrast: harmony and contrast still do not overlap (contrast needs 4 hue steps)', () => {
+  assert.equal(phase6cDefinitionsById['experiment-harmony'].validationSpec.maximumHarmonyHueArcSpan, 3);
+  assert.equal(definition.validationSpec.minimumHueDistance, 4);
+  assert.equal(definition.allowedTools.lightness, false);
 });

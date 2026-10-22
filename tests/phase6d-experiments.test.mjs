@@ -36,18 +36,18 @@ test('contrast requires coherent size and hue groups while retaining optional sh
  for(const mode of ['dual','multiple']) assert.equal(validate('contrast',phase6cFixtures.contrast.pass[mode]).passed,true);
  assert.deepEqual(validate('contrast',phase6cFixtures.contrast.pass.multiple).detectedMethods.slice(0,1),['multiple']);
 });
-test('contrast rejects too few, single-channel, shape-only, and extreme-plus-noise shortcuts',()=>{
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.tooFewDual).primaryDiagnosticCode,'TOO_FEW_ELEMENTS');
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.sizeOnly).primaryDiagnosticCode,'COLOR_CONTRAST_REQUIRED');
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.colorOnly).primaryDiagnosticCode,'SIZE_CONTRAST_REQUIRED');
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.shapeOnly).passed,false);
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.extremeWithNoise).passed,false);
+test('contrast (Gate 4C places) rejects too few places, lonely shapes, look-alike neighbours and shape-only differences',()=>{
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.twoPlaces).primaryDiagnosticCode,'NOT_ENOUGH_CONTRASTS');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.oneCentre).primaryDiagnosticCode,'NOT_ENOUGH_CONTRASTS');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.lonely).primaryDiagnosticCode,'NO_CONTRAST_NEIGHBOR');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.sameNeighbours).primaryDiagnosticCode,'CONTRAST_TOO_WEAK');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.shapeOnly).primaryDiagnosticCode,'CONTRAST_TOO_WEAK');
+ assert.equal(validate('contrast',phase6cFixtures.contrast.fail.apart).primaryDiagnosticCode,'NO_CONTRAST_NEIGHBOR');
 });
-test('contrast weak and unrelated diversity fail',()=>{
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.twoWeak).primaryDiagnosticCode,'TOO_FEW_ELEMENTS');
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.identical).primaryDiagnosticCode,'TOO_FEW_ELEMENTS');
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.weak).primaryDiagnosticCode,'TOO_FEW_ELEMENTS');
- assert.equal(validate('contrast',phase6cFixtures.contrast.fail.unrelated).primaryDiagnosticCode,'TOO_MANY_UNRELATED_DIFFERENCES');
+test('contrast (Gate 4C places) accepts size only, colour only, or both',()=>{
+ assert.deepEqual(validate('contrast',phase6cFixtures.contrast.pass.sizeOnly).detectedMethods,['size']);
+ assert.deepEqual(validate('contrast',phase6cFixtures.contrast.pass.colorOnly).detectedMethods,['color']);
+ assert.equal(validate('contrast',phase6cFixtures.contrast.pass.teacherFivePairs).passed,true);
 });
 test('proportion passes ordered unordered and mixed shapes without gradation rules',()=>{
  for(const mode of ['ordered','unordered','mixedShapes']) assert.equal(validate('proportion',phase6cFixtures.proportion.pass[mode]).passed,true);

@@ -1,5 +1,5 @@
-import { getLogicalSize } from './geometry/palette.js?v=gate4c-unit-1';
-import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4c-unit-1';
+import { getLogicalSize } from './geometry/palette.js?v=gate4c-contrast-1';
+import { areNeighborHues, getShapeMetadata, HUE_FAMILIES } from './geometry/constrained-tools.js?v=gate4c-contrast-1';
 import { auditComposition } from './composition-audit.js';
 
 function response(passed, code, metrics, detectedMethods = []) {
@@ -816,61 +816,90 @@ function contrastPlace(item, spec) {
   const row = item.y < height / 3 ? 0 : item.y > (height * 2) / 3 ? 2 : 1;
   return [['左上角', '上方', '右上角'], ['左邊', '中間', '右邊'], ['左下角', '下方', '右下角']][row][column];
 }
+// Gate 4C contrast (10/22): at least 3 places of strong contrast. A place is two shapes that
+// sit next to each other (touching, overlapping or almost touching) and differ a lot in size
+// (3 levels or more) or colour (4 hue steps or more, or 3 lightness levels; neighbouring
+// colours never count). Every shape needs at least one such neighbour. Places are counted so
+// that each shape belongs to one place at most: a big circle with three small circles around
+// it is one place, not three.
+const CONTRAST_PLACE_WORDS = [['左上', '上方', '右上'], ['左邊', '中間', '右邊'], ['左下', '下方', '右下']];
+function contrastSpot(item, spec) {
+  const width = spec.canvasWidth ?? 1000; const height = spec.canvasHeight ?? 600;
+  const column = item.x < width / 3 ? 0 : item.x > (width * 2) / 3 ? 2 : 1;
+  const row = item.y < height / 3 ? 0 : item.y > (height * 2) / 3 ? 2 : 1;
+  return CONTRAST_PLACE_WORDS[row][column];
+}
+function contrastHalf(item) {
+  const size = Number.isFinite(item.logicalSize) ? item.logicalSize : getLogicalSize(item.size);
+  const width = item.shape === 'rectangle' ? size * 1.5 : (item.shape === 'semicircle' || item.shape === 'line') ? size * 1.5 : size;
+  const height = (item.shape === 'semicircle' || item.shape === 'line') ? size / 2 : size;
+  const radians = ((item.rotation ?? 0) * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(radians)); const sin = Math.abs(Math.sin(radians));
+  return { x: (width * cos + height * sin) / 2, y: (width * sin + height * cos) / 2 };
+}
+function contrastGap(first, second) {
+  const a = contrastHalf(first); const b = contrastHalf(second);
+  return Math.max(Math.abs(first.x - second.x) - a.x - b.x, Math.abs(first.y - second.y) - a.y - b.y);
+}
+function largestPairing(count, edges) {
+  // Most places with each shape used at most once (small canvases, so an exact search is fine).
+  const neighbours = Array.from({ length: count }, () => []);
+  edges.forEach(([i, j]) => { neighbours[i].push(j); neighbours[j].push(i); });
+  const memo = new Map();
+  const best = (used) => {
+    if (memo.has(used)) return memo.get(used);
+    let i = 0;
+    while (i < count && ((used >> i) & 1 || !neighbours[i].some((j) => !((used >> j) & 1)))) i += 1;
+    if (i >= count) { memo.set(used, 0); return 0; }
+    let result = best(used | (1 << i));
+    for (const j of neighbours[i]) if (!((used >> j) & 1)) result = Math.max(result, 1 + best(used | (1 << i) | (1 << j)));
+    memo.set(used, result);
+    return result;
+  };
+  return count <= 26 ? best(0) : Math.floor(edges.length / 2);
+}
 export function validateFormalContrast({ elements = [], spec = {} }) {
-  const minimumElements = spec.minimumElements ?? 6;
-  // Gate 4: every shape must belong to one of the two groups (no odd one out).
-  const coverage = spec.groupCoverage ?? 1;
-  const shapeCoverage = spec.comparisonCoverage ?? 0.8;
-  const minimumGroupSize = spec.minimumGroupSize ?? 2;
-  const jointGroups = [...valueCounts(elements, contrastKey).entries()].sort((a, b) => b[1] - a[1]);
-  const primaryGroups = jointGroups.slice(0, 2);
-  const covered = primaryGroups.reduce((sum, [, count]) => sum + count, 0);
-  const requiredCovered = Math.ceil(elements.length * coverage);
-  const coherent = primaryGroups.length === 2 && primaryGroups.every(([, count]) => count >= minimumGroupSize) && covered >= requiredCovered;
-  const parse = ([key]) => { const [size, hue, lightness] = key.split('|'); return { size: Number(size), hue, lightness: Number(lightness) }; };
-  const [first, second] = primaryGroups.length === 2 ? primaryGroups.map(parse) : [{ size: 0, hue: '', lightness: 3 }, { size: 0, hue: '', lightness: 3 }];
-  const sizePassed = coherent && Math.abs(first.size - second.size) >= (spec.minimumSizeDifference ?? 3);
-  const ai = hueOrder.indexOf(first.hue); const bi = hueOrder.indexOf(second.hue);
-  const hueDistance = ai < 0 || bi < 0 ? 0 : Math.min(Math.abs(ai - bi), hueOrder.length - Math.abs(ai - bi));
-  const lightnessDistance = Math.abs(first.lightness - second.lightness);
-  const colorPassed = coherent && (hueDistance >= (spec.minimumHueDistance ?? 4) || lightnessDistance >= (spec.minimumLightnessDistance ?? 3));
-  const primaryElements = elements.filter((item) => primaryGroups.some(([key]) => key === contrastKey(item)));
-  const shapeGroups = clearTwoGroup(valueCounts(primaryElements, (item) => item.shape), primaryElements.length, shapeCoverage);
-  const shapePassed = shapeGroups && shapeFamily(shapeGroups[0][0]) !== shapeFamily(shapeGroups[1][0]);
-  const metrics = { primaryGroups, covered, requiredCovered, coherent, sizePassed, colorPassed, hueDistance, lightnessDistance, shapePassed, elementCount: elements.length };
+  const requiredPlaces = spec.minimumContrastPlaces ?? 3;
+  const nearGap = spec.contrastNeighborGap ?? 20;
+  const sizeGap = spec.minimumSizeDifference ?? 3;
+  const hueGap = spec.minimumHueDistance ?? 4;
+  const lightGap = spec.minimumLightnessDistance ?? 3;
+  const hueStep = (a, b) => { const i = hueOrder.indexOf(a); const j = hueOrder.indexOf(b); return i < 0 || j < 0 ? 0 : Math.min(Math.abs(i - j), hueOrder.length - Math.abs(i - j)); };
+  const sizeDiffers = (a, b) => Math.abs(a.size - b.size) >= sizeGap;
+  const colourDiffers = (a, b) => hueStep(a.hue, b.hue) >= hueGap || Math.abs((a.lightness ?? 3) - (b.lightness ?? 3)) >= lightGap;
+  const near = []; const strong = [];
+  for (let i = 0; i < elements.length; i += 1) {
+    for (let j = i + 1; j < elements.length; j += 1) {
+      if (contrastGap(elements[i], elements[j]) > nearGap) continue;
+      near.push([i, j]);
+      if (sizeDiffers(elements[i], elements[j]) || colourDiffers(elements[i], elements[j])) strong.push([i, j]);
+    }
+  }
+  const places = largestPairing(elements.length, strong);
+  const kinds = new Set(strong.flatMap(([i, j]) => [sizeDiffers(elements[i], elements[j]) && 'size', colourDiffers(elements[i], elements[j]) && 'color'].filter(Boolean)));
+  const hasPartner = elements.map((_, index) => strong.some(([i, j]) => i === index || j === index));
+  const metrics = { places, requiredPlaces, contrastPairs: strong.length, neighbourPairs: near.length, lonely: hasPartner.filter((ok) => !ok).length, elementCount: elements.length };
   const fail = (code, studentDetail) => ({ ...response(false, code, metrics), studentDetail });
-  const hueName = (hue) => CONTRAST_HUE_LABELS[hue] ?? '這個顏色';
-  const describe = (item) => `${contrastPlace(item, spec)}的${hueName(item.hue)}${CONTRAST_SHAPE_LABELS[item.shape] ?? '圖形'}`;
+  const hueName = (hue) => CONTRAST_HUE_LABELS[hue] ?? '';
+  const shapeName = (item) => CONTRAST_SHAPE_LABELS[item.shape] ?? '圖形';
+  const name = (item) => `${hueName(item.hue)}${shapeName(item)}`;
 
-  if (elements.length < minimumElements) return fail('TOO_FEW_ELEMENTS', `目前有 ${elements.length} 個圖形，至少要 ${minimumElements} 個，分成兩組。`);
-  if (coherent && sizePassed && colorPassed) return response(true, 'valid', metrics, shapePassed ? ['multiple', 'size', 'color', 'shape'] : ['multiple', 'size', 'color']);
-  if (coherent && colorPassed && !sizePassed) return fail('SIZE_CONTRAST_REQUIRED', '兩組圖形的大小差不多，讓一組更大、一組更小。');
-  if (coherent && sizePassed && !colorPassed) {
-    return first.hue === second.hue
-      ? fail('COLOR_CONTRAST_REQUIRED', `兩組都是${hueName(first.hue)}，換一個色環上距離很遠的顏色，例如紅配藍。`)
-      : fail('COLOR_CONTRAST_REQUIRED', `${hueName(first.hue)}和${hueName(second.hue)}太接近了，換一個色環上距離更遠的顏色。`);
+  if (!elements.length) return fail('NO_CONTRAST_PLACE', '先放上圖形：大的旁邊放小的，或紅色旁邊放綠色。');
+  // Shapes without a strongly different neighbour, read from top-left to bottom-right.
+  const reading = elements.map((item, index) => ({ item, index })).sort((a, b) => (Math.round(a.item.y / 200) - Math.round(b.item.y / 200)) || a.item.x - b.item.x);
+  const alone = reading.find(({ index }) => !hasPartner[index]);
+  if (alone) {
+    const neighbours = near.filter(([i, j]) => i === alone.index || j === alone.index).map(([i, j]) => elements[i === alone.index ? j : i]);
+    if (neighbours.length) {
+      const other = neighbours.sort((a, b) => contrastGap(alone.item, a) - contrastGap(alone.item, b))[0];
+      const pair = name(other) === name(alone.item) ? `兩個${name(alone.item)}` : `${name(alone.item)}和${name(other)}`;
+      return fail('CONTRAST_TOO_WEAK', `${contrastSpot(alone.item, spec)}的${pair}，大小和顏色都太接近了。讓一個變大或變小很多，或換一個顏色差很多的。`);
+    }
+    return fail('NO_CONTRAST_NEIGHBOR', `${contrastSpot(alone.item, spec)}的${name(alone.item)}旁邊，沒有和它差很多的圖形。`);
   }
-  if (coherent && !sizePassed && !colorPassed) return fail('DIFFERENCE_TOO_SMALL', '兩組圖形的大小和顏色都太接近了。讓一組更大、一組更小，顏色也選色環上距離很遠的。');
-  if (jointGroups.length === 1) {
-    return new Set(elements.map((item) => item.shape)).size > 1
-      ? fail('NO_CLEAR_CONTRAST', '目前只有造形不同。讓一組更大、一組更小，顏色也要差很多。')
-      : fail('NO_CLEAR_CONTRAST', '目前所有圖形都一樣。分成兩組：一組大、一組小，顏色也要差很多。');
-  }
-  // Two groups are there but not clear yet: a group with only one shape, or shapes that belong to neither group.
-  const lonelyGroup = primaryGroups.find(([, count]) => count < minimumGroupSize);
-  if (primaryGroups.length === 2 && covered >= requiredCovered && lonelyGroup) {
-    const item = elements.find((element) => contrastKey(element) === lonelyGroup[0]);
-    return fail('GROUP_TOO_SMALL', `${describe(item)}自己一組，每組至少要 2 個圖形。`);
-  }
-  const diversity = ['size', 'hue', 'shape'].filter((key) => new Set(elements.map((item) => item[key])).size >= Math.min(4, elements.length)).length;
-  if (elements.length >= 4 && diversity >= 2 && jointGroups.length > 3) return fail('TOO_MANY_UNRELATED_DIFFERENCES', '畫面裡有太多不同的大小和顏色。只留下兩組：一組大、一組小，顏色也要差很多。');
-  const strays = elements.filter((item) => !primaryElements.includes(item));
-  if (strays.length) {
-    return strays.length === 1
-      ? fail('OUTSIDE_GROUPS', `有一個圖形看不出屬於哪一組：${describe(strays[0])}。讓它的大小和顏色跟其中一組一樣。`)
-      : fail('OUTSIDE_GROUPS', `有 ${strays.length} 個圖形看不出屬於哪一組，例如${describe(strays[0])}。讓它們的大小和顏色跟其中一組一樣。`);
-  }
-  return fail('NO_CLEAR_CONTRAST', '還看不出兩組。分成兩組：一組大、一組小，顏色也要差很多。');
+  if (places < requiredPlaces) return fail('NOT_ENOUGH_CONTRASTS', `目前有 ${places} 處對比，再做 ${requiredPlaces - places} 處。`);
+  const methods = kinds.has('size') && kinds.has('color') ? ['multiple', 'size', 'color'] : [...kinds];
+  return response(true, 'valid', metrics, methods);
 }
 
 export function validateFormalProportion({ elements = [], spec = {} }) {

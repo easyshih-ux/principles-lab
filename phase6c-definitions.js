@@ -1,5 +1,5 @@
 import { experimentDefinitionsById } from './experiment-definitions.js';
-import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4c-unit-1';
+import { normalizeAllowedTools } from './geometry/constrained-tools.js?v=gate4c-contrast-1';
 
 const overlapHint = Object.freeze({
   observe: '有些圖形完全疊在一起了，看起來像只剩下一個圖形。',
@@ -120,22 +120,20 @@ export const phase6cDefinitions = Object.freeze([
   }),
   formal('contrast', {
     title: '挑戰｜做出「對比」',
-    task: '做出兩組對比強烈的圖形：大小要差很多，顏色也要差很多。至少 6 個圖形。',
-    creationTips: '顏色可以選色環上距離很遠的，例如紅配藍、黃配紫。',
+    task: '讓畫面中至少有 3 個地方出現強烈的對比。過關：①至少 3 處對比 ②每處是兩個靠在一起（相鄰或重疊）的圖形：大小差很多，或顏色差很多 ③每個圖形旁邊，都要有一個和它差很多的圖形',
+    creationTips: '例如大圓旁邊放小圓，紅色旁邊放綠色；兩種一起用，對比會更強烈。',
     initialState: { elements: [] },
-    validationSpec: { minimumElements: 6, minimumGroupSize: 2, minimumSizeDifference: 3, minimumHueDistance: 4, minimumLightnessDistance: 3, groupCoverage: 1, comparisonCoverage: 0.8, canvasWidth: 1000, canvasHeight: 600 },
+    // Gate 4C (10/22): places of contrast replace the earlier two-group rule. The size and colour
+    // thresholds are unchanged (size 3 levels; hue 4 steps or lightness 3 levels).
+    validationSpec: { minimumContrastPlaces: 3, contrastNeighborGap: 20, minimumSizeDifference: 3, minimumHueDistance: 4, minimumLightnessDistance: 3, canvasWidth: 1000, canvasHeight: 600 },
     diagnosticHints: {
-      NO_CLEAR_CONTRAST: { observe: '還看不出兩組。', think: '對比要有兩組，大小和顏色都差很多。', action: '做一組大的、一組小的，顏色也選差很遠的。' },
-      DIFFERENCE_TOO_SMALL: { observe: '兩組的差別還不夠明顯。', think: '大小和顏色都要一眼就看得出不同。', action: '把大小差距拉開，顏色選色環上距離很遠的。' },
-      TOO_MANY_UNRELATED_DIFFERENCES: { observe: '畫面裡有太多不同。', think: '對比不是全部都不一樣，而是兩組清楚的差別。', action: '只留下兩組，其他的改成跟其中一組一樣。' },
-      TOO_FEW_ELEMENTS: { observe: '圖形的數量還不夠。', think: '至少要 6 個圖形，分成兩組。', action: '再加幾個圖形到兩組裡。' },
-      SIZE_CONTRAST_REQUIRED: { observe: '兩組的大小差不多。', think: '大小要差很多才看得出對比。', action: '讓一組更大、一組更小。' },
-      COLOR_CONTRAST_REQUIRED: { observe: '兩組的顏色太接近了。', think: '顏色要選色環上距離很遠的。', action: '例如紅配藍、黃配紫。' },
-      GROUP_TOO_SMALL: { observe: '有一組只有一個圖形。', think: '每組至少要 2 個圖形。', action: '再放一個一樣的圖形到那一組。' },
-      OUTSIDE_GROUPS: { observe: '有圖形看不出屬於哪一組。', think: '每個圖形都要像其中一組。', action: '讓它的大小和顏色跟其中一組一樣。' }
+      NO_CONTRAST_PLACE: { observe: '畫面上還沒有圖形。', think: '對比是兩個靠在一起、差很多的圖形。', action: '大的旁邊放小的，或紅色旁邊放綠色。' },
+      NO_CONTRAST_NEIGHBOR: { observe: '有圖形旁邊沒有和它差很多的圖形。', think: '每個圖形旁邊都要有一個和它差很多的圖形。', action: '在它旁邊放一個大小或顏色差很多的圖形。' },
+      CONTRAST_TOO_WEAK: { observe: '有兩個靠在一起的圖形太像了。', think: '大小或顏色至少要有一種差很多。', action: '讓一個變大或變小很多，或換一個顏色差很多的。' },
+      NOT_ENOUGH_CONTRASTS: { observe: '對比的地方還不夠多。', think: '至少要有 3 處對比。', action: '再做一處：大的旁邊放小的，或換成顏色差很多的。' }
     },
-    successFeedback: { general: '成功！畫面已形成明顯對比。', byMethod: { size: '成功！你利用明顯的大小差異形成了「對比」。', color: '成功！你利用明顯的色彩差異形成了「對比」。', shape: '成功！不同的造形特徵形成了清楚的「對比」。', multiple: '成功！你同時運用了不只一種差異，讓對比更加明顯。' } },
-    discoveryFeedback: { size: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', color: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', shape: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。', multiple: '對比不是「越多不同越好」，而是讓某種差異變得清楚、有力量。' }
+    successFeedback: { general: '成功！畫面中有好幾處強烈的對比。', byMethod: { size: '成功！你用大小的差異，做出了好幾處強烈的對比。', color: '成功！你用顏色的差異，做出了好幾處強烈的對比。', multiple: '成功！你同時用了大小和顏色，讓對比更加強烈。' } },
+    discoveryFeedback: { general: '對比是把差很多的東西放在一起，差異就會被看見。', size: '對比是把差很多的東西放在一起，差異就會被看見。', color: '對比是把差很多的東西放在一起，差異就會被看見。', multiple: '對比是把差很多的東西放在一起，差異就會被看見。' }
   }),
   formal('proportion', {
     title: '挑戰｜做出「比例」',

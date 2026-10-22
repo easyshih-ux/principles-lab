@@ -62,11 +62,8 @@ test('rotation metadata on concentric contrast circles cannot manufacture six vi
 
 test('legal separated and partially overlapping contrast groups still pass', () => {
   const separated = phase6cFixtures.contrast.pass.dual;
-  const overlapping = separated.map((item, index) => ({
-    ...item,
-    x: index < 3 ? 220 + index * 45 : 610 + (index - 3) * 45,
-    y: index % 2 ? 305 : 270
-  }));
+  // Gate 4C: each small circle now overlaps its big partner.
+  const overlapping = separated.map((item, index) => (index % 2 ? { ...item, x: separated[index - 1].x + 40 } : item));
   assert.equal(validate('contrast', separated).passed, true);
   assert.equal(validate('contrast', overlapping).passed, true);
 });

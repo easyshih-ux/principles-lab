@@ -1,6 +1,6 @@
 import { createExperimentSessionState, getExperimentState, resetExperimentState } from './experiment-session.js';
 import { resolveDiagnosticHint } from './experiment-hints.js';
-import { validatePhase6cExperiment } from './phase6c-validators.js?v=gate4c-unit-1';
+import { validatePhase6cExperiment } from './phase6c-validators.js?v=gate4c-contrast-1';
 
 const FINGERPRINT_FIELDS = Object.freeze([
   'id', 'shape', 'x', 'y', 'logicalX', 'logicalY', 'size', 'sizeLevel',

@@ -5,7 +5,7 @@ import {
   ROTATION_VALUES,
   SIZE_LEVELS,
   STEP_LEVELS
-} from './config.js?v=gate4c-unit-1';
+} from './config.js?v=gate4c-contrast-1';
 
 export const CONTROL_DEFINITIONS = Object.freeze({
   size: Object.freeze({ tool: 'size', values: SIZE_LEVELS, defaultValue: 3 }),

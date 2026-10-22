@@ -254,20 +254,26 @@ export const phase6cFixtures = Object.freeze({
     }
   },
   contrast: {
+    // Gate 4C (10/22): places of contrast — two shapes next to each other that differ a lot.
     pass: {
-      dual: [0,1,2,3,4,5].map((i)=>element('cd' + i,{x:130+i*150,y:i%2?390:210,size:i<3?5:1,hue:i<3?'red':'blue'})),
-      multiple: [0,1,2,3,4,5].map((i)=>element('cm' + i,{x:130+i*150,y:i%2?390:210,size:i<3?5:1,hue:i<3?'red':'blue',shape:i<3?'triangle':'circle'}))
+      // Teacher's iPad artwork (10/22): five big circles, each with a small circle of a strongly different colour overlapping it.
+      teacherFivePairs: [
+        [400, 220, 'red', 340, 180, 'yellow-green'], [200, 360, 'red', 260, 380, 'yellow-green'], [520, 420, 'blue', 580, 400, 'red'],
+        [780, 360, 'blue', 740, 400, 'red'], [380, 500, 'yellow-green', 440, 520, 'red-violet']
+      ].flatMap(([bx, by, bh, sx, sy, sh], i) => [element(`ct5-big-${i}`, { x: bx, y: by, size: 5, hue: bh }), element(`ct5-small-${i}`, { x: sx, y: sy, size: 1, hue: sh })]),
+      // The earlier work: 3 big red and 3 small blue, now placed as 3 touching pairs.
+      dual: [150, 450, 750].flatMap((x, i) => [element(`cd-big-${i}`, { x, y: 300, size: 5, hue: 'red' }), element(`cd-small-${i}`, { x: x + 88, y: 300, size: 1, hue: 'blue' })]),
+      multiple: [150, 450, 750].flatMap((x, i) => [element(`cm-big-${i}`, { x, y: 300, size: 5, hue: 'red', shape: 'triangle' }), element(`cm-small-${i}`, { x: x + 88, y: 300, size: 1, hue: 'blue' })]),
+      sizeOnly: [150, 450, 750].flatMap((x, i) => [element(`cso-big-${i}`, { x, y: 300, size: 5, hue: 'blue' }), element(`cso-small-${i}`, { x: x + 88, y: 300, size: 2, hue: 'blue' })]),
+      colorOnly: [150, 450, 750].flatMap((x, i) => [element(`cco-a-${i}`, { x, y: 300, hue: 'red' }), element(`cco-b-${i}`, { x: x + 80, y: 300, hue: 'green' })])
     },
     fail: {
-      tooFewDual: [0,1,2,3,4].map((i)=>element('ctf' + i,{x:150+i*170,size:i<2?5:1,hue:i<2?'red':'blue'})),
-      sizeOnly: [0,1,2,3,4,5].map((i)=>element('cso' + i,{x:130+i*150,size:i<3?5:1,hue:'blue'})),
-      colorOnly: [0,1,2,3,4,5].map((i)=>element('cco' + i,{x:130+i*150,size:3,hue:i<3?'red':'blue'})),
-      shapeOnly: [0,1,2,3,4,5].map((i)=>element('cho' + i,{x:130+i*150,shape:i<3?'triangle':'circle'})),
-      extremeWithNoise: [element('cen-a',{x:100,size:5,hue:'red'}),element('cen-b',{x:260,size:1,hue:'blue'}),...['square','triangle','rectangle','semicircle'].map((shape,i)=>element('cen-'+i,{x:420+i*140,shape,size:(i%3)+2,hue:['orange','yellow','green','violet'][i]}))],
-      twoWeak: [element('ct-weak-a', { x: 300, size: 3 }), element('ct-weak-b', { x: 700, size: 4 })],
-      identical: [element('ct-same-a', { x: 300, size: 3 }), element('ct-same-b', { x: 700, size: 3 })],
-      weak: [3,3,3,4].map((size,i)=>element('cw' + i,{x:180+i*180,size})),
-      unrelated: ['circle','square','triangle','rectangle','semicircle','line'].map((shape,i)=>element('cu' + i,{x:80+i*165,shape,size:(i%5)+1,hue:['red','orange','yellow','green','blue','violet'][i]}))
+      twoPlaces: [250, 650].flatMap((x, i) => [element(`ctw-big-${i}`, { x, y: 300, size: 5, hue: 'red' }), element(`ctw-small-${i}`, { x: x + 88, y: 300, size: 1, hue: 'blue' })]),
+      oneCentre: [element('cc-big', { x: 500, y: 300, size: 5 }), element('cc-s1', { x: 588, y: 300, size: 1, hue: 'blue' }), element('cc-s2', { x: 412, y: 300, size: 1, hue: 'blue' }), element('cc-s3', { x: 500, y: 388, size: 1, hue: 'blue' })],
+      sameNeighbours: [150, 450, 750].flatMap((x, i) => [element(`csn-a-${i}`, { x, y: 300, hue: 'red' }), element(`csn-b-${i}`, { x: x + 80, y: 300, hue: 'red-orange' })]),
+      lonely: [...[150, 450, 750].flatMap((x, i) => [element(`cl-big-${i}`, { x, y: 200, size: 5, hue: 'red' }), element(`cl-small-${i}`, { x: x + 88, y: 200, size: 1, hue: 'blue' })]), element('cl-alone', { x: 850, y: 480, hue: 'blue' })],
+      shapeOnly: [150, 450, 750].flatMap((x, i) => [element(`cho-a-${i}`, { x, y: 300, shape: 'triangle' }), element(`cho-b-${i}`, { x: x + 80, y: 300 })]),
+      apart: [0, 1, 2, 3, 4, 5].map((i) => element(`cap-${i}`, { x: 130 + i * 150, y: i % 2 ? 390 : 210, size: i < 3 ? 5 : 1, hue: i < 3 ? 'red' : 'blue' }))
     }
   },
   proportion: {
