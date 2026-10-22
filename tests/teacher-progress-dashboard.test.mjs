@@ -155,7 +155,9 @@ test('authorized Dashboard markup shows counts without percentages or student de
   assert.match(markup, /115 學年度｜701 班學習進度/);
   assert.match(markup, /自由練習[\s\S]*<strong>1<\/strong><span>\/ 4<\/span>/);
   assert.match(markup, /取得最新進度/);
-  assert.equal((markup.match(/查看已完成座號 ▾/g) ?? []).length, 4);
+  // 10/22: the toggle shows how many seats are still unfinished.
+  assert.equal((markup.match(/查看座號（未完成 \d+ 人）▾/g) ?? []).length, 4);
+  assert.match(markup, /自由練習[\s\S]*?查看座號（未完成 3 人）▾/);
   assert.doesNotMatch(markup, /teacher-seat-chips/);
   assert.doesNotMatch(markup, /%|學生名單|排名|成績/);
 });
@@ -174,16 +176,22 @@ test('expanded checkpoint shows sorted two-digit completed seats and empty state
     expandedCheckpoints: new Set(['level1Complete'])
   });
   assert.match(level1, /data-completed-seats-toggle="level1Complete"[^>]*aria-expanded="true"/);
-  assert.match(level1, /teacher-seat-chips[\s\S]*>01<[\s\S]*>05</);
-  assert.match(level1, /共 2 人/);
-  assert.doesNotMatch(level1, />02</);
+  // 10/22: unfinished seats come first, then the completed seats.
+  assert.ok(level1.indexOf('未完成座號') < level1.indexOf('已完成座號'));
+  const pending = level1.slice(level1.indexOf('未完成座號'), level1.indexOf('已完成座號'));
+  const done = level1.slice(level1.indexOf('已完成座號'));
+  assert.match(done, /teacher-seat-chips[\s\S]*>01<[\s\S]*>05</);
+  assert.match(done, /共 2 人/);
+  assert.doesNotMatch(done, />02</);
+  assert.match(pending, /teacher-seat-chips-pending[\s\S]*>02</);
+  assert.doesNotMatch(pending, />01<|>05</);
 
   const level2 = teacherPageMarkup({
     user: { uid: 'teacher' }, authorization: 'authorized', dashboard,
     expandedCheckpoints: new Set(['level2Complete'])
   });
   assert.match(level2, /已完成座號[\s\S]*尚無完成紀錄/);
-  assert.doesNotMatch(level2, /未完成座號/);
+  assert.match(level2, /未完成座號[\s\S]*共 4 人/);
 });
 
 test('seat detail toggles only rerender local UI and never refresh Firestore', () => {
@@ -207,9 +215,9 @@ test('Dashboard uses compact horizontal rows with full-width details and a narro
   assert.match(css, /teacher-seat-chips\{[^}]*flex-wrap:wrap[^}]*min-width:0/);
   assert.match(css, /@media\(max-width:620px\)[\s\S]*teacher-progress-card\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/);
   assert.doesNotMatch(css, /teacher-progress-grid\{[^}]*repeat\(2/);
-  assert.match(index, /styles\.css\?v=teacher-gate2-1/);
-  assert.match(index, /app\.js\?v=gate4c-handoff-1/);
-  assert.match(app, /teacher-page\.js\?v=teacher-gate2-1/);
+  assert.match(index, /styles\.css\?v=teacher-pending-1/);
+  assert.match(index, /app\.js\?v=gate4c-pending-1/);
+  assert.match(app, /teacher-page\.js\?v=teacher-pending-1/);
 });
 
 test('permission-denied Dashboard hides progress cards and reports insufficient permission', () => {
@@ -243,4 +251,13 @@ test('Dashboard markup reports loading and retriable network errors', () => {
   assert.match(networkError, /暫時無法取得進度/);
   assert.match(networkError, /id="teacher-dashboard-refresh"/);
   assert.doesNotMatch(networkError, /id="teacher-dashboard-refresh"[^>]*disabled/);
+});
+
+test('10/22: the summary lists unfinished seats for every step, and an all-done step says so', () => {
+  const allDone = classrooms[0].validSeatNumbers.map((seatNo) => ({ academicYear: '115', classId: '701', seatNo, studentKey: `115-701-${seatNo}`, level1Complete: true }));
+  const summary = summarizeTeacherProgress(classrooms[0], allDone);
+  assert.deepEqual(summary.pendingSeats.level1Complete, []);
+  assert.deepEqual(summary.pendingSeats.level2Complete, [...classrooms[0].validSeatNumbers].sort((a, b) => a - b));
+  const markup = teacherPageMarkup({ user: { uid: 'teacher' }, authorization: 'authorized', dashboard: { classrooms: activeTeacherClassrooms(classrooms), selectedClassId: '701', status: 'success', summary, error: '' }, expandedCheckpoints: new Set(['level1Complete']) });
+  assert.match(markup, /未完成座號[\s\S]*全部完成/);
 });

@@ -18,7 +18,9 @@ export function emptyTeacherProgressSummary(classroom, academicYear = LEGACY_DEF
     classId: classroom.id,
     validCount: classroom.validSeatNumbers.length,
     counts: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, 0])),
-    completedSeats: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, []]))
+    completedSeats: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, []])),
+    // 10/22: seats still to finish each step, so the teacher sees who needs help first.
+    pendingSeats: Object.fromEntries(STUDENT_PROGRESS_CHECKPOINTS.map((key) => [key, [...classroom.validSeatNumbers].map(Number).sort((a, b) => a - b)]))
   };
 }
 
@@ -46,6 +48,8 @@ export function summarizeTeacherProgress(classroom, records = [], academicYear =
     summary.completedSeats[checkpoint] = [...completedStudents[checkpoint].values()]
       .sort((left, right) => left - right);
     summary.counts[checkpoint] = summary.completedSeats[checkpoint].length;
+    const done = new Set(summary.completedSeats[checkpoint]);
+    summary.pendingSeats[checkpoint] = [...validSeats].filter((seatNo) => !done.has(seatNo)).sort((left, right) => left - right);
   }
   return summary;
 }

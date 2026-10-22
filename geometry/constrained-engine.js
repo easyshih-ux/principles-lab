@@ -1,9 +1,9 @@
-import { GeometryEngine } from './engine.js?v=gate4c-handoff-1';
-import { engineToolsFor, logicalSizeForRatio, normalizeAllowedTools } from './constrained-tools.js?v=gate4c-handoff-1';
-import { STEP_SIZE_TO_LOGICAL } from './config.js?v=gate4c-handoff-1';
-import { snapAndClampElementPosition, getRotatedHalfExtents } from './bounds.js?v=gate4c-handoff-1';
-import { getLogicalSize } from './palette.js?v=gate4c-handoff-1';
-import { createGeometryElement } from './model.js?v=gate4c-handoff-1';
+import { GeometryEngine } from './engine.js?v=gate4c-pending-1';
+import { engineToolsFor, logicalSizeForRatio, normalizeAllowedTools } from './constrained-tools.js?v=gate4c-pending-1';
+import { STEP_SIZE_TO_LOGICAL } from './config.js?v=gate4c-pending-1';
+import { snapAndClampElementPosition, getRotatedHalfExtents } from './bounds.js?v=gate4c-pending-1';
+import { getLogicalSize } from './palette.js?v=gate4c-pending-1';
+import { createGeometryElement } from './model.js?v=gate4c-pending-1';
 
 // Gate 4C unit copy (repetition only). A unit is the group of shapes that touch, overlap or
 // almost touch — the same rule the repetition checker uses. Copies are placed with a clear

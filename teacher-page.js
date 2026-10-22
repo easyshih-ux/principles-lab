@@ -8,7 +8,7 @@ import {
 import {
   createTeacherDashboardController,
   TEACHER_PROGRESS_ITEMS
-} from './teacher-progress-dashboard.js?v=v2-d3-1';
+} from './teacher-progress-dashboard.js?v=teacher-pending-1';
 import { formatSeatNumber } from './classroom-config.js';
 import { changeDraftMaximum, createTeacherClassSettingsController, toggleDraftSeat } from './teacher-class-settings.js?v=v2-d3-1';
 import { createAcademicYearManagementController } from './teacher-academic-year-management.js?v=v2-d3-1-1';
@@ -54,12 +54,19 @@ function teacherDashboardMarkup(dashboard, expandedCheckpoints = new Set()) {
           ${TEACHER_PROGRESS_ITEMS.map(({ key, label }, index) => {
             const expanded = expandedCheckpoints.has(key);
             const completedSeats = summary?.completedSeats?.[key] ?? [];
+            const pendingSeats = summary?.pendingSeats?.[key] ?? [];
             return `
             <article class="teacher-progress-card teacher-progress-card-${index + 1}">
               <h3>${label}</h3>
               <p class="teacher-progress-count"><strong>${summary?.counts?.[key] ?? 0}</strong><span>/ ${validCount}</span></p>
-              <button class="teacher-seats-toggle" type="button" data-completed-seats-toggle="${key}" aria-expanded="${expanded}">${expanded ? '收起已完成座號 ▴' : '查看已完成座號 ▾'}</button>
-              ${expanded ? `<div class="teacher-completed-seats">
+              <button class="teacher-seats-toggle" type="button" data-completed-seats-toggle="${key}" aria-expanded="${expanded}">${expanded ? '收起座號 ▴' : `查看座號（未完成 ${pendingSeats.length} 人）▾`}</button>
+              ${expanded ? `<div class="teacher-completed-seats teacher-pending-seats">
+                <h4>未完成座號</h4>
+                ${pendingSeats.length
+                  ? `<div class="teacher-completed-seats-row"><div class="teacher-seat-chips teacher-seat-chips-pending">${pendingSeats.map((seatNo) => `<span>${formatSeatNumber(seatNo)}</span>`).join('')}</div><p>共 ${pendingSeats.length} 人</p></div>`
+                  : '<p>全部完成</p>'}
+              </div>
+              <div class="teacher-completed-seats">
                 <h4>已完成座號</h4>
                 ${completedSeats.length
                   ? `<div class="teacher-completed-seats-row"><div class="teacher-seat-chips">${completedSeats.map((seatNo) => `<span>${formatSeatNumber(seatNo)}</span>`).join('')}</div><p>共 ${completedSeats.length} 人</p></div>`
